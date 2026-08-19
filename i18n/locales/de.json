@@ -1,0 +1,258 @@
+{
+  "app": {
+    "name": "Uptime",
+    "description": "Ein minimalistischer, selbst gehosteter Uptime-Monitor mit bearbeitbaren Dashboards."
+  },
+  "nav": {
+    "dashboards": "Dashboards",
+    "monitors": "Monitore",
+    "settings": "Einstellungen",
+    "openMenu": "Menü öffnen",
+    "signedInAs": "Angemeldet als {username}"
+  },
+  "common": {
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "delete": "Löschen",
+    "edit": "Bearbeiten",
+    "create": "Anlegen",
+    "add": "Hinzufügen",
+    "close": "Schließen",
+    "search": "Suchen",
+    "loading": "Wird geladen",
+    "retry": "Erneut versuchen",
+    "actions": "Aktionen",
+    "optional": "optional",
+    "never": "nie",
+    "none": "Keine",
+    "all": "Alle",
+    "yes": "Ja",
+    "no": "Nein",
+    "saved": "Gespeichert",
+    "saving": "Wird gespeichert",
+    "error": "Da ist etwas schiefgelaufen"
+  },
+  "status": {
+    "up": "Erreichbar",
+    "down": "Ausfall",
+    "pending": "Unklar",
+    "paused": "Pausiert",
+    "unknown": "Keine Daten"
+  },
+  "auth": {
+    "signIn": "Anmelden",
+    "signOut": "Abmelden",
+    "signInTitle": "Admin-Anmeldung",
+    "signInDescription": "Nur das Admin-Konto darf Monitore und Dashboards anlegen oder ändern. Alles andere ist öffentlich sichtbar.",
+    "username": "Benutzername",
+    "password": "Passwort",
+    "invalidCredentials": "Benutzername oder Passwort ist falsch.",
+    "signedIn": "Angemeldet als {username}.",
+    "signedOut": "Abgemeldet.",
+    "adminOnly": "Nur für Admins"
+  },
+  "monitor": {
+    "title": "Monitore",
+    "count": "keine Monitore | 1 Monitor | {count} Monitore",
+    "create": "Neuer Monitor",
+    "edit": "Monitor bearbeiten",
+    "created": "Monitor „{name}“ angelegt.",
+    "updated": "Monitor „{name}“ gespeichert.",
+    "deleted": "Monitor „{name}“ gelöscht.",
+    "empty": {
+      "title": "Noch keine Monitore",
+      "description": "Lege den ersten Monitor an, um Verfügbarkeitsdaten zu sammeln.",
+      "readonly": "Der Admin hat noch keine Monitore angelegt."
+    },
+    "type": {
+      "http": "HTTP(S)",
+      "ping": "Ping",
+      "httpDescription": "Ruft eine URL auf und prüft Status-Code, optionales Schlüsselwort und TLS-Zertifikat.",
+      "pingDescription": "Schickt ICMP-Echo-Pakete an einen Host und misst die Antwortzeit."
+    },
+    "sections": {
+      "general": "Allgemein",
+      "request": "Anfrage",
+      "schedule": "Zeitplan",
+      "advanced": "Erweitert"
+    },
+    "fields": {
+      "name": "Name",
+      "type": "Typ",
+      "description": "Beschreibung",
+      "url": "URL",
+      "hostname": "Hostname oder IP",
+      "method": "Methode",
+      "headers": "Request-Header",
+      "headerName": "Name",
+      "headerValue": "Wert",
+      "body": "Request-Body",
+      "expectedStatusCodes": "Akzeptierte Status-Codes",
+      "keyword": "Schlüsselwort",
+      "keywordInverted": "Fehlschlagen, wenn das Schlüsselwort vorkommt",
+      "followRedirects": "Weiterleitungen folgen",
+      "ignoreTls": "TLS-Fehler ignorieren",
+      "checkCertificateExpiry": "Zertifikatsablauf überwachen",
+      "certificateExpiryWarningDays": "So viele Tage vor Ablauf warnen",
+      "packetCount": "Pakete pro Prüfung",
+      "intervalSeconds": "Prüfintervall",
+      "timeoutSeconds": "Zeitlimit",
+      "retries": "Wiederholungen vor Ausfall",
+      "active": "Aktiv"
+    },
+    "hints": {
+      "expectedStatusCodes": "Einzelne Codes und Bereiche, durch Komma getrennt. Zum Beispiel 200-299,301.",
+      "keyword": "Der Antworttext muss diesen Text enthalten, damit die Prüfung besteht.",
+      "retries": "So viele Fehlschläge werden toleriert, bevor ein Ausfall gemeldet wird.",
+      "interval": "Sekunden zwischen zwei Prüfungen.",
+      "timeout": "Sekunden, die eine einzelne Prüfung dauern darf.",
+      "ignoreTls": "Akzeptiert selbstsignierte und abgelaufene Zertifikate. Nur für interne Hosts sinnvoll.",
+      "active": "Pausierte Monitore behalten ihre Historie, werden aber nicht geprüft."
+    },
+    "actions": {
+      "checkNow": "Jetzt prüfen",
+      "pause": "Pausieren",
+      "resume": "Fortsetzen",
+      "checked": "Prüfung abgeschlossen."
+    },
+    "delete": {
+      "title": "Monitor löschen",
+      "description": "„{name}“ wird mit der gesamten Historie entfernt. Widgets, die darauf verweisen, werden ebenfalls gelöscht. Das lässt sich nicht rückgängig machen."
+    },
+    "detail": {
+      "responseTime": "Antwortzeit",
+      "avgResponseTime": "Durchschnittliche Antwortzeit",
+      "lastCheck": "Letzte Prüfung",
+      "nextCheck": "Nächste Prüfung",
+      "uptime": "Verfügbarkeit",
+      "certificate": "TLS-Zertifikat",
+      "certificateValidUntil": "Gültig bis {date}",
+      "certificateExpiresIn": "Läuft in {days} Tagen ab",
+      "certificateExpired": "Abgelaufen",
+      "history": "Letzte Prüfungen",
+      "noHistory": "Bisher wurden keine Prüfungen aufgezeichnet.",
+      "noData": "Keine Daten für diesen Zeitraum.",
+      "checkedAt": "Zeitpunkt",
+      "message": "Ergebnis",
+      "statusCode": "Code",
+      "target": "Ziel",
+      "interval": "alle {seconds}"
+    }
+  },
+  "dashboard": {
+    "title": "Dashboards",
+    "create": "Neues Dashboard",
+    "edit": "Dashboard bearbeiten",
+    "created": "Dashboard „{name}“ angelegt.",
+    "updated": "Dashboard „{name}“ gespeichert.",
+    "deleted": "Dashboard „{name}“ gelöscht.",
+    "editMode": "Layout bearbeiten",
+    "editModeDone": "Fertig",
+    "editModeHint": "Widgets zum Verschieben ziehen, an der unteren rechten Ecke in der Größe ändern. Änderungen werden automatisch gespeichert.",
+    "addWidget": "Widget hinzufügen",
+    "layoutSaved": "Layout gespeichert.",
+    "fields": {
+      "name": "Name",
+      "slug": "URL-Kürzel",
+      "description": "Beschreibung",
+      "isDefault": "Als Startseite verwenden"
+    },
+    "hints": {
+      "slug": "Erscheint in der Adresszeile, zum Beispiel /d/produktion.",
+      "isDefault": "Besucher der Startseite werden zu diesem Dashboard geleitet."
+    },
+    "empty": {
+      "title": "Dieses Dashboard ist leer",
+      "description": "Wechsle in den Bearbeitungsmodus und füge das erste Widget hinzu.",
+      "readonly": "Der Admin hat diesem Dashboard noch keine Widgets hinzugefügt."
+    },
+    "delete": {
+      "title": "Dashboard löschen",
+      "description": "„{name}“ wird mit allen Widgets entfernt. Die Monitore selbst bleiben bestehen."
+    },
+    "lastDashboard": "Das letzte Dashboard kann nicht gelöscht werden."
+  },
+  "widget": {
+    "add": "Widget hinzufügen",
+    "edit": "Widget-Einstellungen",
+    "remove": "Widget entfernen",
+    "monitorMissing": "Der verknüpfte Monitor existiert nicht mehr.",
+    "type": {
+      "monitor": "Monitor-Karte",
+      "uptime-summary": "Verfügbarkeitswert",
+      "latency-chart": "Antwortzeit-Diagramm",
+      "status-overview": "Statusübersicht",
+      "heading": "Überschrift"
+    },
+    "typeDescription": {
+      "monitor": "Status, Antwortzeit und der jüngste Verlauf eines Monitors.",
+      "uptime-summary": "Ein einzelner großer Verfügbarkeitswert für einen Monitor.",
+      "latency-chart": "Antwortzeit über einen wählbaren Zeitraum.",
+      "status-overview": "Anzahl aller Monitore nach Status.",
+      "heading": "Ein Textelement, um Widgets zu gruppieren."
+    },
+    "fields": {
+      "type": "Widget-Typ",
+      "title": "Titel",
+      "monitor": "Monitor",
+      "range": "Zeitraum",
+      "heartbeatCount": "Anzahl angezeigter Prüfungen",
+      "level": "Größe"
+    },
+    "level": {
+      "1": "Groß",
+      "2": "Mittel",
+      "3": "Klein"
+    },
+    "overview": {
+      "total": "Monitore",
+      "avgUptime": "Durchschnittliche Verfügbarkeit, 24 h"
+    }
+  },
+  "range": {
+    "1h": "1 Stunde",
+    "24h": "24 Stunden",
+    "7d": "7 Tage",
+    "30d": "30 Tage",
+    "1y": "1 Jahr"
+  },
+  "settings": {
+    "title": "Einstellungen",
+    "account": "Admin-Konto",
+    "accountDescription": "Zugangsdaten des einzigen Admin-Kontos ändern.",
+    "currentPassword": "Aktuelles Passwort",
+    "newPassword": "Neues Passwort",
+    "newPasswordHint": "Leer lassen, um das Passwort zu behalten. Mindestens 10 Zeichen.",
+    "wrongPassword": "Das aktuelle Passwort ist falsch.",
+    "updated": "Konto aktualisiert.",
+    "appearance": "Darstellung",
+    "appearanceDescription": "Gilt nur für diesen Browser.",
+    "theme": "Erscheinungsbild",
+    "language": "Sprache",
+    "themeOption": {
+      "light": "Hell",
+      "dark": "Dunkel",
+      "system": "System"
+    }
+  },
+  "error": {
+    "notFound": "Nicht gefunden",
+    "notFoundDescription": "Diese Seite existiert nicht.",
+    "dashboardNotFound": "Dieses Dashboard existiert nicht.",
+    "monitorNotFound": "Dieser Monitor existiert nicht.",
+    "backHome": "Zurück zur Startseite",
+    "unauthorized": "Bitte melde dich als Admin an, um das zu tun."
+  },
+  "validation": {
+    "required": "Dieses Feld ist erforderlich",
+    "tooLong": "Höchstens {max} Zeichen verwenden",
+    "tooShort": "Mindestens {min} Zeichen verwenden",
+    "outOfRange": "Wert zwischen {min} und {max} eingeben",
+    "url": "Gültige http:// oder https:// URL eingeben",
+    "hostname": "Gültigen Hostnamen oder gültige IP-Adresse eingeben",
+    "slug": "Nur Kleinbuchstaben, Ziffern und Bindestriche verwenden",
+    "statusCodes": "Einzelne Codes oder Bereiche verwenden, zum Beispiel 200-299,301",
+    "timeoutTooLong": "Das Zeitlimit darf das Prüfintervall nicht überschreiten",
+    "monitorRequired": "Monitor für dieses Widget auswählen"
+  }
+}

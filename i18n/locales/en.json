@@ -1,0 +1,258 @@
+{
+  "app": {
+    "name": "Uptime",
+    "description": "A minimal, self-hosted uptime monitor with editable dashboards."
+  },
+  "nav": {
+    "dashboards": "Dashboards",
+    "monitors": "Monitors",
+    "settings": "Settings",
+    "openMenu": "Open menu",
+    "signedInAs": "Signed in as {username}"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "add": "Add",
+    "close": "Close",
+    "search": "Search",
+    "loading": "Loading",
+    "retry": "Try again",
+    "actions": "Actions",
+    "optional": "optional",
+    "never": "never",
+    "none": "None",
+    "all": "All",
+    "yes": "Yes",
+    "no": "No",
+    "saved": "Saved",
+    "saving": "Saving",
+    "error": "Something went wrong"
+  },
+  "status": {
+    "up": "Up",
+    "down": "Down",
+    "pending": "Pending",
+    "paused": "Paused",
+    "unknown": "No data"
+  },
+  "auth": {
+    "signIn": "Sign in",
+    "signOut": "Sign out",
+    "signInTitle": "Admin sign in",
+    "signInDescription": "Only the admin account can create or change monitors and dashboards. Everything else is public.",
+    "username": "Username",
+    "password": "Password",
+    "invalidCredentials": "Wrong username or password.",
+    "signedIn": "Signed in as {username}.",
+    "signedOut": "Signed out.",
+    "adminOnly": "Admin only"
+  },
+  "monitor": {
+    "title": "Monitors",
+    "count": "no monitors | 1 monitor | {count} monitors",
+    "create": "New monitor",
+    "edit": "Edit monitor",
+    "created": "Monitor \"{name}\" created.",
+    "updated": "Monitor \"{name}\" saved.",
+    "deleted": "Monitor \"{name}\" deleted.",
+    "empty": {
+      "title": "No monitors yet",
+      "description": "Add the first monitor to start collecting uptime data.",
+      "readonly": "The admin has not added any monitors yet."
+    },
+    "type": {
+      "http": "HTTP(S)",
+      "ping": "Ping",
+      "httpDescription": "Requests a URL and checks the status code, an optional keyword and the TLS certificate.",
+      "pingDescription": "Sends ICMP echo requests to a host and measures the round trip time."
+    },
+    "sections": {
+      "general": "General",
+      "request": "Request",
+      "schedule": "Schedule",
+      "advanced": "Advanced"
+    },
+    "fields": {
+      "name": "Name",
+      "type": "Type",
+      "description": "Description",
+      "url": "URL",
+      "hostname": "Hostname or IP",
+      "method": "Method",
+      "headers": "Request headers",
+      "headerName": "Name",
+      "headerValue": "Value",
+      "body": "Request body",
+      "expectedStatusCodes": "Accepted status codes",
+      "keyword": "Keyword",
+      "keywordInverted": "Fail when the keyword is present",
+      "followRedirects": "Follow redirects",
+      "ignoreTls": "Ignore TLS errors",
+      "checkCertificateExpiry": "Watch certificate expiry",
+      "certificateExpiryWarningDays": "Warn this many days before expiry",
+      "packetCount": "Packets per check",
+      "intervalSeconds": "Check interval",
+      "timeoutSeconds": "Timeout",
+      "retries": "Retries before down",
+      "active": "Active"
+    },
+    "hints": {
+      "expectedStatusCodes": "Single codes and ranges, separated by commas. For example 200-299,301.",
+      "keyword": "The response body must contain this text for the check to pass.",
+      "retries": "Failures tolerated before the monitor is reported as down.",
+      "interval": "Seconds between two checks.",
+      "timeout": "Seconds a single check may take.",
+      "ignoreTls": "Accepts self signed and expired certificates. Only use this for internal hosts.",
+      "active": "Paused monitors keep their history but are not checked."
+    },
+    "actions": {
+      "checkNow": "Check now",
+      "pause": "Pause",
+      "resume": "Resume",
+      "checked": "Check finished."
+    },
+    "delete": {
+      "title": "Delete monitor",
+      "description": "\"{name}\" and its entire history will be removed. Widgets referencing it are deleted as well. This cannot be undone."
+    },
+    "detail": {
+      "responseTime": "Response time",
+      "avgResponseTime": "Average response time",
+      "lastCheck": "Last check",
+      "nextCheck": "Next check",
+      "uptime": "Uptime",
+      "certificate": "TLS certificate",
+      "certificateValidUntil": "Valid until {date}",
+      "certificateExpiresIn": "Expires in {days} days",
+      "certificateExpired": "Expired",
+      "history": "Recent checks",
+      "noHistory": "No checks recorded yet.",
+      "noData": "No data for this range.",
+      "checkedAt": "Time",
+      "message": "Result",
+      "statusCode": "Code",
+      "target": "Target",
+      "interval": "every {seconds}"
+    }
+  },
+  "dashboard": {
+    "title": "Dashboards",
+    "create": "New dashboard",
+    "edit": "Edit dashboard",
+    "created": "Dashboard \"{name}\" created.",
+    "updated": "Dashboard \"{name}\" saved.",
+    "deleted": "Dashboard \"{name}\" deleted.",
+    "editMode": "Edit layout",
+    "editModeDone": "Done",
+    "editModeHint": "Drag widgets to move them and pull the bottom right corner to resize. Changes are saved automatically.",
+    "addWidget": "Add widget",
+    "layoutSaved": "Layout saved.",
+    "fields": {
+      "name": "Name",
+      "slug": "URL slug",
+      "description": "Description",
+      "isDefault": "Use as start page"
+    },
+    "hints": {
+      "slug": "Used in the address bar, for example /d/production.",
+      "isDefault": "Visitors landing on the start page are sent to this dashboard."
+    },
+    "empty": {
+      "title": "This dashboard is empty",
+      "description": "Switch to edit mode and add your first widget.",
+      "readonly": "The admin has not added any widgets to this dashboard yet."
+    },
+    "delete": {
+      "title": "Delete dashboard",
+      "description": "\"{name}\" and all of its widgets will be removed. The monitors themselves stay untouched."
+    },
+    "lastDashboard": "The last dashboard cannot be deleted."
+  },
+  "widget": {
+    "add": "Add widget",
+    "edit": "Widget settings",
+    "remove": "Remove widget",
+    "monitorMissing": "The referenced monitor no longer exists.",
+    "type": {
+      "monitor": "Monitor card",
+      "uptime-summary": "Uptime figure",
+      "latency-chart": "Response time chart",
+      "status-overview": "Status overview",
+      "heading": "Heading"
+    },
+    "typeDescription": {
+      "monitor": "Status, response time and the recent pulse of one monitor.",
+      "uptime-summary": "A single large uptime percentage for one monitor.",
+      "latency-chart": "Response time over a selectable time range.",
+      "status-overview": "Counts of all monitors by status.",
+      "heading": "A text label to group widgets."
+    },
+    "fields": {
+      "type": "Widget type",
+      "title": "Title",
+      "monitor": "Monitor",
+      "range": "Time range",
+      "heartbeatCount": "Number of checks shown",
+      "level": "Size"
+    },
+    "level": {
+      "1": "Large",
+      "2": "Medium",
+      "3": "Small"
+    },
+    "overview": {
+      "total": "Monitors",
+      "avgUptime": "Average uptime, 24 h"
+    }
+  },
+  "range": {
+    "1h": "1 hour",
+    "24h": "24 hours",
+    "7d": "7 days",
+    "30d": "30 days",
+    "1y": "1 year"
+  },
+  "settings": {
+    "title": "Settings",
+    "account": "Admin account",
+    "accountDescription": "Change the credentials of the single admin account.",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "newPasswordHint": "Leave empty to keep the current password. At least 10 characters.",
+    "wrongPassword": "The current password is incorrect.",
+    "updated": "Account updated.",
+    "appearance": "Appearance",
+    "appearanceDescription": "Applies to this browser only.",
+    "theme": "Theme",
+    "language": "Language",
+    "themeOption": {
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System"
+    }
+  },
+  "error": {
+    "notFound": "Not found",
+    "notFoundDescription": "This page does not exist.",
+    "dashboardNotFound": "This dashboard does not exist.",
+    "monitorNotFound": "This monitor does not exist.",
+    "backHome": "Back to the start page",
+    "unauthorized": "Please sign in as admin to do that."
+  },
+  "validation": {
+    "required": "This field is required",
+    "tooLong": "Use at most {max} characters",
+    "tooShort": "Use at least {min} characters",
+    "outOfRange": "Enter a value between {min} and {max}",
+    "url": "Enter a valid http:// or https:// URL",
+    "hostname": "Enter a valid hostname or IP address",
+    "slug": "Use lowercase letters, digits and dashes only",
+    "statusCodes": "Use single codes or ranges, for example 200-299,301",
+    "timeoutTooLong": "The timeout must not exceed the check interval",
+    "monitorRequired": "Select a monitor for this widget"
+  }
+}

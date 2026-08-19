@@ -1,0 +1,28 @@
+# Nuxt
+.nuxt
+.output
+.data
+dist
+
+# Dependencies
+node_modules
+
+# Runtime data
+data/
+*.db
+*.db-shm
+*.db-wal
+
+# Local env
+.env
+.env.*
+!.env.example
+
+# Logs
+logs
+*.log
+
+# Editors and OS
+.DS_Store
+.idea
+.vscode

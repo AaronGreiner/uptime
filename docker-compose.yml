@@ -1,0 +1,26 @@
+services:
+  uptime:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      # Required. Generate with: openssl rand -base64 32
+      NUXT_SESSION_PASSWORD: ${NUXT_SESSION_PASSWORD:?Set NUXT_SESSION_PASSWORD in .env}
+      # Seeded on the first start only. An empty password means a random one is
+      # generated and printed to the container log exactly once.
+      NUXT_ADMIN_USERNAME: ${NUXT_ADMIN_USERNAME:-admin}
+      NUXT_ADMIN_PASSWORD: ${NUXT_ADMIN_PASSWORD:-}
+      NUXT_RETENTION_HEARTBEAT_DAYS: ${NUXT_RETENTION_HEARTBEAT_DAYS:-7}
+      NUXT_RETENTION_HOURLY_STATS_DAYS: ${NUXT_RETENTION_HOURLY_STATS_DAYS:-365}
+      NUXT_SCHEDULER_CONCURRENCY: ${NUXT_SCHEDULER_CONCURRENCY:-10}
+      NUXT_SEED_DEMO_DATA: ${NUXT_SEED_DEMO_DATA:-false}
+      NUXT_PUBLIC_APP_NAME: ${NUXT_PUBLIC_APP_NAME:-Uptime}
+    volumes:
+      - uptime-data:/data
+    sysctls:
+      # Allows unprivileged ICMP sockets, which ping monitors rely on.
+      net.ipv4.ping_group_range: "0 2147483647"
+
+volumes:
+  uptime-data:
