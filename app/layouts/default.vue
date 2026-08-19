@@ -73,7 +73,10 @@ async function onDashboardCreated(slug: string) {
       :default-size="15"
       :max-size="24"
       :ui="{
-        footer: 'flex-col items-stretch gap-2 border-t border-default',
+        // No divider towards the content: the panel already reads as its own
+        // surface. The vertical padding lines the brand up with the navbar.
+        root: 'border-none py-3 sm:py-4',
+        footer: 'flex-col items-stretch gap-2',
         header: 'gap-2'
       }"
     >

@@ -86,10 +86,18 @@ navbar, filters and contextual metadata in the toolbar. Each navbar needs a
 rendered by the navbar itself. The sign-in page uses the `auth` layout instead,
 because the sidebar is meaningless there.
 
-**Surfaces.** The shell background is one step behind `bg-default` (see the `body`
-rules in `main.css`), so cards read as surfaces floating on it. Use plain `UCard`
-for content blocks: its `title` and `description` props plus the `outline`
-variant give the header, the separator and the body in one go.
+**Surfaces.** Three stacked levels, deliberately without hard dividing lines: the
+shell sits behind everything (the `body` rules in `main.css`), the content panel
+floats on it as an inset rounded surface, and cards sit on top of the panel. The
+panel treatment lives in `app.config.ts` under `dashboardPanel`, so every page
+gets it without repeating classes, and the sidebar drops its trailing border in
+the layout. Use plain `UCard` for content blocks: its `title` and `description`
+props plus the `outline` variant give the header, the separator and the body in
+one go.
+
+Because the panel is inset, its body owns the scrolling: the navbar and toolbar
+stay put while the content moves. Anything that needs to stay visible belongs in
+the panel header, not at the top of the body.
 
 **Dashboards.** A dashboard owns widgets; each widget stores a position for all
 five breakpoints in `dashboard_widgets.layout`. The grid is `grid-layout-plus`
