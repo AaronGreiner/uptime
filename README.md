@@ -90,6 +90,30 @@ something to show immediately.
 
 Leave it at `false` for a real deployment.
 
+#### Trying the demo
+
+Put this in `.env` to get a fully populated instance with a known login:
+
+```bash
+NUXT_SESSION_PASSWORD=local-development-session-password-32
+NUXT_ADMIN_USERNAME=admin
+NUXT_ADMIN_PASSWORD=devpassword123
+NUXT_SEED_DEMO_DATA=true
+```
+
+Then run `pnpm dev` and sign in at http://localhost:3000/login with:
+
+- Username: `admin`
+- Password: `devpassword123`
+
+> **These credentials are for the local demo only.** They are published here, so
+> anyone can read them. Never use them on a reachable instance: pick your own
+> `NUXT_ADMIN_PASSWORD` and a random `NUXT_SESSION_PASSWORD` before deploying, or
+> leave the admin password empty and use the one generated on first start.
+
+Without demo data the seeded account is the same, only the monitors and
+dashboards are missing.
+
 ## Monitor types
 
 **HTTP(S)** — checks a URL and passes when the status code falls inside the
