@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from '@nuxt/ui'
 
+const props = defineProps<{ collapsed?: boolean }>()
+
 const { isAdmin, admin, clearSession } = useAdmin()
 const { t } = useI18n()
 const toast = useToast()
@@ -15,20 +17,9 @@ async function signOut() {
 }
 
 const items = computed<DropdownMenuItem[][]>(() => [
-  [{
-    label: admin.value?.username ?? '',
-    type: 'label' as const,
-    icon: 'i-lucide-shield-check'
-  }],
-  [{
-    label: t('nav.settings'),
-    icon: 'i-lucide-settings',
-    to: '/settings'
-  }, {
-    label: t('auth.signOut'),
-    icon: 'i-lucide-log-out',
-    onSelect: signOut
-  }]
+  [{ label: admin.value?.username ?? '', type: 'label' as const, icon: 'i-lucide-shield-check' }],
+  [{ label: t('nav.settings'), icon: 'i-lucide-settings', to: '/settings' }],
+  [{ label: t('auth.signOut'), icon: 'i-lucide-log-out', onSelect: signOut }]
 ])
 </script>
 
@@ -36,23 +27,31 @@ const items = computed<DropdownMenuItem[][]>(() => [
   <UDropdownMenu
     v-if="isAdmin"
     :items="items"
-    :content="{ align: 'end' }"
+    :content="{ align: 'start', side: props.collapsed ? 'right' : 'top' }"
+    :ui="{ content: 'min-w-48' }"
   >
     <UButton
-      icon="i-lucide-shield-check"
       color="neutral"
       variant="ghost"
-      :aria-label="$t('nav.settings')"
+      icon="i-lucide-shield-check"
+      :label="collapsed ? undefined : admin?.username"
+      :block="!collapsed"
+      :square="collapsed"
+      :aria-label="$t('auth.adminOnly')"
+      :ui="{ base: collapsed ? '' : 'justify-start' }"
     />
   </UDropdownMenu>
 
   <UButton
     v-else
     to="/login"
-    icon="i-lucide-log-in"
     color="neutral"
     variant="ghost"
-    :label="$t('auth.signIn')"
-    :ui="{ label: 'hidden sm:inline' }"
+    icon="i-lucide-log-in"
+    :label="collapsed ? undefined : $t('auth.signIn')"
+    :block="!collapsed"
+    :square="collapsed"
+    :aria-label="$t('auth.signIn')"
+    :ui="{ base: collapsed ? '' : 'justify-start' }"
   />
 </template>

@@ -10,10 +10,24 @@ if (target.value) {
 </script>
 
 <template>
-  <UContainer class="py-16">
-    <UEmpty
-      icon="i-lucide-layout-dashboard"
-      :title="$t('error.dashboardNotFound')"
-    />
-  </UContainer>
+  <UDashboardPanel id="home">
+    <template #header>
+      <UDashboardNavbar
+        :title="$t('nav.dashboards')"
+        icon="i-lucide-layout-dashboard"
+      >
+        <template #leading>
+          <UDashboardSidebarCollapse />
+        </template>
+      </UDashboardNavbar>
+    </template>
+
+    <template #body>
+      <UEmpty
+        icon="i-lucide-layout-dashboard"
+        :title="$t('error.dashboardNotFound')"
+        class="flex-1"
+      />
+    </template>
+  </UDashboardPanel>
 </template>

@@ -5,6 +5,8 @@ Uptime Kuma, built with Nuxt 4, Nuxt UI 4 and SQLite.
 
 - **Public by default** — dashboards and monitor status are visible without an
   account. A single admin account can create and change things.
+- **Dashboard shell** — collapsible, resizable sidebar with the overall status
+  always in view; every page gets its own navbar and toolbar.
 - **Editable dashboards** — drag and resize widgets on a real grid, with a
   layout stored per breakpoint.
 - **HTTP(S) and ping monitors** — status code ranges, keyword matching, custom

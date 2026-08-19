@@ -1,32 +1,41 @@
 <script setup lang="ts">
+import type { DropdownMenuItem } from '@nuxt/ui'
+
+const props = withDefaults(defineProps<{
+  /** `compact` shows the language code only, `full` fills the available width. */
+  variant?: 'compact' | 'full'
+  collapsed?: boolean
+}>(), {
+  variant: 'compact',
+  collapsed: false
+})
+
 const { locale, locales, setLocale } = useI18n()
 
-const items = computed(() => locales.value.map(entry => ({
-  label: entry.name ?? entry.code,
-  value: entry.code
-})))
+const currentName = computed(() => locales.value.find(entry => entry.code === locale.value)?.name ?? locale.value)
 
-const current = computed({
-  get: () => locale.value,
-  set: (value: string) => setLocale(value as typeof locale.value)
-})
+const items = computed<DropdownMenuItem[]>(() => locales.value.map(entry => ({
+  label: entry.name ?? entry.code,
+  icon: entry.code === locale.value ? 'i-lucide-check' : undefined,
+  onSelect: () => setLocale(entry.code)
+})))
 </script>
 
 <template>
-  <USelectMenu
-    v-model="current"
+  <UDropdownMenu
     :items="items"
-    value-key="value"
-    :search-input="false"
-    variant="ghost"
-    color="neutral"
-    icon="i-lucide-languages"
-    :ui="{ base: 'w-auto min-w-0 gap-1.5', content: 'w-auto min-w-36', trailingIcon: 'hidden sm:inline-flex' }"
-    :aria-label="$t('settings.language')"
+    :content="{ align: props.variant === 'full' ? 'start' : 'end' }"
+    :ui="{ content: 'min-w-40' }"
   >
-    <template #default="{ modelValue }">
-      <span class="hidden sm:inline">{{ items.find(item => item.value === modelValue)?.label }}</span>
-      <span class="sm:hidden uppercase">{{ modelValue }}</span>
-    </template>
-  </USelectMenu>
+    <UButton
+      color="neutral"
+      variant="ghost"
+      icon="i-lucide-languages"
+      :label="collapsed ? undefined : (variant === 'full' ? currentName : locale.toUpperCase())"
+      :block="variant === 'full'"
+      :square="collapsed"
+      :aria-label="$t('settings.language')"
+      :ui="{ base: variant === 'full' ? 'justify-start ring ring-default' : '' }"
+    />
+  </UDropdownMenu>
 </template>

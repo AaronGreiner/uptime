@@ -49,7 +49,7 @@ const target = computed(() => monitorTarget(props.monitor))
       class="grid grid-cols-2 @[24rem]:grid-cols-3 gap-3 text-sm"
     >
       <div class="min-w-0">
-        <dt class="text-dimmed text-xs truncate-target">
+        <dt class="text-muted text-xs truncate-target">
           {{ $t('monitor.detail.uptime') }}
         </dt>
         <dd class="font-medium tabular-nums truncate-target">
@@ -57,7 +57,7 @@ const target = computed(() => monitorTarget(props.monitor))
         </dd>
       </div>
       <div class="min-w-0">
-        <dt class="text-dimmed text-xs truncate-target">
+        <dt class="text-muted text-xs truncate-target">
           {{ $t('monitor.detail.responseTime') }}
         </dt>
         <dd class="font-medium tabular-nums truncate-target">
@@ -65,7 +65,7 @@ const target = computed(() => monitorTarget(props.monitor))
         </dd>
       </div>
       <div class="min-w-0 hidden @[24rem]:block">
-        <dt class="text-dimmed text-xs truncate-target">
+        <dt class="text-muted text-xs truncate-target">
           {{ $t('monitor.detail.lastCheck') }}
         </dt>
         <dd class="font-medium truncate-target">

@@ -60,7 +60,7 @@ const tone = computed(() => {
     class="h-full"
     :ui="{ root: 'flex', body: 'flex-1 flex flex-col justify-center gap-1 min-h-0 overflow-y-auto' }"
   >
-    <p class="text-xs uppercase tracking-wide text-dimmed truncate-target">
+    <p class="text-sm text-muted truncate-target">
       {{ widget.config.title || monitor.name }}
     </p>
     <p

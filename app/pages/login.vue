@@ -3,12 +3,12 @@ import type { FormSubmitEvent } from '@nuxt/ui'
 import { loginSchema } from '#shared/utils/validation'
 import type { z } from 'zod'
 
+definePageMeta({ layout: 'auth' })
+
 const { t } = useI18n()
 const route = useRoute()
 const toast = useToast()
 const { fetch: refreshSession, loggedIn } = useUserSession()
-
-definePageMeta({ layout: 'default' })
 
 useSeoMeta({ title: () => t('auth.signInTitle') })
 
@@ -16,9 +16,11 @@ const state = reactive({ username: '', password: '' })
 const submitting = ref(false)
 const failed = ref(false)
 
+const redirectTarget = computed(() => typeof route.query.redirect === 'string' ? route.query.redirect : '/')
+
 watchEffect(() => {
   if (loggedIn.value) {
-    navigateTo(typeof route.query.redirect === 'string' ? route.query.redirect : '/')
+    navigateTo(redirectTarget.value)
   }
 })
 
@@ -32,7 +34,7 @@ async function onSubmit(event: FormSubmitEvent<z.output<typeof loginSchema>>) {
     await refreshSession()
 
     toast.add({ title: t('auth.signedIn', { username: user.username }), color: 'success', icon: 'i-lucide-check' })
-    await navigateTo(typeof route.query.redirect === 'string' ? route.query.redirect : '/')
+    await navigateTo(redirectTarget.value)
   } catch {
     failed.value = true
   } finally {
@@ -42,68 +44,59 @@ async function onSubmit(event: FormSubmitEvent<z.output<typeof loginSchema>>) {
 </script>
 
 <template>
-  <UContainer class="py-16 sm:py-24">
-    <div class="mx-auto w-full max-w-sm">
-      <UCard>
-        <div class="space-y-6">
-          <div class="space-y-1.5">
-            <h1 class="text-xl font-semibold text-highlighted">
-              {{ $t('auth.signInTitle') }}
-            </h1>
-            <p class="text-sm text-muted">
-              {{ $t('auth.signInDescription') }}
-            </p>
-          </div>
+  <UCard
+    class="w-full max-w-sm"
+    :title="$t('auth.signInTitle')"
+    :description="$t('auth.signInDescription')"
+  >
+    <div class="space-y-4">
+      <UAlert
+        v-if="failed"
+        color="error"
+        variant="subtle"
+        icon="i-lucide-triangle-alert"
+        :description="$t('auth.invalidCredentials')"
+      />
 
-          <UAlert
-            v-if="failed"
-            color="error"
-            variant="subtle"
-            icon="i-lucide-triangle-alert"
-            :description="$t('auth.invalidCredentials')"
+      <UForm
+        :schema="loginSchema"
+        :state="state"
+        class="space-y-4"
+        @submit="onSubmit"
+      >
+        <UFormField
+          :label="$t('auth.username')"
+          name="username"
+          required
+        >
+          <UInput
+            v-model="state.username"
+            class="w-full"
+            autocomplete="username"
+            autofocus
           />
+        </UFormField>
 
-          <UForm
-            :schema="loginSchema"
-            :state="state"
-            class="space-y-4"
-            @submit="onSubmit"
-          >
-            <UFormField
-              :label="$t('auth.username')"
-              name="username"
-              required
-            >
-              <UInput
-                v-model="state.username"
-                class="w-full"
-                autocomplete="username"
-                autofocus
-              />
-            </UFormField>
+        <UFormField
+          :label="$t('auth.password')"
+          name="password"
+          required
+        >
+          <UInput
+            v-model="state.password"
+            class="w-full"
+            type="password"
+            autocomplete="current-password"
+          />
+        </UFormField>
 
-            <UFormField
-              :label="$t('auth.password')"
-              name="password"
-              required
-            >
-              <UInput
-                v-model="state.password"
-                class="w-full"
-                type="password"
-                autocomplete="current-password"
-              />
-            </UFormField>
-
-            <UButton
-              type="submit"
-              block
-              :loading="submitting"
-              :label="$t('auth.signIn')"
-            />
-          </UForm>
-        </div>
-      </UCard>
+        <UButton
+          type="submit"
+          block
+          :loading="submitting"
+          :label="$t('auth.signIn')"
+        />
+      </UForm>
     </div>
-  </UContainer>
+  </UCard>
 </template>

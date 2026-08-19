@@ -10,6 +10,18 @@
   --ui-radius: 0.625rem;
 }
 
+/*
+ * The application shell sits one step behind the cards so panels read as
+ * surfaces floating on the background, rather than blending into it.
+ */
+body {
+  background-color: var(--ui-color-neutral-50);
+}
+
+.dark body {
+  background-color: var(--ui-color-neutral-950);
+}
+
 /* Keep long targets and messages from stretching cards. */
 .truncate-target {
   overflow: hidden;

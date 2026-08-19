@@ -34,6 +34,7 @@ Migrations are applied automatically at boot by `server/plugins/00.database.ts`.
 
 ```
 app/            Vue application (pages, components, composables)
+  layouts/      `default` is the dashboard shell, `auth` is the bare sign-in frame
 server/
   api/          HTTP endpoints, file based routing
   database/     Drizzle schema
@@ -74,6 +75,21 @@ rolls heartbeats into `monitor_stats_hourly` (recomputing the current, still ope
 hour every time) and then prunes both tables according to the retention config.
 Queries for ranges up to 24 h read raw heartbeats, longer ranges read the hourly
 rollups — see `RAW_HEARTBEAT_RANGE_LIMIT_SECONDS`.
+
+**Application shell.** `app/layouts/default.vue` renders `UDashboardGroup` plus a
+collapsible, resizable `UDashboardSidebar` holding the navigation, the overall
+status card and the account controls. Every page then renders its own
+`UDashboardPanel` with a `#header` (a `UDashboardNavbar`, optionally followed by a
+`UDashboardToolbar`) and a `#body`. Put the page title and its actions in the
+navbar, filters and contextual metadata in the toolbar. Each navbar needs a
+`<UDashboardSidebarCollapse />` in its `#leading` slot; the mobile toggle is
+rendered by the navbar itself. The sign-in page uses the `auth` layout instead,
+because the sidebar is meaningless there.
+
+**Surfaces.** The shell background is one step behind `bg-default` (see the `body`
+rules in `main.css`), so cards read as surfaces floating on it. Use plain `UCard`
+for content blocks: its `title` and `description` props plus the `outline`
+variant give the header, the separator and the body in one go.
 
 **Dashboards.** A dashboard owns widgets; each widget stores a position for all
 five breakpoints in `dashboard_widgets.layout`. The grid is `grid-layout-plus`
@@ -123,5 +139,11 @@ check. The dispatcher logs and swallows.
 - The grid mutates the layout array it is given in place. `Grid.vue` therefore
   keeps the very same array reference in its per breakpoint map; replacing it
   resets the component.
+- `UCard` sets `overflow-hidden`, which disables the automatic minimum size of a
+  flex item. Cards are given `shrink-0` in `app.config.ts` so they are not
+  squashed inside the panel's flex column; do not remove it.
+- `UDashboardToolbar` scrolls horizontally by default. Long text in it needs
+  `:ui="{ left: 'min-w-0 flex-1' }"` plus truncation, otherwise it scrolls on
+  phones instead of shortening.
 - `nowInSeconds()` lives in `server/services/scheduler.ts` and is the one clock
   the server uses. Reuse it instead of inlining `Date.now()`.

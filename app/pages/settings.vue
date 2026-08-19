@@ -54,105 +54,102 @@ async function onSubmit(event: FormSubmitEvent<z.output<typeof accountUpdateSche
 </script>
 
 <template>
-  <UContainer class="py-6 sm:py-8 space-y-6 max-w-2xl">
-    <header>
-      <h1 class="text-2xl font-semibold text-highlighted">
-        {{ $t('settings.title') }}
-      </h1>
-    </header>
-
-    <UCard variant="outline">
-      <div class="space-y-1.5 mb-5">
-        <h2 class="font-medium text-highlighted">
-          {{ $t('settings.account') }}
-        </h2>
-        <p class="text-sm text-muted">
-          {{ $t('settings.accountDescription') }}
-        </p>
-      </div>
-
-      <UForm
-        :schema="accountUpdateSchema"
-        :state="state"
-        class="space-y-4"
-        @submit="onSubmit"
+  <UDashboardPanel id="settings">
+    <template #header>
+      <UDashboardNavbar
+        :title="$t('settings.title')"
+        icon="i-lucide-settings"
       >
-        <UFormField
-          :label="$t('auth.username')"
-          name="username"
-          required
+        <template #leading>
+          <UDashboardSidebarCollapse />
+        </template>
+      </UDashboardNavbar>
+    </template>
+
+    <template #body>
+      <div class="w-full max-w-2xl flex flex-col gap-4 sm:gap-6">
+        <UCard
+          :title="$t('settings.account')"
+          :description="$t('settings.accountDescription')"
         >
-          <UInput
-            v-model="state.username"
-            class="w-full"
-            autocomplete="username"
-          />
-        </UFormField>
+          <UForm
+            :schema="accountUpdateSchema"
+            :state="state"
+            class="space-y-4"
+            @submit="onSubmit"
+          >
+            <UFormField
+              :label="$t('auth.username')"
+              name="username"
+              required
+            >
+              <UInput
+                v-model="state.username"
+                class="w-full"
+                autocomplete="username"
+              />
+            </UFormField>
 
-        <UFormField
-          :label="$t('settings.currentPassword')"
-          name="currentPassword"
-          required
-        >
-          <UInput
-            v-model="state.currentPassword"
-            class="w-full"
-            type="password"
-            autocomplete="current-password"
-          />
-        </UFormField>
+            <UFormField
+              :label="$t('settings.currentPassword')"
+              name="currentPassword"
+              required
+            >
+              <UInput
+                v-model="state.currentPassword"
+                class="w-full"
+                type="password"
+                autocomplete="current-password"
+              />
+            </UFormField>
 
-        <UFormField
-          :label="$t('settings.newPassword')"
-          name="newPassword"
-          :description="$t('settings.newPasswordHint')"
-        >
-          <UInput
-            v-model="state.newPassword"
-            class="w-full"
-            type="password"
-            autocomplete="new-password"
-          />
-        </UFormField>
+            <UFormField
+              :label="$t('settings.newPassword')"
+              name="newPassword"
+              :description="$t('settings.newPasswordHint')"
+            >
+              <UInput
+                v-model="state.newPassword"
+                class="w-full"
+                type="password"
+                autocomplete="new-password"
+              />
+            </UFormField>
 
-        <UButton
-          type="submit"
-          :loading="submitting"
-          :label="$t('common.save')"
-        />
-      </UForm>
-    </UCard>
-
-    <UCard variant="outline">
-      <div class="space-y-1.5 mb-5">
-        <h2 class="font-medium text-highlighted">
-          {{ $t('settings.appearance') }}
-        </h2>
-        <p class="text-sm text-muted">
-          {{ $t('settings.appearanceDescription') }}
-        </p>
-      </div>
-
-      <div class="grid gap-4 sm:grid-cols-2">
-        <UFormField :label="$t('settings.theme')">
-          <ClientOnly>
-            <USelectMenu
-              v-model="theme"
-              :items="themeItems"
-              value-key="value"
-              :search-input="false"
-              class="w-full"
+            <UButton
+              type="submit"
+              :loading="submitting"
+              :label="$t('common.save')"
             />
-            <template #fallback>
-              <USkeleton class="h-8 w-full" />
-            </template>
-          </ClientOnly>
-        </UFormField>
+          </UForm>
+        </UCard>
 
-        <UFormField :label="$t('settings.language')">
-          <AppLocaleSelect class="w-full" />
-        </UFormField>
+        <UCard
+          :title="$t('settings.appearance')"
+          :description="$t('settings.appearanceDescription')"
+        >
+          <div class="grid gap-4 sm:grid-cols-2">
+            <UFormField :label="$t('settings.theme')">
+              <ClientOnly>
+                <USelectMenu
+                  v-model="theme"
+                  :items="themeItems"
+                  value-key="value"
+                  :search-input="false"
+                  class="w-full"
+                />
+                <template #fallback>
+                  <USkeleton class="h-8 w-full" />
+                </template>
+              </ClientOnly>
+            </UFormField>
+
+            <UFormField :label="$t('settings.language')">
+              <AppLocaleSelect variant="full" />
+            </UFormField>
+          </div>
+        </UCard>
       </div>
-    </UCard>
-  </UContainer>
+    </template>
+  </UDashboardPanel>
 </template>

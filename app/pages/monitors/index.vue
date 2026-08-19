@@ -79,106 +79,119 @@ async function confirmDelete() {
 </script>
 
 <template>
-  <UContainer class="py-6 sm:py-8 space-y-6">
-    <header class="flex flex-wrap items-start justify-between gap-4">
-      <div>
-        <h1 class="text-2xl font-semibold text-highlighted">
-          {{ $t('monitor.title') }}
-        </h1>
-        <p class="text-sm text-muted mt-1">
-          {{ $t('monitor.count', monitors.length) }}
-        </p>
+  <UDashboardPanel id="monitors">
+    <template #header>
+      <UDashboardNavbar
+        :title="$t('monitor.title')"
+        icon="i-lucide-activity"
+      >
+        <template #leading>
+          <UDashboardSidebarCollapse />
+        </template>
+
+        <template #right>
+          <UButton
+            v-if="isAdmin"
+            icon="i-lucide-plus"
+            :label="$t('monitor.create')"
+            @click="openForm(null)"
+          />
+        </template>
+      </UDashboardNavbar>
+
+      <UDashboardToolbar
+        v-if="monitors.length"
+        :ui="{ left: 'min-w-0 flex-1' }"
+      >
+        <template #left>
+          <UInput
+            v-model="search"
+            icon="i-lucide-search"
+            :placeholder="$t('common.search')"
+            class="min-w-0 flex-1 sm:flex-none sm:w-64"
+          />
+          <USelectMenu
+            v-model="statusFilter"
+            :items="statusItems"
+            value-key="value"
+            :search-input="false"
+            class="w-36"
+          />
+        </template>
+
+        <template #right>
+          <span class="hidden sm:inline text-sm text-dimmed tabular-nums whitespace-nowrap">
+            {{ $t('monitor.count', filtered.length) }}
+          </span>
+        </template>
+      </UDashboardToolbar>
+    </template>
+
+    <template #body>
+      <div
+        v-if="filtered.length"
+        class="grid gap-4 sm:gap-6 sm:grid-cols-2 2xl:grid-cols-3"
+      >
+        <MonitorCard
+          v-for="monitor in filtered"
+          :key="monitor.id"
+          :monitor="monitor"
+        >
+          <template
+            v-if="isAdmin"
+            #actions
+          >
+            <UDropdownMenu
+              :items="menuItems(monitor)"
+              :content="{ align: 'end' }"
+            >
+              <UButton
+                icon="i-lucide-ellipsis-vertical"
+                size="xs"
+                color="neutral"
+                variant="ghost"
+                :loading="pending === monitor.id"
+                :aria-label="$t('common.actions')"
+              />
+            </UDropdownMenu>
+          </template>
+        </MonitorCard>
       </div>
 
-      <UButton
-        v-if="isAdmin"
-        icon="i-lucide-plus"
-        :label="$t('monitor.create')"
-        @click="openForm(null)"
-      />
-    </header>
-
-    <div
-      v-if="monitors.length"
-      class="flex flex-wrap items-center gap-3"
-    >
-      <UInput
-        v-model="search"
-        icon="i-lucide-search"
-        :placeholder="$t('common.search')"
-        class="w-full sm:w-64"
-      />
-      <USelectMenu
-        v-model="statusFilter"
-        :items="statusItems"
-        value-key="value"
-        :search-input="false"
-        class="w-40"
-      />
-    </div>
-
-    <div
-      v-if="filtered.length"
-      class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
-    >
-      <MonitorCard
-        v-for="monitor in filtered"
-        :key="monitor.id"
-        :monitor="monitor"
+      <UEmpty
+        v-else
+        icon="i-lucide-activity"
+        :title="monitors.length ? $t('common.none') : $t('monitor.empty.title')"
+        :description="monitors.length ? undefined : $t(isAdmin ? 'monitor.empty.description' : 'monitor.empty.readonly')"
+        class="flex-1"
       >
         <template
-          v-if="isAdmin"
+          v-if="isAdmin && !monitors.length"
           #actions
         >
-          <UDropdownMenu
-            :items="menuItems(monitor)"
-            :content="{ align: 'end' }"
-          >
-            <UButton
-              icon="i-lucide-ellipsis-vertical"
-              size="xs"
-              color="neutral"
-              variant="ghost"
-              :loading="pending === monitor.id"
-              :aria-label="$t('common.actions')"
-            />
-          </UDropdownMenu>
+          <UButton
+            icon="i-lucide-plus"
+            :label="$t('monitor.create')"
+            @click="openForm(null)"
+          />
         </template>
-      </MonitorCard>
-    </div>
+      </UEmpty>
 
-    <UEmpty
-      v-else
-      icon="i-lucide-activity"
-      :title="monitors.length ? $t('common.none') : $t('monitor.empty.title')"
-      :description="monitors.length ? undefined : $t(isAdmin ? 'monitor.empty.description' : 'monitor.empty.readonly')"
-    >
-      <template
-        v-if="isAdmin && !monitors.length"
-        #actions
-      >
-        <UButton
-          icon="i-lucide-plus"
-          :label="$t('monitor.create')"
-          @click="openForm(null)"
+      <template v-if="isAdmin">
+        <MonitorFormModal
+          v-model:open="formOpen"
+          :monitor="editedMonitor"
+          @saved="reload()"
+        />
+
+        <ConfirmModal
+          v-model:open="deleteOpen"
+          :title="$t('monitor.delete.title')"
+          :description="$t('monitor.delete.description', { name: monitorToDelete?.name ?? '' })"
+          :loading="pending !== null"
+          @confirm="confirmDelete"
         />
       </template>
-    </UEmpty>
-
-    <template v-if="isAdmin">
-      <MonitorFormModal
-        v-model:open="formOpen"
-        :monitor="editedMonitor"
-        @saved="reload()"
-      />
-
-      <ConfirmModal
-        v-model:open="deleteOpen"
-        :title="$t('monitor.delete.title')"
-        :description="$t('monitor.delete.description', { name: monitorToDelete?.name ?? '' })"
-        :loading="pending !== null"
-        @confirm="confirmDelete"
-      />
     </template>
-  </UContainer>
+  </UDashboardPanel>
 </template>

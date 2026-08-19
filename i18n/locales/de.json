@@ -8,7 +8,9 @@
     "monitors": "Monitore",
     "settings": "Einstellungen",
     "openMenu": "Menü öffnen",
-    "signedInAs": "Angemeldet als {username}"
+    "signedInAs": "Angemeldet als {username}",
+    "monitoring": "Überwachung",
+    "brand": "Uptime"
   },
   "common": {
     "save": "Speichern",
@@ -206,7 +208,7 @@
     },
     "overview": {
       "total": "Monitore",
-      "avgUptime": "Durchschnittliche Verfügbarkeit, 24 h"
+      "avgUptime": "Ø Verfügbarkeit, 24 h"
     }
   },
   "range": {
@@ -254,5 +256,13 @@
     "statusCodes": "Einzelne Codes oder Bereiche verwenden, zum Beispiel 200-299,301",
     "timeoutTooLong": "Das Zeitlimit darf das Prüfintervall nicht überschreiten",
     "monitorRequired": "Monitor für dieses Widget auswählen"
+  },
+  "sidebar": {
+    "allUp": "Alle Systeme erreichbar",
+    "someDown": "kein Monitor ausgefallen | 1 Monitor ausgefallen | {count} Monitore ausgefallen",
+    "somePending": "keine Prüfung unklar | 1 Prüfung unklar | {count} Prüfungen unklar",
+    "empty": "Noch keine Monitore",
+    "upOfTotal": "{up} von {total} erreichbar",
+    "uptimeShort": "{value} · 24 h"
   }
 }

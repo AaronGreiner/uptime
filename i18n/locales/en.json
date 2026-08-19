@@ -8,7 +8,9 @@
     "monitors": "Monitors",
     "settings": "Settings",
     "openMenu": "Open menu",
-    "signedInAs": "Signed in as {username}"
+    "signedInAs": "Signed in as {username}",
+    "monitoring": "Monitoring",
+    "brand": "Uptime"
   },
   "common": {
     "save": "Save",
@@ -206,7 +208,7 @@
     },
     "overview": {
       "total": "Monitors",
-      "avgUptime": "Average uptime, 24 h"
+      "avgUptime": "Avg. uptime, 24 h"
     }
   },
   "range": {
@@ -254,5 +256,13 @@
     "statusCodes": "Use single codes or ranges, for example 200-299,301",
     "timeoutTooLong": "The timeout must not exceed the check interval",
     "monitorRequired": "Select a monitor for this widget"
+  },
+  "sidebar": {
+    "allUp": "All systems up",
+    "someDown": "no monitors down | 1 monitor down | {count} monitors down",
+    "somePending": "no checks pending | 1 check pending | {count} checks pending",
+    "empty": "No monitors yet",
+    "upOfTotal": "{up} of {total} up",
+    "uptimeShort": "{value} · 24 h"
   }
 }

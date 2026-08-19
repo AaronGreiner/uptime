@@ -53,7 +53,7 @@ const tiles = computed(() => ([
 
     <div class="grid grid-cols-2 @[26rem]:grid-cols-3 @[46rem]:grid-cols-6 gap-3 @[26rem]:gap-4">
       <div class="min-w-0">
-        <p class="text-xs uppercase tracking-wide text-dimmed leading-tight">
+        <p class="text-sm text-muted leading-tight">
           {{ $t('widget.overview.total') }}
         </p>
         <p class="text-xl @[26rem]:text-2xl font-semibold tabular-nums">
@@ -66,7 +66,7 @@ const tiles = computed(() => ([
         :key="tile.key"
         class="min-w-0"
       >
-        <p class="text-xs uppercase tracking-wide text-dimmed leading-tight">
+        <p class="text-sm text-muted leading-tight">
           {{ $t(`status.${tile.key}`) }}
         </p>
         <p
@@ -78,7 +78,7 @@ const tiles = computed(() => ([
       </div>
 
       <div class="min-w-0 col-span-2 @[26rem]:col-span-3 @[46rem]:col-span-1">
-        <p class="text-xs uppercase tracking-wide text-dimmed leading-tight">
+        <p class="text-sm text-muted leading-tight">
           {{ $t('widget.overview.avgUptime') }}
         </p>
         <p class="text-xl @[26rem]:text-2xl font-semibold tabular-nums">

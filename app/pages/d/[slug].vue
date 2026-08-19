@@ -23,7 +23,6 @@ useSeoMeta({ title: () => dashboard.value?.name ?? t('nav.dashboards') })
 const editing = ref(false)
 const widgetModalOpen = ref(false)
 const dashboardModalOpen = ref(false)
-const createModalOpen = ref(false)
 const deleteModalOpen = ref(false)
 const deleting = ref(false)
 const editedWidget = ref<DashboardWidget | null>(null)
@@ -77,10 +76,6 @@ const menuItems = computed<DropdownMenuItem[][]>(() => [
     label: t('dashboard.edit'),
     icon: 'i-lucide-pencil',
     onSelect: () => { dashboardModalOpen.value = true }
-  }, {
-    label: t('dashboard.create'),
-    icon: 'i-lucide-plus',
-    onSelect: () => { createModalOpen.value = true }
   }],
   [{
     label: t('common.delete'),
@@ -89,120 +84,133 @@ const menuItems = computed<DropdownMenuItem[][]>(() => [
     onSelect: () => { deleteModalOpen.value = true }
   }]
 ])
+
+const showToolbar = computed(() => Boolean(dashboard.value?.description) || editing.value)
 </script>
 
 <template>
-  <UContainer
+  <UDashboardPanel
     v-if="dashboard"
-    class="py-6 sm:py-8 space-y-6"
+    id="dashboard"
   >
-    <header class="flex flex-wrap items-start justify-between gap-4">
-      <div class="min-w-0">
-        <h1 class="text-2xl font-semibold text-highlighted">
-          {{ dashboard.name }}
-        </h1>
-        <p
-          v-if="dashboard.description"
-          class="text-sm text-muted mt-1"
-        >
-          {{ dashboard.description }}
-        </p>
-      </div>
-
-      <div
-        v-if="isAdmin"
-        class="flex items-center gap-2"
+    <template #header>
+      <UDashboardNavbar
+        :title="dashboard.name"
+        icon="i-lucide-layout-dashboard"
       >
-        <UButton
-          v-if="editing"
-          icon="i-lucide-plus"
-          variant="subtle"
-          :label="$t('dashboard.addWidget')"
-          @click="openWidgetModal(null)"
-        />
-        <UButton
-          :icon="editing ? 'i-lucide-check' : 'i-lucide-pencil-ruler'"
-          :color="editing ? 'primary' : 'neutral'"
-          :variant="editing ? 'solid' : 'subtle'"
-          :label="$t(editing ? 'dashboard.editModeDone' : 'dashboard.editMode')"
-          @click="editing = !editing"
-        />
-        <UDropdownMenu
-          :items="menuItems"
-          :content="{ align: 'end' }"
+        <template #leading>
+          <UDashboardSidebarCollapse />
+        </template>
+
+        <template #right>
+          <template v-if="isAdmin">
+            <UButton
+              v-if="editing"
+              icon="i-lucide-plus"
+              color="neutral"
+              variant="subtle"
+              :label="$t('dashboard.addWidget')"
+              @click="openWidgetModal(null)"
+            />
+            <UButton
+              :icon="editing ? 'i-lucide-check' : 'i-lucide-pencil-ruler'"
+              :color="editing ? 'primary' : 'neutral'"
+              :variant="editing ? 'solid' : 'subtle'"
+              :label="$t(editing ? 'dashboard.editModeDone' : 'dashboard.editMode')"
+              @click="editing = !editing"
+            />
+            <UDropdownMenu
+              :items="menuItems"
+              :content="{ align: 'end' }"
+            >
+              <UButton
+                icon="i-lucide-ellipsis-vertical"
+                color="neutral"
+                variant="ghost"
+                :aria-label="$t('common.actions')"
+              />
+            </UDropdownMenu>
+          </template>
+        </template>
+      </UDashboardNavbar>
+
+      <UDashboardToolbar
+        v-if="showToolbar"
+        :ui="{ left: 'min-w-0 flex-1' }"
+      >
+        <template #left>
+          <p
+            v-if="editing"
+            class="flex items-center gap-2 text-sm text-muted min-w-0"
+          >
+            <UIcon
+              name="i-lucide-move"
+              class="size-4 shrink-0 text-primary"
+            />
+            <span class="truncate-target">{{ $t('dashboard.editModeHint') }}</span>
+          </p>
+          <p
+            v-else
+            class="text-sm text-muted truncate-target"
+          >
+            {{ dashboard.description }}
+          </p>
+        </template>
+      </UDashboardToolbar>
+    </template>
+
+    <template #body>
+      <DashboardGrid
+        v-if="dashboard.widgets.length"
+        :dashboard="dashboard"
+        :monitors="monitors"
+        :editing="editing"
+        @edit-widget="openWidgetModal($event)"
+        @remove-widget="removeWidget($event)"
+      />
+
+      <UEmpty
+        v-else
+        icon="i-lucide-layout-dashboard"
+        :title="$t('dashboard.empty.title')"
+        :description="$t(isAdmin ? 'dashboard.empty.description' : 'dashboard.empty.readonly')"
+        class="flex-1"
+      >
+        <template
+          v-if="isAdmin"
+          #actions
         >
           <UButton
-            icon="i-lucide-ellipsis-vertical"
-            color="neutral"
-            variant="ghost"
-            :aria-label="$t('common.actions')"
+            icon="i-lucide-plus"
+            :label="$t('dashboard.addWidget')"
+            @click="editing = true; openWidgetModal(null)"
           />
-        </UDropdownMenu>
-      </div>
-    </header>
+        </template>
+      </UEmpty>
 
-    <UAlert
-      v-if="editing"
-      color="neutral"
-      variant="subtle"
-      icon="i-lucide-move"
-      :description="$t('dashboard.editModeHint')"
-    />
+      <template v-if="isAdmin">
+        <DashboardWidgetFormModal
+          v-model:open="widgetModalOpen"
+          :dashboard-id="dashboard.id"
+          :widget="editedWidget"
+          :monitors="monitors"
+          @saved="refreshDashboard()"
+        />
 
-    <DashboardGrid
-      v-if="dashboard.widgets.length"
-      :dashboard="dashboard"
-      :monitors="monitors"
-      :editing="editing"
-      @edit-widget="openWidgetModal($event)"
-      @remove-widget="removeWidget($event)"
-    />
+        <DashboardFormModal
+          v-model:open="dashboardModalOpen"
+          :dashboard="dashboard"
+          @saved="refreshDashboards(); router.push(`/d/${$event.slug}`)"
+        />
 
-    <UEmpty
-      v-else
-      icon="i-lucide-layout-dashboard"
-      :title="$t('dashboard.empty.title')"
-      :description="$t(isAdmin ? 'dashboard.empty.description' : 'dashboard.empty.readonly')"
-    >
-      <template
-        v-if="isAdmin"
-        #actions
-      >
-        <UButton
-          icon="i-lucide-plus"
-          :label="$t('dashboard.addWidget')"
-          @click="editing = true; openWidgetModal(null)"
+        <ConfirmModal
+          v-model:open="deleteModalOpen"
+          :title="$t('dashboard.delete.title')"
+          :description="$t('dashboard.delete.description', { name: dashboard.name })"
+          :loading="deleting"
+          @confirm="deleteDashboard"
         />
       </template>
-    </UEmpty>
-
-    <template v-if="isAdmin">
-      <DashboardWidgetFormModal
-        v-model:open="widgetModalOpen"
-        :dashboard-id="dashboard.id"
-        :widget="editedWidget"
-        :monitors="monitors"
-        @saved="refreshDashboard()"
-      />
-
-      <DashboardFormModal
-        v-model:open="dashboardModalOpen"
-        :dashboard="dashboard"
-        @saved="refreshDashboards(); router.push(`/d/${$event.slug}`)"
-      />
-
-      <DashboardFormModal
-        v-model:open="createModalOpen"
-        @saved="refreshDashboards(); router.push(`/d/${$event.slug}`)"
-      />
-
-      <ConfirmModal
-        v-model:open="deleteModalOpen"
-        :title="$t('dashboard.delete.title')"
-        :description="$t('dashboard.delete.description', { name: dashboard.name })"
-        :loading="deleting"
-        @confirm="deleteDashboard"
-      />
     </template>
-  </UContainer>
+  </UDashboardPanel>
 </template>
