@@ -119,6 +119,16 @@ async function runCheck(monitor: MonitorRow): Promise<void> {
 export function recordCheckResult(monitor: MonitorRow, result: CheckResult): NotificationEvent | null {
   const database = useDatabase()
   const now = nowInSeconds()
+
+  // The monitor can be gone by the time a slow check returns: deleting one, or
+  // wiping the instance from the settings, does not wait for the in-flight
+  // checks. Writing the heartbeat would fail on the foreign key.
+  const stillExists = database.select({ id: monitors.id }).from(monitors).where(eq(monitors.id, monitor.id)).get()
+
+  if (!stillExists) {
+    return null
+  }
+
   const previous = database.select().from(monitorState).where(eq(monitorState.monitorId, monitor.id)).get()
   const previousStatus = previous?.status ?? 'pending'
 

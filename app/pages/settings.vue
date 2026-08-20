@@ -5,7 +5,7 @@ import type { z } from 'zod'
 
 definePageMeta({ middleware: 'admin' })
 
-const { t } = useI18n()
+const { t, locale, locales, setLocale } = useI18n()
 const toast = useToast()
 const colorMode = useColorMode()
 const { admin, refreshSession } = useAdmin()
@@ -33,6 +33,67 @@ const theme = computed<ThemePreference>({
     colorMode.preference = value
   }
 })
+
+const localeItems = computed(() => locales.value.map(entry => ({
+  label: entry.name ?? entry.code,
+  value: entry.code
+})))
+
+const language = computed({
+  get: () => locale.value,
+  set: (value) => {
+    void setLocale(value)
+  }
+})
+
+const clearOpen = ref(false)
+const seedOpen = ref(false)
+const clearing = ref(false)
+const seeding = ref(false)
+
+/**
+ * Both actions replace what every page is showing, so the shared caches are
+ * refetched before the toast appears.
+ */
+async function onClearData() {
+  clearing.value = true
+
+  try {
+    await $fetch('/api/admin/data', { method: 'DELETE' })
+    await refreshNuxtData()
+
+    clearOpen.value = false
+    toast.add({ title: t('settings.data.clear.done'), color: 'success', icon: 'i-lucide-check' })
+  } catch (error) {
+    toast.add({ title: t('common.error'), description: resolveErrorMessage(error), color: 'error' })
+  } finally {
+    clearing.value = false
+  }
+}
+
+async function onSeedDemoData() {
+  seeding.value = true
+
+  try {
+    const summary = await $fetch('/api/admin/demo-data', { method: 'POST' })
+    await refreshNuxtData()
+
+    seedOpen.value = false
+    toast.add({
+      title: t('settings.data.demo.done', {
+        monitors: summary.monitors,
+        groups: summary.groups,
+        days: summary.historyDays
+      }),
+      color: 'success',
+      icon: 'i-lucide-check'
+    })
+  } catch (error) {
+    toast.add({ title: t('common.error'), description: resolveErrorMessage(error), color: 'error' })
+  } finally {
+    seeding.value = false
+  }
+}
 
 async function onSubmit(event: FormSubmitEvent<z.output<typeof accountUpdateSchema>>) {
   submitting.value = true
@@ -145,10 +206,87 @@ async function onSubmit(event: FormSubmitEvent<z.output<typeof accountUpdateSche
             </UFormField>
 
             <UFormField :label="$t('settings.language')">
-              <AppLocaleSelect variant="full" />
+              <USelectMenu
+                v-model="language"
+                :items="localeItems"
+                value-key="value"
+                :search-input="false"
+                class="w-full"
+              />
             </UFormField>
           </div>
         </UCard>
+
+        <UCard
+          :title="$t('settings.data.title')"
+          :description="$t('settings.data.description')"
+        >
+          <div class="flex flex-col gap-4">
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+              <div class="min-w-0 sm:flex-1">
+                <p class="font-medium text-highlighted">
+                  {{ $t('settings.data.demo.label') }}
+                </p>
+                <p class="text-sm text-muted">
+                  {{ $t('settings.data.demo.hint') }}
+                </p>
+              </div>
+
+              <UButton
+                color="neutral"
+                variant="subtle"
+                icon="i-lucide-database-zap"
+                class="self-start shrink-0"
+                :label="$t('settings.data.demo.action')"
+                :loading="seeding"
+                :disabled="clearing"
+                @click="seedOpen = true"
+              />
+            </div>
+
+            <USeparator />
+
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+              <div class="min-w-0 sm:flex-1">
+                <p class="font-medium text-highlighted">
+                  {{ $t('settings.data.clear.label') }}
+                </p>
+                <p class="text-sm text-muted">
+                  {{ $t('settings.data.clear.hint') }}
+                </p>
+              </div>
+
+              <UButton
+                color="error"
+                variant="subtle"
+                icon="i-lucide-trash-2"
+                class="self-start shrink-0"
+                :label="$t('settings.data.clear.action')"
+                :loading="clearing"
+                :disabled="seeding"
+                @click="clearOpen = true"
+              />
+            </div>
+          </div>
+        </UCard>
+
+        <ConfirmModal
+          v-model:open="seedOpen"
+          :title="$t('settings.data.demo.title')"
+          :description="$t('settings.data.demo.description')"
+          :confirm-label="$t('settings.data.demo.action')"
+          :loading="seeding"
+          @confirm="onSeedDemoData"
+        />
+
+        <ConfirmModal
+          v-model:open="clearOpen"
+          :title="$t('settings.data.clear.title')"
+          :description="$t('settings.data.clear.description')"
+          :confirm-label="$t('settings.data.clear.action')"
+          :loading="clearing"
+          @confirm="onClearData"
+        />
       </div>
     </template>
   </UDashboardPanel>

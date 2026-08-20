@@ -7,10 +7,12 @@ const router = useRouter()
 const appName = useRuntimeConfig().public.appName
 
 const { data: dashboards, refresh: refreshDashboards } = useDashboards()
-const { data: monitors, refresh: refreshMonitors } = useMonitors()
+const { refresh: refreshMonitors } = useMonitors()
 const { refresh: refreshSummary } = useStatusSummary()
+const { items: monitorItems } = useMonitorNavigation()
 
 // One polling loop for the whole application: every page reads the same caches.
+// Groups are left out on purpose, they only change when the admin edits them.
 usePolling(() => {
   refreshMonitors()
   refreshSummary()
@@ -35,12 +37,7 @@ const navigation = computed<NavigationMenuItem[][]>(() => {
       : [])
   ], [
     { label: t('nav.monitoring'), type: 'label' },
-    {
-      label: t('nav.monitors'),
-      icon: 'i-lucide-activity',
-      to: '/monitors',
-      badge: monitors.value.length || undefined
-    }
+    ...monitorItems.value
   ]]
 
   if (isAdmin.value) {

@@ -100,7 +100,8 @@
       "intervalSeconds": "Check interval",
       "timeoutSeconds": "Timeout",
       "retries": "Retries before down",
-      "active": "Active"
+      "active": "Active",
+      "group": "Group"
     },
     "hints": {
       "expectedStatusCodes": "Single codes and ranges, separated by commas. For example 200-299,301.",
@@ -109,7 +110,8 @@
       "interval": "Seconds between two checks.",
       "timeout": "Seconds a single check may take.",
       "ignoreTls": "Accepts self signed and expired certificates. Only use this for internal hosts.",
-      "active": "Paused monitors keep their history but are not checked."
+      "active": "Paused monitors keep their history but are not checked.",
+      "group": "Groups organise the sidebar tree and the monitor list."
     },
     "actions": {
       "checkNow": "Check now",
@@ -139,6 +141,40 @@
       "statusCode": "Code",
       "target": "Target",
       "interval": "every {seconds}"
+    },
+    "allMonitors": "All monitors"
+  },
+  "group": {
+    "title": "Groups",
+    "create": "New group",
+    "edit": "Edit group",
+    "addChild": "Add subgroup",
+    "created": "Group \"{name}\" created.",
+    "updated": "Group \"{name}\" saved.",
+    "deleted": "Group \"{name}\" deleted.",
+    "formDescription": "Groups can be nested. A monitor belongs to at most one of them.",
+    "namePlaceholder": "Production",
+    "none": "No group",
+    "root": "No parent group",
+    "ungrouped": "Without a group",
+    "filterAll": "All groups",
+    "emptyGroup": "This group is still empty.",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "viewGrouped": "Group by group",
+    "viewFlat": "Show as one list",
+    "fields": {
+      "name": "Name",
+      "parent": "Parent group",
+      "icon": "Icon",
+      "description": "Description"
+    },
+    "hints": {
+      "parent": "Nest this group below another one, or leave it at the top level."
+    },
+    "delete": {
+      "title": "Delete group",
+      "description": "\"{name}\" will be removed. Its subgroups and monitors are kept and move up to the parent group."
     }
   },
   "dashboard": {
@@ -235,6 +271,26 @@
       "light": "Light",
       "dark": "Dark",
       "system": "System"
+    },
+    "data": {
+      "title": "Data",
+      "description": "Bulk actions on everything this instance has recorded.",
+      "clear": {
+        "label": "Delete all data",
+        "hint": "Removes every monitor, group, dashboard and all recorded history. The admin account and this instance's settings stay.",
+        "action": "Delete everything",
+        "title": "Delete all data?",
+        "description": "Every monitor, group, dashboard and heartbeat is removed permanently. This cannot be undone.",
+        "done": "All data deleted."
+      },
+      "demo": {
+        "label": "Reset demo data",
+        "hint": "Deletes everything first, then creates a fresh set of demo groups, monitors and generated history.",
+        "action": "Seed demo data",
+        "title": "Replace everything with demo data?",
+        "description": "The existing data is deleted first. The demo monitors point at real public endpoints and are checked as soon as they exist.",
+        "done": "Created {monitors} demo monitors in {groups} groups with {days} days of history."
+      }
     }
   },
   "error": {

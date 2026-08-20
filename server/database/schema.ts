@@ -1,4 +1,5 @@
 import { index, integer, primaryKey, sqliteTable, text, unique } from 'drizzle-orm/sqlite-core'
+import type { AnySQLiteColumn } from 'drizzle-orm/sqlite-core'
 import type { WidgetConfig, WidgetLayout, WidgetType } from '../../shared/types/dashboard'
 import type { HeartbeatStatus, MonitorStatus, MonitorType } from '../../shared/types/monitor'
 
@@ -17,11 +18,35 @@ export const users = sqliteTable('users', {
   updatedAt: timestamp('updated_at').notNull()
 })
 
+/**
+ * Monitors are organised in a tree. `parent_id` is nullable, so a group without
+ * a parent is a root; the depth is bounded by MONITOR_GROUP_MAX_DEPTH rather
+ * than by the schema. Deleting a group never deletes what it holds: the API
+ * lifts subgroups and monitors up to the parent first, and the `set null`
+ * fallbacks keep the tree consistent should a row ever be removed directly.
+ */
+export const monitorGroups = sqliteTable('monitor_groups', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').notNull(),
+  description: text('description'),
+  /** Iconify name rendered in the tree, for example `i-lucide-server`. */
+  icon: text('icon'),
+  parentId: integer('parent_id').references((): AnySQLiteColumn => monitorGroups.id, { onDelete: 'set null' }),
+  /** Manual order among siblings. Ties are broken by name. */
+  position: integer('position').notNull().default(0),
+  createdAt: timestamp('created_at').notNull(),
+  updatedAt: timestamp('updated_at').notNull()
+}, table => [
+  index('monitor_groups_parent_idx').on(table.parentId)
+])
+
 export const monitors = sqliteTable('monitors', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   name: text('name').notNull(),
   type: text('type').$type<MonitorType>().notNull(),
   description: text('description'),
+  /** Null means the monitor sits at the root of the tree, next to the groups. */
+  groupId: integer('group_id').references(() => monitorGroups.id, { onDelete: 'set null' }),
 
   // Scheduling
   intervalSeconds: integer('interval_seconds').notNull().default(60),
@@ -49,7 +74,8 @@ export const monitors = sqliteTable('monitors', {
   createdAt: timestamp('created_at').notNull(),
   updatedAt: timestamp('updated_at').notNull()
 }, table => [
-  index('monitors_active_idx').on(table.active)
+  index('monitors_active_idx').on(table.active),
+  index('monitors_group_idx').on(table.groupId)
 ])
 
 /**
@@ -153,6 +179,7 @@ export const settings = sqliteTable('settings', {
   updatedAt: timestamp('updated_at').notNull()
 })
 
+export type MonitorGroupRow = typeof monitorGroups.$inferSelect
 export type MonitorRow = typeof monitors.$inferSelect
 export type MonitorStateRow = typeof monitorState.$inferSelect
 export type HeartbeatRow = typeof heartbeats.$inferSelect

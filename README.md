@@ -11,6 +11,8 @@ Uptime Kuma, built with Nuxt 4, Nuxt UI 4 and SQLite.
   layout stored per breakpoint.
 - **HTTP(S) and ping monitors** — status code ranges, keyword matching, custom
   headers, TLS certificate expiry, ICMP round trip times.
+- **Nested groups** — organise monitors into a tree, browse it from the sidebar,
+  and keep the full monitor list one click away.
 - **Light and dark mode**, **English and German**.
 - **Long history, small database** — raw results roll into hourly aggregates and
   are pruned on a schedule.

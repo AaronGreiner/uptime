@@ -1,10 +1,13 @@
 import { randomBytes } from 'node:crypto'
-import { sql } from 'drizzle-orm'
-import type { WidgetType } from '../../shared/types/dashboard'
+import { eq, inArray } from 'drizzle-orm'
+import type { WidgetConfig, WidgetType } from '../../shared/types/dashboard'
 import { buildDefaultWidgetLayout } from '../../shared/utils/grid'
-import { dashboards, dashboardWidgets, heartbeats, monitors, monitorState, users } from '../database/schema'
+import { dashboards, dashboardWidgets, heartbeats, monitorGroups, monitors, monitorState, notificationChannels, settings, users } from '../database/schema'
 import { aggregateHourlyStats } from './maintenance'
 import { nowInSeconds } from './scheduler'
+
+/** Slug of the dashboard that both the default seed and the demo seed fill. */
+const OVERVIEW_SLUG = 'overview'
 
 /**
  * Creates the single admin account on an empty database.
@@ -57,7 +60,7 @@ export function seedDefaultDashboard(): void {
   const now = nowInSeconds()
 
   database.insert(dashboards).values({
-    slug: 'overview',
+    slug: OVERVIEW_SLUG,
     name: 'Overview',
     description: null,
     isDefault: true,
@@ -67,30 +70,96 @@ export function seedDefaultDashboard(): void {
   }).run()
 }
 
+interface DemoGroup {
+  /** Referenced by the monitors and by the child groups below. */
+  key: string
+  name: string
+  icon: string
+  description?: string
+  parent?: string
+}
+
+/**
+ * Three levels deep on the production branch, which is what makes the tree in
+ * the sidebar worth looking at.
+ */
+const DEMO_GROUPS: DemoGroup[] = [
+  { key: 'production', name: 'Production', icon: 'i-lucide-rocket', description: 'Everything customers touch' },
+  { key: 'production/web', name: 'Web', icon: 'i-lucide-globe', parent: 'production' },
+  { key: 'production/api', name: 'APIs', icon: 'i-lucide-webhook', parent: 'production' },
+  { key: 'production/docs', name: 'Documentation', icon: 'i-lucide-book-open', parent: 'production' },
+  { key: 'infrastructure', name: 'Infrastructure', icon: 'i-lucide-server', description: 'Network and edge' },
+  { key: 'infrastructure/dns', name: 'DNS', icon: 'i-lucide-network', parent: 'infrastructure' },
+  { key: 'infrastructure/edge', name: 'Edge', icon: 'i-lucide-shield', parent: 'infrastructure' },
+  { key: 'staging', name: 'Staging', icon: 'i-lucide-flask-conical', description: 'Preview environment, checks are paused' },
+  { key: 'vendors', name: 'Vendors', icon: 'i-lucide-puzzle', description: 'Dependencies outside our control' }
+]
+
 interface DemoMonitor {
   name: string
+  /** Key of the owning group in DEMO_GROUPS. */
+  group: string
   type: 'http' | 'ping'
   url?: string
   hostname?: string
   description: string
-  /** Probability that a generated heartbeat is a failure. */
+  intervalSeconds: number
+  /** Probability that a generated heartbeat starts an outage. */
   failureRate: number
   baseLatency: number
+  active?: boolean
+  /** Days until the fake TLS certificate expires, for the certificate card. */
+  certificateDays?: number
+  /** Ends the generated history in an outage, so the demo shows an incident. */
+  endsDown?: boolean
 }
 
+/**
+ * Every entry but the last points at a real, public endpoint, so enabling the
+ * demo seed makes the scheduler send actual requests to those hosts. The
+ * intervals are deliberately generous for that reason.
+ */
 const DEMO_MONITORS: DemoMonitor[] = [
-  { name: 'Nuxt', type: 'http', url: 'https://nuxt.com', description: 'Public website', failureRate: 0.004, baseLatency: 120 },
-  { name: 'GitHub API', type: 'http', url: 'https://api.github.com', description: 'REST API endpoint', failureRate: 0.01, baseLatency: 210 },
-  { name: 'Cloudflare DNS', type: 'ping', hostname: '1.1.1.1', description: 'ICMP reachability', failureRate: 0.002, baseLatency: 14 },
-  { name: 'Example Service', type: 'http', url: 'https://example.com', description: 'Flaky demo service', failureRate: 0.08, baseLatency: 340 }
+  { name: 'Nuxt', group: 'production/web', type: 'http', url: 'https://nuxt.com', description: 'Marketing site', intervalSeconds: 120, failureRate: 0.003, baseLatency: 120, certificateDays: 63 },
+  { name: 'Vue', group: 'production/web', type: 'http', url: 'https://vuejs.org', description: 'Framework site', intervalSeconds: 300, failureRate: 0.004, baseLatency: 145, certificateDays: 41 },
+  { name: 'Vite', group: 'production/web', type: 'http', url: 'https://vite.dev', description: 'Build tool site', intervalSeconds: 300, failureRate: 0.004, baseLatency: 160, certificateDays: 9 },
+
+  { name: 'GitHub API', group: 'production/api', type: 'http', url: 'https://api.github.com', description: 'REST API endpoint', intervalSeconds: 120, failureRate: 0.006, baseLatency: 210, certificateDays: 78 },
+  { name: 'npm Registry', group: 'production/api', type: 'http', url: 'https://registry.npmjs.org', description: 'Package metadata', intervalSeconds: 300, failureRate: 0.008, baseLatency: 260, certificateDays: 52 },
+
+  { name: 'Nuxt UI', group: 'production/docs', type: 'http', url: 'https://ui.nuxt.com', description: 'Component documentation', intervalSeconds: 300, failureRate: 0.003, baseLatency: 135, certificateDays: 63 },
+  { name: 'MDN Web Docs', group: 'production/docs', type: 'http', url: 'https://developer.mozilla.org', description: 'Reference documentation', intervalSeconds: 300, failureRate: 0.005, baseLatency: 190, certificateDays: 88 },
+
+  { name: 'Cloudflare DNS', group: 'infrastructure/dns', type: 'ping', hostname: '1.1.1.1', description: 'ICMP reachability', intervalSeconds: 60, failureRate: 0.001, baseLatency: 14 },
+  { name: 'Google DNS', group: 'infrastructure/dns', type: 'ping', hostname: '8.8.8.8', description: 'ICMP reachability', intervalSeconds: 120, failureRate: 0.002, baseLatency: 21 },
+  { name: 'Quad9 DNS', group: 'infrastructure/dns', type: 'ping', hostname: '9.9.9.9', description: 'ICMP reachability', intervalSeconds: 300, failureRate: 0.004, baseLatency: 33 },
+
+  { name: 'Cloudflare Edge', group: 'infrastructure/edge', type: 'http', url: 'https://www.cloudflare.com', description: 'Edge network entry point', intervalSeconds: 300, failureRate: 0.002, baseLatency: 95, certificateDays: 120 },
+
+  { name: 'Preview Deploy', group: 'staging', type: 'http', url: 'https://example.com', description: 'Paused until the next release', intervalSeconds: 300, failureRate: 0.05, baseLatency: 320, active: false, certificateDays: 27 },
+
+  { name: 'Example Service', group: 'vendors', type: 'http', url: 'https://example.com', description: 'Flaky third party', intervalSeconds: 300, failureRate: 0.05, baseLatency: 340, certificateDays: 34 },
+  // Points at a closed local port on purpose: without one failing monitor the
+  // demo never shows what an incident looks like.
+  { name: 'Billing (legacy)', group: 'vendors', type: 'http', url: 'http://127.0.0.1:9/', description: 'Unreachable on purpose, so the demo has an incident to show', intervalSeconds: 60, failureRate: 0.02, baseLatency: 480, endsDown: true }
 ]
 
+interface CreatedMonitor {
+  id: number
+  demo: DemoMonitor
+}
+
+/** What a demo seed produced, so the admin UI can report it back. */
+export interface DemoDataSummary {
+  groups: number
+  monitors: number
+  historyDays: number
+}
+
 /**
- * Populates the database with demo monitors, a pre-built dashboard and synthetic
- * history. Controlled by NUXT_SEED_DEMO_DATA and only ever runs once.
- *
- * The demo monitors point at real, public endpoints, so enabling this makes the
- * scheduler send actual requests to those hosts.
+ * Populates an empty database with demo data on boot. Controlled by
+ * NUXT_SEED_DEMO_DATA and only ever runs once; the admin can ask for a fresh
+ * set at any time through reseedDemoData.
  */
 export function seedDemoData(): void {
   const database = useDatabase()
@@ -107,21 +176,43 @@ export function seedDemoData(): void {
     return
   }
 
+  createDemoData()
+}
+
+/**
+ * Throws the current contents away and writes a fresh set of demo data. Unlike
+ * seedDemoData this ignores both guards: an admin asking for demo data in the
+ * UI knows the database is not empty.
+ */
+export function reseedDemoData(): DemoDataSummary {
+  clearAllData()
+
+  return createDemoData()
+}
+
+/**
+ * Writes demo groups, monitors, synthetic history and a filled overview
+ * dashboard. Expects an empty database, both callers make sure of that.
+ */
+function createDemoData(): DemoDataSummary {
+  const database = useDatabase()
   const { seed } = useRuntimeConfig()
   const now = nowInSeconds()
-  const created: Array<{ id: number, demo: DemoMonitor }> = []
+  const groupIds = createDemoGroups(now)
+  const created: CreatedMonitor[] = []
 
   for (const demo of DEMO_MONITORS) {
     const row = database.insert(monitors).values({
       name: demo.name,
       type: demo.type,
       description: demo.description,
+      groupId: groupIds.get(demo.group) ?? null,
       url: demo.url ?? '',
       hostname: demo.hostname ?? '',
-      intervalSeconds: 60,
+      intervalSeconds: demo.intervalSeconds,
       timeoutSeconds: 10,
       retries: 1,
-      active: true,
+      active: demo.active ?? true,
       createdAt: now,
       updatedAt: now
     }).returning({ id: monitors.id }).get()
@@ -130,31 +221,80 @@ export function seedDemoData(): void {
   }
 
   generateDemoHistory(created, seed.demoHistoryDays)
-  buildDemoDashboard(created.map(entry => entry.id), now)
+  buildDemoDashboard(groupIds, created, now)
 
   aggregateHourlyStats()
   setSetting(SETTING_KEYS.demoSeeded, true)
 
-  console.info(`[seed] Created ${created.length} demo monitors with ${seed.demoHistoryDays} days of generated history.`)
+  console.info(
+    `[seed] Created ${groupIds.size} demo groups and ${created.length} demo monitors `
+    + `with ${seed.demoHistoryDays} days of generated history.`
+  )
+
+  return { groups: groupIds.size, monitors: created.length, historyDays: seed.demoHistoryDays }
 }
 
-/** Writes synthetic heartbeats so charts have something to show immediately. */
-function generateDemoHistory(created: Array<{ id: number, demo: DemoMonitor }>, days: number): void {
+/** Inserts the group tree parents first, so every parent id is known. */
+function createDemoGroups(now: number): Map<string, number> {
+  const database = useDatabase()
+  const ids = new Map<string, number>()
+
+  // DEMO_GROUPS lists parents before their children, which is all the ordering
+  // this needs.
+  DEMO_GROUPS.forEach((group, position) => {
+    const row = database.insert(monitorGroups).values({
+      name: group.name,
+      description: group.description ?? null,
+      icon: group.icon,
+      parentId: group.parent ? ids.get(group.parent) ?? null : null,
+      position,
+      createdAt: now,
+      updatedAt: now
+    }).returning({ id: monitorGroups.id }).get()
+
+    ids.set(group.key, row.id)
+  })
+
+  return ids
+}
+
+/**
+ * Writes synthetic heartbeats so charts have something to show immediately.
+ *
+ * The last hour is sampled once a minute and everything older every five
+ * minutes: the one hour chart buckets per minute, so a uniformly coarse history
+ * would leave it almost empty.
+ */
+function generateDemoHistory(created: CreatedMonitor[], days: number): void {
   const database = useDatabase()
   const now = nowInSeconds()
-  const stepSeconds = 300
-  const steps = Math.max(0, Math.round(days * 86_400 / stepSeconds))
+  const fineWindow = 3600
+  const coarseStep = 300
+  const fineStep = 60
+
+  const timestamps: number[] = []
+
+  for (let at = now - Math.max(0, Math.round(days * 86_400)); at < now - fineWindow; at += coarseStep) {
+    timestamps.push(at)
+  }
+
+  for (let at = now - fineWindow; at <= now; at += fineStep) {
+    timestamps.push(at)
+  }
 
   database.transaction((transaction) => {
     for (const { id, demo } of created) {
+      // The closing outage is measured in samples, which are one minute apart
+      // inside the fine window.
+      const endsDownFrom = demo.endsDown ? timestamps.length - 34 : Number.POSITIVE_INFINITY
       let outageRemaining = 0
       let lastStatus: 'up' | 'down' = 'up'
       let lastLatency: number | null = demo.baseLatency
 
-      for (let step = steps; step > 0; step--) {
-        const checkedAt = now - step * stepSeconds
-
-        if (outageRemaining > 0) {
+      for (const [index, checkedAt] of timestamps.entries()) {
+        if (index >= endsDownFrom) {
+          outageRemaining = 1
+        } else if (outageRemaining > 0) {
           outageRemaining--
         } else if (Math.random() < demo.failureRate) {
           outageRemaining = 1 + Math.floor(Math.random() * 4)
@@ -188,9 +328,11 @@ function generateDemoHistory(created: Array<{ id: number, demo: DemoMonitor }>, 
         lastCheckedAt: now,
         nextCheckAt: now + Math.floor(Math.random() * 20),
         latencyMs: lastLatency,
-        message: lastStatus === 'up' ? 'HTTP 200' : 'Generated outage',
-        consecutiveFailures: lastStatus === 'down' ? 1 : 0,
+        message: lastStatus === 'up' ? 'HTTP 200' : 'Connection refused',
+        consecutiveFailures: lastStatus === 'down' ? 3 : 0,
         consecutiveSuccesses: lastStatus === 'up' ? 1 : 0,
+        certificateExpiresAt: demo.certificateDays ? now + demo.certificateDays * 86_400 : null,
+        certificateCheckedAt: demo.certificateDays ? now : null,
         statusChangedAt: now,
         updatedAt: now
       }).onConflictDoNothing().run()
@@ -198,20 +340,22 @@ function generateDemoHistory(created: Array<{ id: number, demo: DemoMonitor }>, 
   })
 }
 
-/** Lays out a demo dashboard mixing every widget type. */
-function buildDemoDashboard(monitorIds: number[], now: number): void {
+/**
+ * Fills the default dashboard rather than adding a second one: the overview is
+ * where the app lands, so an empty grid there is the first thing a new install
+ * sees. Sections follow the group tree, one heading per top level group.
+ */
+function buildDemoDashboard(groupIds: Map<string, number>, created: CreatedMonitor[], now: number): void {
   const database = useDatabase()
-  const dashboard = database.insert(dashboards).values({
-    slug: 'demo',
-    name: 'Demo',
-    description: 'Generated dashboard showcasing the available widgets',
-    isDefault: false,
-    position: 1,
-    createdAt: now,
-    updatedAt: now
-  }).returning({ id: dashboards.id }).get()
+  const dashboard = database.select().from(dashboards).where(eq(dashboards.slug, OVERVIEW_SLUG)).get()
 
-  const insertWidget = (type: WidgetType, x: number, y: number, monitorId: number | null, config: Record<string, unknown>) => {
+  if (!dashboard) {
+    return
+  }
+
+  let row = 0
+
+  const place = (type: WidgetType, x: number, y: number, monitorId: number | null, config: WidgetConfig) => {
     database.insert(dashboardWidgets).values({
       dashboardId: dashboard.id,
       type,
@@ -223,31 +367,67 @@ function buildDemoDashboard(monitorIds: number[], now: number): void {
     }).run()
   }
 
-  insertWidget('status-overview', 0, 0, null, {})
+  place('status-overview', 0, row, null, {})
+  row += 3
 
-  monitorIds.forEach((monitorId, index) => {
-    insertWidget('monitor', (index % 3) * 4, 3 + Math.floor(index / 3) * 4, monitorId, { heartbeatCount: 40 })
-  })
+  // Only the top level groups get a section, the nested ones would fragment the
+  // grid into rows of one or two cards.
+  for (const group of DEMO_GROUPS.filter(entry => !entry.parent)) {
+    const members = created.filter(
+      entry => entry.demo.group === group.key || entry.demo.group.startsWith(`${group.key}/`)
+    )
 
-  const chartRow = 3 + Math.ceil(monitorIds.length / 3) * 4
+    if (!members.length) {
+      continue
+    }
 
-  if (monitorIds[0]) {
-    insertWidget('latency-chart', 0, chartRow, monitorIds[0], { range: '24h' })
+    place('heading', 0, row, null, { title: group.name, level: 2 })
+    row += 1
+
+    members.forEach((member, index) => {
+      place('monitor', (index % 3) * 4, row + Math.floor(index / 3) * 4, member.id, { heartbeatCount: 40 })
+    })
+
+    row += Math.ceil(members.length / 3) * 4
   }
 
-  if (monitorIds[1]) {
-    insertWidget('uptime-summary', 6, chartRow, monitorIds[1], { range: '7d' })
+  const flagship = created.find(entry => entry.demo.name === 'Nuxt')
+  const secondary = created.find(entry => entry.demo.name === 'GitHub API')
+
+  if (flagship && secondary) {
+    place('heading', 0, row, null, { title: 'Response time', level: 2 })
+    row += 1
+
+    place('latency-chart', 0, row, flagship.id, { range: '24h' })
+    place('uptime-summary', 6, row, flagship.id, { range: '7d' })
+    place('uptime-summary', 9, row, secondary.id, { range: '7d' })
   }
 }
 
-/** Drops every demo artefact again, used by the reset endpoint. */
-export function clearDemoData(): void {
+/**
+ * Empties the instance: monitors with their whole history, the group tree,
+ * every dashboard and every notification channel. The admin account survives,
+ * and the empty overview dashboard is put back, so what is left is exactly what
+ * a fresh install starts with.
+ */
+export function clearAllData(): void {
   const database = useDatabase()
 
   database.transaction((transaction) => {
+    // Heartbeats, hourly stats, monitor state and the widgets pointing at a
+    // monitor go with the monitors; the widgets of a dashboard go with it.
     transaction.delete(monitors).run()
-    transaction.run(sql`delete from dashboards where slug = 'demo'`)
+    transaction.delete(monitorGroups).run()
+    transaction.delete(dashboards).run()
+    transaction.delete(notificationChannels).run()
+
+    // Both markers describe data that no longer exists. Removing the rows keeps
+    // the table in the state a fresh install has it in.
+    transaction
+      .delete(settings)
+      .where(inArray(settings.key, [SETTING_KEYS.demoSeeded, SETTING_KEYS.aggregatedThrough]))
+      .run()
   })
 
-  setSetting(SETTING_KEYS.demoSeeded, false)
+  seedDefaultDashboard()
 }

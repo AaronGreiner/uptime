@@ -76,10 +76,18 @@ const boundedNumber = (min: number, max: number) => z
   .min(min, { error: message('validation.outOfRange', { min, max }) })
   .max(max, { error: message('validation.outOfRange', { min, max }) })
 
+const optionalId = () => z
+  .number()
+  .int()
+  .positive()
+  .nullish()
+  .transform(value => value ?? null)
+
 export const monitorInputSchema = z.object({
   name: requiredText(120),
   type: z.enum(['http', 'ping'], { error: message('validation.required') }),
   description: optionalText(500),
+  groupId: optionalId(),
 
   intervalSeconds: boundedNumber(MONITOR_INTERVAL_BOUNDS.min, MONITOR_INTERVAL_BOUNDS.max),
   timeoutSeconds: boundedNumber(MONITOR_TIMEOUT_BOUNDS.min, MONITOR_TIMEOUT_BOUNDS.max),
@@ -133,6 +141,21 @@ function isHttpUrl(value: string): boolean {
 }
 
 export type MonitorInput = z.output<typeof monitorInputSchema>
+
+export const monitorGroupInputSchema = z.object({
+  name: requiredText(120),
+  description: optionalText(500),
+  /** Free form so a future icon picker is not blocked by an enum here. */
+  icon: optionalText(60),
+  parentId: optionalId()
+})
+
+export type MonitorGroupInput = z.output<typeof monitorGroupInputSchema>
+
+/** Swaps a group with the neighbouring sibling in the given direction. */
+export const monitorGroupMoveSchema = z.object({
+  direction: z.enum(['up', 'down'])
+})
 
 export const dashboardInputSchema = z.object({
   name: requiredText(120),

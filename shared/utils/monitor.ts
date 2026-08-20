@@ -22,6 +22,11 @@ export function monitorStatusColor(status: MonitorStatus): 'success' | 'error' |
   }
 }
 
+/** Icon standing for the kind of check, used wherever the type is not spelled out. */
+export function monitorTypeIcon(type: MonitorType): string {
+  return type === 'http' ? 'i-lucide-globe' : 'i-lucide-radio-tower'
+}
+
 export function monitorStatusIcon(status: MonitorStatus): string {
   switch (status) {
     case 'up': return 'i-lucide-circle-check'

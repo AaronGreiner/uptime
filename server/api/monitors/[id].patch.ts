@@ -14,6 +14,9 @@ export default defineEventHandler(async (event) => {
   }
 
   const input = await readValidatedBody(event, monitorInputSchema.parse)
+
+  assertGroupExists(input.groupId)
+
   const database = useDatabase()
   const now = nowInSeconds()
 

@@ -34,6 +34,8 @@ export interface Monitor extends MonitorHttpOptions, MonitorPingOptions {
   name: string
   type: MonitorType
   description: string | null
+  /** Group the monitor belongs to, or null when it sits at the tree root. */
+  groupId: number | null
   intervalSeconds: number
   timeoutSeconds: number
   /** Consecutive failures tolerated before the monitor is reported as down. */

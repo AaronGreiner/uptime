@@ -100,7 +100,8 @@
       "intervalSeconds": "Prüfintervall",
       "timeoutSeconds": "Zeitlimit",
       "retries": "Wiederholungen vor Ausfall",
-      "active": "Aktiv"
+      "active": "Aktiv",
+      "group": "Gruppe"
     },
     "hints": {
       "expectedStatusCodes": "Einzelne Codes und Bereiche, durch Komma getrennt. Zum Beispiel 200-299,301.",
@@ -109,7 +110,8 @@
       "interval": "Sekunden zwischen zwei Prüfungen.",
       "timeout": "Sekunden, die eine einzelne Prüfung dauern darf.",
       "ignoreTls": "Akzeptiert selbstsignierte und abgelaufene Zertifikate. Nur für interne Hosts sinnvoll.",
-      "active": "Pausierte Monitore behalten ihre Historie, werden aber nicht geprüft."
+      "active": "Pausierte Monitore behalten ihre Historie, werden aber nicht geprüft.",
+      "group": "Gruppen strukturieren den Baum in der Navigation und die Monitorliste."
     },
     "actions": {
       "checkNow": "Jetzt prüfen",
@@ -139,6 +141,40 @@
       "statusCode": "Code",
       "target": "Ziel",
       "interval": "alle {seconds}"
+    },
+    "allMonitors": "Alle Monitore"
+  },
+  "group": {
+    "title": "Gruppen",
+    "create": "Neue Gruppe",
+    "edit": "Gruppe bearbeiten",
+    "addChild": "Untergruppe hinzufügen",
+    "created": "Gruppe „{name}“ angelegt.",
+    "updated": "Gruppe „{name}“ gespeichert.",
+    "deleted": "Gruppe „{name}“ gelöscht.",
+    "formDescription": "Gruppen lassen sich verschachteln. Ein Monitor gehört zu höchstens einer davon.",
+    "namePlaceholder": "Produktion",
+    "none": "Keine Gruppe",
+    "root": "Keine übergeordnete Gruppe",
+    "ungrouped": "Ohne Gruppe",
+    "filterAll": "Alle Gruppen",
+    "emptyGroup": "Diese Gruppe ist noch leer.",
+    "moveUp": "Nach oben",
+    "moveDown": "Nach unten",
+    "viewGrouped": "Nach Gruppen sortieren",
+    "viewFlat": "Als eine Liste zeigen",
+    "fields": {
+      "name": "Name",
+      "parent": "Übergeordnete Gruppe",
+      "icon": "Symbol",
+      "description": "Beschreibung"
+    },
+    "hints": {
+      "parent": "Ordne die Gruppe einer anderen unter oder belasse sie auf oberster Ebene."
+    },
+    "delete": {
+      "title": "Gruppe löschen",
+      "description": "„{name}“ wird entfernt. Untergruppen und Monitore bleiben erhalten und rücken in die übergeordnete Gruppe."
     }
   },
   "dashboard": {
@@ -235,6 +271,26 @@
       "light": "Hell",
       "dark": "Dunkel",
       "system": "System"
+    },
+    "data": {
+      "title": "Daten",
+      "description": "Massenaktionen für alles, was diese Instanz aufgezeichnet hat.",
+      "clear": {
+        "label": "Alle Daten löschen",
+        "hint": "Entfernt alle Monitore, Gruppen, Dashboards und den gesamten Verlauf. Das Admin-Konto und die Einstellungen dieser Instanz bleiben erhalten.",
+        "action": "Alles löschen",
+        "title": "Alle Daten löschen?",
+        "description": "Alle Monitore, Gruppen, Dashboards und Heartbeats werden dauerhaft entfernt. Das lässt sich nicht rückgängig machen.",
+        "done": "Alle Daten gelöscht."
+      },
+      "demo": {
+        "label": "Demodaten zurücksetzen",
+        "hint": "Löscht zuerst alles und erzeugt anschließend frische Demogruppen, Demomonitore und einen generierten Verlauf.",
+        "action": "Demodaten erzeugen",
+        "title": "Alles durch Demodaten ersetzen?",
+        "description": "Die vorhandenen Daten werden zuerst gelöscht. Die Demomonitore zeigen auf echte öffentliche Endpunkte und werden geprüft, sobald sie existieren.",
+        "done": "{monitors} Demomonitore in {groups} Gruppen mit {days} Tagen Verlauf erstellt."
+      }
     }
   },
   "error": {

@@ -10,6 +10,7 @@ export function toMonitorInput(monitor: Monitor): MonitorInput {
     name: monitor.name,
     type: monitor.type,
     description: monitor.description,
+    groupId: monitor.groupId,
     intervalSeconds: monitor.intervalSeconds,
     timeoutSeconds: monitor.timeoutSeconds,
     retries: monitor.retries,

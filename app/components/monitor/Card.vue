@@ -6,9 +6,12 @@ const props = withDefaults(defineProps<{
   heartbeatCount?: number
   /** Hides the pulse bar and the metric row for very small grid cells. */
   dense?: boolean
+  /** Breadcrumb of the owning group, shown where the card stands on its own. */
+  groupPath?: string
 }>(), {
   heartbeatCount: 40,
-  dense: false
+  dense: false,
+  groupPath: undefined
 })
 
 const { formatLatency, formatUptime, formatRelativeTime } = useFormatters()
@@ -24,6 +27,13 @@ const target = computed(() => monitorTarget(props.monitor))
   >
     <div class="flex items-start justify-between gap-3">
       <div class="min-w-0 flex-1">
+        <p
+          v-if="groupPath"
+          class="text-xs text-dimmed truncate-target"
+          :title="groupPath"
+        >
+          {{ groupPath }}
+        </p>
         <NuxtLink
           :to="`/monitors/${monitor.id}`"
           class="font-medium text-highlighted hover:text-primary transition-colors truncate-target block"

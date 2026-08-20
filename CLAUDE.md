@@ -27,7 +27,7 @@ pnpm db:generate    # generate a migration after editing the schema
 pnpm db:studio      # browse the database
 ```
 
-Migrations are applied automatically at boot by `server/plugins/00.database.ts`.
+Migrations are applied automatically at boot by `server/plugins/bootstrap.ts`.
 `pnpm db:migrate` is only needed for manual runs against a stopped instance.
 
 ## Layout
@@ -48,11 +48,26 @@ drizzle/        Generated SQL migrations, shipped next to the server output
 
 ## How the pieces fit
 
-**Scheduler.** `server/plugins/10.scheduler.ts` starts one interval. Each tick
+**Scheduler.** `server/plugins/bootstrap.ts` starts one interval. Each tick
 selects monitors whose `monitor_state.next_check_at` has passed, runs up to
 `scheduler.concurrency` checks in parallel and writes a `heartbeats` row plus the
 updated `monitor_state`. An in-flight set prevents a slow check from being queued
 twice.
+
+**Groups.** Monitors are organised in a tree. `monitor_groups.parent_id` is a
+self reference, `monitors.group_id` is nullable, and a null group puts the
+monitor at the root next to the top level groups. Depth is capped by
+`MONITOR_GROUP_MAX_DEPTH` in `shared/utils/group.ts`, which is also where the
+tree is assembled: `buildMonitorGroupTree` turns the flat API response into
+nodes, `buildMonitorTree` attaches the monitors and rolls the status counts up
+towards the roots. Both sides use it — the sidebar through
+`useMonitorNavigation`, the list page through `useMonitorTree`.
+
+`assertValidParent` in `server/utils/groups.ts` is the guard: it rejects a
+missing parent, a group nested into its own subtree, and any move that would
+push the deepest leaf past the depth cap. Deleting a group never deletes what it
+holds; `deleteMonitorGroup` lifts subgroups and monitors to the parent first.
+The tree is small, so these walks run in memory instead of as recursive CTEs.
 
 **Check executors** live in `server/services/checks/`. `index.ts` maps a
 `MonitorType` to an executor. Adding a type means: add the executor, extend the

@@ -48,7 +48,7 @@ export default defineNuxtConfig({
       /** Creates demo monitors and dashboards on an empty database. */
       demoData: false,
       /** Days of synthetic history generated for demo monitors. */
-      demoHistoryDays: 3
+      demoHistoryDays: 7
     },
     public: {
       appName: 'Uptime'

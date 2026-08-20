@@ -8,12 +8,15 @@ import {
   MONITOR_TIMEOUT_BOUNDS,
   MONITOR_TYPES
 } from '#shared/utils/monitor'
+import { monitorGroupIcon } from '#shared/utils/group'
 import { HTTP_METHODS, monitorInputSchema } from '#shared/utils/validation'
 import type { MonitorInput } from '#shared/utils/validation'
 
 const props = defineProps<{
   /** Omit to create a new monitor. */
   monitor?: Monitor | null
+  /** Preselected group, used when creating from a group section. */
+  defaultGroupId?: number | null
 }>()
 
 const emit = defineEmits<{ saved: [monitor: MonitorWithState] }>()
@@ -22,14 +25,19 @@ const open = defineModel<boolean>('open', { required: true })
 
 const { t } = useI18n()
 const toast = useToast()
+const { flatTree } = useMonitorTree()
 
 type HeaderRow = { name: string, value: string }
+
+/** USelectMenu needs a concrete value, the API expects null for no group. */
+const UNGROUPED_VALUE = 0
 
 function createState(monitor?: Monitor | null): MonitorInput {
   return {
     name: monitor?.name ?? '',
     type: monitor?.type ?? 'http',
     description: monitor?.description ?? null,
+    groupId: monitor ? monitor.groupId : props.defaultGroupId ?? null,
     intervalSeconds: monitor?.intervalSeconds ?? 60,
     timeoutSeconds: monitor?.timeoutSeconds ?? 10,
     retries: monitor?.retries ?? 1,
@@ -81,6 +89,19 @@ const typeItems = computed(() => MONITOR_TYPES.map(type => ({
 })))
 
 const methodItems = HTTP_METHODS.map(method => ({ label: method, value: method }))
+
+const groupItems = computed(() => [
+  { label: t('group.none'), value: UNGROUPED_VALUE, icon: 'i-lucide-folder-tree' },
+  // The full path keeps nested groups apart without indenting the menu.
+  ...flatTree.value.map(node => ({ label: node.path.join(' / '), value: node.id, icon: monitorGroupIcon(node) }))
+])
+
+const selectedGroup = computed({
+  get: () => state.value.groupId ?? UNGROUPED_VALUE,
+  set: (value: number) => {
+    state.value.groupId = value === UNGROUPED_VALUE ? null : value
+  }
+})
 
 function addHeaderRow() {
   headerRows.value.push({ name: '', value: '' })
@@ -163,17 +184,32 @@ async function onSubmit(event: FormSubmitEvent<MonitorInput>) {
             </UFormField>
           </div>
 
-          <UFormField
-            :label="$t('monitor.fields.description')"
-            name="description"
-            :hint="$t('common.optional')"
-          >
-            <UInput
-              :model-value="state.description ?? ''"
-              class="w-full"
-              @update:model-value="state.description = String($event) || null"
-            />
-          </UFormField>
+          <div class="grid gap-4 sm:grid-cols-2">
+            <UFormField
+              :label="$t('monitor.fields.group')"
+              name="groupId"
+              :description="$t('monitor.hints.group')"
+            >
+              <USelectMenu
+                v-model="selectedGroup"
+                :items="groupItems"
+                value-key="value"
+                class="w-full"
+              />
+            </UFormField>
+
+            <UFormField
+              :label="$t('monitor.fields.description')"
+              name="description"
+              :hint="$t('common.optional')"
+            >
+              <UInput
+                :model-value="state.description ?? ''"
+                class="w-full"
+                @update:model-value="state.description = String($event) || null"
+              />
+            </UFormField>
+          </div>
         </section>
 
         <USeparator />

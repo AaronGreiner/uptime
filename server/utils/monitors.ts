@@ -27,6 +27,7 @@ export function serializeMonitor(row: MonitorRow): Monitor {
     name: row.name,
     type: row.type,
     description: row.description,
+    groupId: row.groupId,
     intervalSeconds: row.intervalSeconds,
     timeoutSeconds: row.timeoutSeconds,
     retries: row.retries,
