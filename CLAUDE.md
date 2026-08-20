@@ -15,6 +15,10 @@ the back. Read only for everyone, editable by a single admin account.
 - Prefer the existing Nuxt UI components and its semantic colour tokens
   (`text-muted`, `bg-elevated`, `border-default`, `text-success` …) over custom
   colours, so light and dark mode keep working for free.
+- When an icon represents state that can change while its control stays mounted,
+  prefer `AppMorphIcon` over swapping a `UIcon` or an `icon` prop. Keep static
+  and short-lived icons on `UIcon`; motion must communicate a visible state
+  transition rather than decorate the interface.
 
 ## Commands
 
@@ -159,6 +163,23 @@ after hydration makes the layout jump. Vue does not rectify class or attribute
 mismatches during hydration either, so a wrong first render simply stays on
 screen. Anything you add here has to be readable while the page is rendered, not
 written by an effect afterwards.
+
+**Morphing icons.** `AppMorphIcon` is the shared wrapper around morphicons. It
+resolves stable Lucide `IconNode` references from `MORPH_ICONS` in
+`app/utils/morph.ts`, applies the project's `snappy` spring and honours the
+`useMorphMotion` preference. Use it whenever a badge, button or input stays
+mounted while its icon changes — status updates, binary toggles and short-lived
+success states are the intended cases. Add new morph participants to the
+registry instead of importing Lucide geometry into components. Put the wrapper
+in Nuxt UI's `#leading` or `#trailing` slot and apply the slot's icon class so
+sizing remains consistent. A custom leading slot replaces `UButton`'s built-in
+loading icon, so render and spin the loading state there when needed.
+
+Do not morph static navigation or type icons, toast icons, dropdown items that
+unmount on selection, or disclosure chevrons that already rotate cleanly with
+CSS. Keep labels on the surrounding control when it is interactive; otherwise
+pass an i18n-translated `label` to `AppMorphIcon`. Any initial icon must remain
+SSR-safe: client-only state may change it only after hydration.
 
 **Dashboards.** A dashboard owns widgets; each widget stores a position for all
 five breakpoints in `dashboard_widgets.layout`. The grid is `grid-layout-plus`

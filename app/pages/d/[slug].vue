@@ -113,12 +113,18 @@ const showToolbar = computed(() => Boolean(dashboard.value?.description) || edit
               @click="openWidgetModal(null)"
             />
             <UButton
-              :icon="editing ? 'i-lucide-check' : 'i-lucide-pencil-ruler'"
               :color="editing ? 'primary' : 'neutral'"
               :variant="editing ? 'solid' : 'subtle'"
               :label="$t(editing ? 'dashboard.editModeDone' : 'dashboard.editMode')"
               @click="editing = !editing"
-            />
+            >
+              <template #leading="{ ui }">
+                <AppMorphIcon
+                  :name="editing ? 'check' : 'pencilRuler'"
+                  :class="ui.leadingIcon()"
+                />
+              </template>
+            </UButton>
             <UDropdownMenu
               :items="menuItems"
               :content="{ align: 'end' }"

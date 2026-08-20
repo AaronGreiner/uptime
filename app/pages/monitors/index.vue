@@ -296,27 +296,26 @@ async function confirmGroupDelete() {
             {{ $t('monitor.count', filtered.length) }}
           </span>
 
-          <UButtonGroup
+          <UTooltip
             v-if="tree.length"
-            size="sm"
+            :text="$t(grouped ? 'group.viewFlat' : 'group.viewGrouped')"
           >
             <UButton
-              icon="i-lucide-folder-tree"
               :color="grouped ? 'primary' : 'neutral'"
               :variant="grouped ? 'subtle' : 'ghost'"
               :aria-label="$t('group.viewGrouped')"
               :aria-pressed="grouped"
-              @click="grouped = true"
-            />
-            <UButton
-              icon="i-lucide-layout-grid"
-              :color="grouped ? 'neutral' : 'primary'"
-              :variant="grouped ? 'ghost' : 'subtle'"
-              :aria-label="$t('group.viewFlat')"
-              :aria-pressed="!grouped"
-              @click="grouped = false"
-            />
-          </UButtonGroup>
+              size="sm"
+              @click="grouped = !grouped"
+            >
+              <template #leading="{ ui }">
+                <AppMorphIcon
+                  :name="grouped ? 'folderTree' : 'layoutGrid'"
+                  :class="ui.leadingIcon()"
+                />
+              </template>
+            </UButton>
+          </UTooltip>
         </template>
       </UDashboardToolbar>
     </template>

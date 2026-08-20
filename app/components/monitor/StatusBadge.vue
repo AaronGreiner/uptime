@@ -11,7 +11,7 @@ const props = withDefaults(defineProps<{
 })
 
 const color = computed(() => monitorStatusColor(props.status))
-const icon = computed(() => monitorStatusIcon(props.status))
+const icon = computed(() => monitorStatusMorphIcon(props.status))
 </script>
 
 <template>
@@ -19,8 +19,14 @@ const icon = computed(() => monitorStatusIcon(props.status))
     :color="color"
     :variant="variant"
     :size="size"
-    :icon="icon"
     :label="$t(`status.${status}`)"
-    :ui="{ leadingIcon: status === 'pending' ? 'animate-spin' : '' }"
-  />
+    class="transition-colors"
+  >
+    <template #leading="{ ui }">
+      <AppMorphIcon
+        :name="icon"
+        :class="ui.leadingIcon({ class: status === 'pending' ? 'animate-spin' : '' })"
+      />
+    </template>
+  </UBadge>
 </template>

@@ -23,6 +23,8 @@
     "better-sqlite3": "^13.0.3",
     "drizzle-orm": "^0.45.2",
     "grid-layout-plus": "^1.1.1",
+    "lucide": "^1.33.0",
+    "morphicons": "^1.7.0",
     "nuxt": "^4.5.2",
     "nuxt-auth-utils": "^0.5.30",
     "tailwindcss": "^4.3.3",

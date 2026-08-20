@@ -82,10 +82,9 @@ async function onSubmit(event: FormSubmitEvent<z.output<typeof loginSchema>>) {
           name="password"
           required
         >
-          <UInput
+          <AppPasswordInput
             v-model="state.password"
             class="w-full"
-            type="password"
             autocomplete="current-password"
           />
         </UFormField>

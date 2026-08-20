@@ -35,6 +35,8 @@
     "no": "No",
     "saved": "Saved",
     "saving": "Saving",
+    "switchToLightMode": "Switch to light mode",
+    "switchToDarkMode": "Switch to dark mode",
     "error": "Something went wrong"
   },
   "status": {
@@ -51,6 +53,8 @@
     "signInDescription": "Only the admin account can create or change monitors and dashboards. Everything else is public.",
     "username": "Username",
     "password": "Password",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
     "invalidCredentials": "Wrong username or password.",
     "signedIn": "Signed in as {username}.",
     "signedOut": "Signed out.",
@@ -121,6 +125,8 @@
       "checkNow": "Check now",
       "pause": "Pause",
       "resume": "Resume",
+      "copyTarget": "Copy target",
+      "copiedTarget": "Target copied",
       "checked": "Check finished."
     },
     "delete": {
@@ -271,10 +277,16 @@
     "appearanceDescription": "Applies to this browser only.",
     "theme": "Theme",
     "language": "Language",
+    "iconMotion": "Icon motion",
     "themeOption": {
       "light": "Light",
       "dark": "Dark",
       "system": "System"
+    },
+    "iconMotionOption": {
+      "system": "Follow system",
+      "on": "On",
+      "off": "Off"
     },
     "data": {
       "title": "Data",

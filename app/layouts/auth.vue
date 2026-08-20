@@ -15,7 +15,7 @@ const appName = useRuntimeConfig().public.appName
 
       <div class="flex items-center gap-1">
         <AppLocaleSelect />
-        <UColorModeButton />
+        <AppColorModeButton />
       </div>
     </header>
 

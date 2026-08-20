@@ -39,7 +39,6 @@ const foldAllLabel = computed(() => t(allCollapsed.value ? 'nav.expandAll' : 'na
         :text="foldAllLabel"
       >
         <UButton
-          :icon="allCollapsed ? 'i-lucide-chevrons-up-down' : 'i-lucide-chevrons-down-up'"
           color="neutral"
           variant="ghost"
           size="xs"
@@ -47,7 +46,14 @@ const foldAllLabel = computed(() => t(allCollapsed.value ? 'nav.expandAll' : 'na
           class="ms-auto"
           :aria-label="foldAllLabel"
           @click="toggleAll"
-        />
+        >
+          <template #leading="{ ui }">
+            <AppMorphIcon
+              :name="allCollapsed ? 'chevronsUpDown' : 'chevronsDownUp'"
+              :class="ui.leadingIcon()"
+            />
+          </template>
+        </UButton>
       </UTooltip>
     </div>
 

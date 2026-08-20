@@ -35,6 +35,8 @@
     "no": "Nein",
     "saved": "Gespeichert",
     "saving": "Wird gespeichert",
+    "switchToLightMode": "Zum hellen Modus wechseln",
+    "switchToDarkMode": "Zum dunklen Modus wechseln",
     "error": "Da ist etwas schiefgelaufen"
   },
   "status": {
@@ -51,6 +53,8 @@
     "signInDescription": "Nur das Admin-Konto darf Monitore und Dashboards anlegen oder ändern. Alles andere ist öffentlich sichtbar.",
     "username": "Benutzername",
     "password": "Passwort",
+    "showPassword": "Passwort anzeigen",
+    "hidePassword": "Passwort ausblenden",
     "invalidCredentials": "Benutzername oder Passwort ist falsch.",
     "signedIn": "Angemeldet als {username}.",
     "signedOut": "Abgemeldet.",
@@ -121,6 +125,8 @@
       "checkNow": "Jetzt prüfen",
       "pause": "Pausieren",
       "resume": "Fortsetzen",
+      "copyTarget": "Ziel kopieren",
+      "copiedTarget": "Ziel kopiert",
       "checked": "Prüfung abgeschlossen."
     },
     "delete": {
@@ -271,10 +277,16 @@
     "appearanceDescription": "Gilt nur für diesen Browser.",
     "theme": "Erscheinungsbild",
     "language": "Sprache",
+    "iconMotion": "Symbolanimationen",
     "themeOption": {
       "light": "Hell",
       "dark": "Dunkel",
       "system": "System"
+    },
+    "iconMotionOption": {
+      "system": "Systemeinstellung",
+      "on": "An",
+      "off": "Aus"
     },
     "data": {
       "title": "Daten",

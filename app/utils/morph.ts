@@ -1,0 +1,63 @@
+import {
+  Check,
+  ChevronsDownUp,
+  ChevronsUpDown,
+  CircleCheck,
+  CirclePause,
+  CircleX,
+  Copy,
+  Eye,
+  EyeOff,
+  FolderTree,
+  LayoutGrid,
+  LoaderCircle,
+  Moon,
+  Pause,
+  PencilRuler,
+  Play,
+  RefreshCw,
+  Sun
+} from 'lucide'
+import type { IconNode } from 'morphicons/vue'
+import type { MonitorStatus } from '#shared/types/monitor'
+
+/**
+ * The icons that take part in a morph. Module scope is intentional: morphicons
+ * caches its plans in a WeakMap keyed by the IconNode reference.
+ */
+export const MORPH_ICONS = {
+  check: Check,
+  chevronsDownUp: ChevronsDownUp,
+  chevronsUpDown: ChevronsUpDown,
+  circleCheck: CircleCheck,
+  circlePause: CirclePause,
+  circleX: CircleX,
+  copy: Copy,
+  eye: Eye,
+  eyeOff: EyeOff,
+  folderTree: FolderTree,
+  layoutGrid: LayoutGrid,
+  loaderCircle: LoaderCircle,
+  moon: Moon,
+  pause: Pause,
+  pencilRuler: PencilRuler,
+  play: Play,
+  refreshCw: RefreshCw,
+  sun: Sun
+} satisfies Record<string, IconNode>
+
+export type MorphIconName = keyof typeof MORPH_ICONS
+
+/**
+ * Morph counterpart of `monitorStatusIcon` in shared/utils/monitor.ts.
+ * Kept here rather than there because `shared/` is imported by the server, and
+ * the icon geometry has no business in the Nitro bundle.
+ */
+export function monitorStatusMorphIcon(status: MonitorStatus): MorphIconName {
+  switch (status) {
+    case 'up': return 'circleCheck'
+    case 'down': return 'circleX'
+    case 'pending': return 'loaderCircle'
+    case 'paused': return 'circlePause'
+  }
+}

@@ -9,6 +9,7 @@ const { t, locale, locales, setLocale } = useI18n()
 const toast = useToast()
 const colorMode = useColorMode()
 const { admin, refreshSession } = useAdmin()
+const { morphMotion } = useMorphMotion()
 
 useSeoMeta({ title: () => t('settings.title') })
 
@@ -24,6 +25,11 @@ type ThemePreference = 'system' | 'light' | 'dark'
 
 const themeItems = computed(() => (['system', 'light', 'dark'] as const).map(value => ({
   label: t(`settings.themeOption.${value}`),
+  value
+})))
+
+const morphMotionItems = computed(() => (['system', 'on', 'off'] as const).map(value => ({
+  label: t(`settings.iconMotionOption.${value}`),
   value
 })))
 
@@ -156,10 +162,9 @@ async function onSubmit(event: FormSubmitEvent<z.output<typeof accountUpdateSche
               name="currentPassword"
               required
             >
-              <UInput
+              <AppPasswordInput
                 v-model="state.currentPassword"
                 class="w-full"
-                type="password"
                 autocomplete="current-password"
               />
             </UFormField>
@@ -169,10 +174,9 @@ async function onSubmit(event: FormSubmitEvent<z.output<typeof accountUpdateSche
               name="newPassword"
               :description="$t('settings.newPasswordHint')"
             >
-              <UInput
+              <AppPasswordInput
                 v-model="state.newPassword"
                 class="w-full"
-                type="password"
                 autocomplete="new-password"
               />
             </UFormField>
@@ -189,7 +193,7 @@ async function onSubmit(event: FormSubmitEvent<z.output<typeof accountUpdateSche
           :title="$t('settings.appearance')"
           :description="$t('settings.appearanceDescription')"
         >
-          <div class="grid gap-4 sm:grid-cols-2">
+          <div class="grid gap-4 sm:grid-cols-3">
             <UFormField :label="$t('settings.theme')">
               <ClientOnly>
                 <USelectMenu
@@ -209,6 +213,16 @@ async function onSubmit(event: FormSubmitEvent<z.output<typeof accountUpdateSche
               <USelectMenu
                 v-model="language"
                 :items="localeItems"
+                value-key="value"
+                :search-input="false"
+                class="w-full"
+              />
+            </UFormField>
+
+            <UFormField :label="$t('settings.iconMotion')">
+              <USelectMenu
+                v-model="morphMotion"
+                :items="morphMotionItems"
                 value-key="value"
                 :search-input="false"
                 class="w-full"

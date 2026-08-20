@@ -123,7 +123,7 @@ async function onDashboardCreated(slug: string) {
             :class="collapsed ? 'flex-col' : 'ms-auto'"
           >
             <AppLocaleSelect :collapsed="collapsed" />
-            <UColorModeButton />
+            <AppColorModeButton />
           </div>
         </div>
       </template>

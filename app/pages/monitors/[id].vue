@@ -7,6 +7,7 @@ import { STATS_RANGES, isStatsRange } from '#shared/utils/stats'
 const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
+const toast = useToast()
 const { isAdmin } = useAdmin()
 const { formatDateTime, formatDuration, formatLatency, formatRelativeTime, formatUptime, formatDate } = useFormatters()
 
@@ -54,10 +55,27 @@ onMonitorChecked((event) => {
   void refreshStats()
 }, monitorId)
 
-const { pending, checkNow, toggleActive, remove } = useMonitorActions(reload)
+const { pending, succeededId, checkNow, toggleActive, remove } = useMonitorActions(reload)
 
 const formOpen = ref(false)
 const deleteOpen = ref(false)
+const copied = ref(false)
+let copiedTimer: ReturnType<typeof setTimeout> | undefined
+
+onScopeDispose(() => clearTimeout(copiedTimer))
+
+async function copyTarget() {
+  try {
+    await navigator.clipboard.writeText(target.value)
+    copied.value = true
+    clearTimeout(copiedTimer)
+    copiedTimer = setTimeout(() => {
+      copied.value = false
+    }, 1500)
+  } catch (copyError) {
+    toast.add({ title: t('common.error'), description: resolveErrorMessage(copyError), color: 'error' })
+  }
+}
 
 async function confirmDelete() {
   if (monitor.value && await remove(monitor.value)) {
@@ -116,20 +134,32 @@ const recentChecks = computed(() => [...(heartbeats.value ?? [])].reverse())
         <template #right>
           <template v-if="isAdmin">
             <UButton
-              icon="i-lucide-refresh-cw"
               color="neutral"
               variant="subtle"
               :loading="pending === monitor.id"
               :label="$t('monitor.actions.checkNow')"
               @click="checkNow(monitor)"
-            />
+            >
+              <template #leading="{ ui }">
+                <AppMorphIcon
+                  :name="succeededId === monitor.id ? 'check' : 'refreshCw'"
+                  :class="ui.leadingIcon({ class: pending === monitor.id ? 'animate-spin' : '' })"
+                />
+              </template>
+            </UButton>
             <UButton
-              :icon="monitor.active ? 'i-lucide-pause' : 'i-lucide-play'"
               color="neutral"
               variant="ghost"
               :aria-label="$t(monitor.active ? 'monitor.actions.pause' : 'monitor.actions.resume')"
               @click="toggleActive(monitor)"
-            />
+            >
+              <template #leading="{ ui }">
+                <AppMorphIcon
+                  :name="monitor.active ? 'pause' : 'play'"
+                  :class="ui.leadingIcon()"
+                />
+              </template>
+            </UButton>
             <UButton
               icon="i-lucide-pencil"
               color="neutral"
@@ -167,6 +197,24 @@ const recentChecks = computed(() => [...(heartbeats.value ?? [])].reverse())
               v-else
               class="font-mono"
             >{{ target }}</span>
+
+            <UTooltip :text="$t(copied ? 'monitor.actions.copiedTarget' : 'monitor.actions.copyTarget')">
+              <UButton
+                color="neutral"
+                variant="ghost"
+                size="xs"
+                square
+                :aria-label="$t(copied ? 'monitor.actions.copiedTarget' : 'monitor.actions.copyTarget')"
+                @click="copyTarget"
+              >
+                <template #leading="{ ui }">
+                  <AppMorphIcon
+                    :name="copied ? 'check' : 'copy'"
+                    :class="ui.leadingIcon()"
+                  />
+                </template>
+              </UButton>
+            </UTooltip>
 
             <span class="text-dimmed">·</span>
             <span>{{ $t(`monitor.type.${monitor.type}`) }}</span>
