@@ -3,8 +3,8 @@
   "configurations": [
     {
       "name": "uptime-dev",
-      "runtimeExecutable": "corepack",
-      "runtimeArgs": ["pnpm", "dev"],
+      "runtimeExecutable": "bun",
+      "runtimeArgs": ["run", "dev"],
       "port": 3000
     }
   ]

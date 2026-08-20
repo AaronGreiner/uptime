@@ -12,6 +12,10 @@ the back. Read only for everyone, editable by a single admin account.
   two files must always have an identical key set.
 - Read endpoints stay public. Anything that writes calls `requireAdmin(event)`.
   Hiding a button in the UI is never the authorisation.
+- Bun is the package manager and application runtime. Use `bun install`,
+  `bun add` and `bun run`; do not introduce npm, pnpm or Yarn lockfiles or
+  commands. Package scripts that launch a CLI must force Bun with `bun --bun`,
+  because dependency bin files may otherwise select Node through their shebang.
 - Prefer the existing Nuxt UI components and its semantic colour tokens
   (`text-muted`, `bg-elevated`, `border-default`, `text-success` …) over custom
   colours, so light and dark mode keep working for free.
@@ -23,16 +27,16 @@ the back. Read only for everyone, editable by a single admin account.
 ## Commands
 
 ```bash
-pnpm dev            # dev server on :3000
-pnpm build          # production build into .output
-pnpm typecheck      # vue-tsc across app, server and shared
-pnpm lint           # eslint, --fix to autofix
-pnpm db:generate    # generate a migration after editing the schema
-pnpm db:studio      # browse the database
+bun run dev            # dev server on :3000
+bun run build          # production build into .output
+bun run typecheck      # vue-tsc across app, server and shared
+bun run lint           # eslint, --fix to autofix
+bun run db:generate    # generate a migration after editing the schema
+bun run db:studio      # browse the database
 ```
 
 Migrations are applied automatically at boot by `server/plugins/bootstrap.ts`.
-`pnpm db:migrate` is only needed for manual runs against a stopped instance.
+`bun run db:migrate` is only needed for manual runs against a stopped instance.
 
 ## Layout
 
@@ -222,8 +226,8 @@ check. The dispatcher logs and swallows.
 - `server/database/schema.ts` imports shared types with **relative** paths.
   drizzle-kit bundles that file outside of Nuxt, so the `#shared` alias is not
   available there.
-- `better-sqlite3` is a native module. It is listed in `nitro.externals.external`
-  and `vite.optimizeDeps.exclude`; do not bundle it.
+- SQLite uses Bun's built-in `bun:sqlite` driver through
+  `drizzle-orm/bun-sqlite`; do not reintroduce a Node-native SQLite package.
 - Timestamps are Unix **seconds** everywhere in the database and API. Only
   convert to milliseconds at the edge, when handing a value to `Date` or `Intl`.
 - The grid mutates the layout array it is given in place. `Grid.vue` therefore

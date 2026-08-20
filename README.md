@@ -19,8 +19,10 @@ Uptime Kuma, built with Nuxt 4, Nuxt UI 4 and SQLite.
 
 ## Quick start
 
+Install [Bun](https://bun.sh/) 1.3.9 or newer, then:
+
 ```bash
-pnpm install
+bun install
 cp .env.example .env
 ```
 
@@ -33,7 +35,7 @@ openssl rand -base64 32
 Then start it:
 
 ```bash
-pnpm dev
+bun run dev
 ```
 
 The app runs on http://localhost:3000. On the first start it creates the admin
@@ -103,7 +105,7 @@ NUXT_ADMIN_PASSWORD=devpassword123
 NUXT_SEED_DEMO_DATA=true
 ```
 
-Then run `pnpm dev` and sign in at http://localhost:3000/login with:
+Then run `bun run dev` and sign in at http://localhost:3000/login with:
 
 - Username: `admin`
 - Password: `devpassword123`
@@ -144,14 +146,14 @@ database that stays small.
 ## Development
 
 ```bash
-pnpm dev          # dev server
-pnpm typecheck    # vue-tsc across app, server and shared code
-pnpm lint         # eslint
-pnpm db:generate  # create a migration after changing server/database/schema.ts
-pnpm db:studio    # browse the database
+bun run dev          # dev server
+bun run typecheck    # vue-tsc across app, server and shared code
+bun run lint         # eslint
+bun run db:generate  # create a migration after changing server/database/schema.ts
+bun run db:studio    # browse the database
 ```
 
-Migrations run automatically at boot, so a fresh checkout only needs `pnpm dev`.
+Migrations run automatically at boot, so a fresh checkout only needs `bun run dev`.
 
 Architecture notes, conventions and extension points are in
 [CLAUDE.md](./CLAUDE.md).

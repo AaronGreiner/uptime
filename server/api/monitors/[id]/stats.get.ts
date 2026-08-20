@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import z from 'zod'
 import { STATS_RANGE_SECONDS } from '../../../../shared/utils/stats'
 
 const querySchema = z.object({

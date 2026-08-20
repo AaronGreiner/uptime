@@ -37,7 +37,7 @@ withDefaults(defineProps<{
           custom
         >
           <a
-            :href="href"
+            :href="href ?? undefined"
             :aria-current="entry.active ? 'page' : undefined"
             class="min-w-0 flex-1 flex items-center gap-1.5 px-2.5 py-1.5 text-sm font-medium transition-colors"
             :class="entry.active ? 'text-primary' : 'text-muted group-hover:text-highlighted'"

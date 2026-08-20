@@ -1,25 +1,18 @@
 # syntax=docker/dockerfile:1
 
 # --- Build ------------------------------------------------------------------
-FROM node:24-bookworm-slim AS build
+FROM oven/bun:1.3.9-debian AS build
 
 WORKDIR /app
-
-# better-sqlite3 is compiled from source during the install step.
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends python3 make g++ \
-  && rm -rf /var/lib/apt/lists/*
-
-RUN corepack enable
 
 # The postinstall hook runs "nuxt prepare", which needs the full source tree.
 COPY . .
 
-RUN pnpm install --frozen-lockfile
-RUN pnpm build
+RUN bun install --frozen-lockfile
+RUN bun run build
 
 # --- Runtime ----------------------------------------------------------------
-FROM node:24-bookworm-slim AS runtime
+FROM oven/bun:1.3.9-debian AS runtime
 
 WORKDIR /app
 
@@ -39,13 +32,13 @@ COPY --from=build /app/.output ./.output
 # Migrations are read from disk at boot and are not part of the server bundle.
 COPY --from=build /app/drizzle ./drizzle
 
-RUN mkdir -p /data && chown -R node:node /data /app
+RUN mkdir -p /data && chown -R bun:bun /data /app
 
-USER node
+USER bun
 
 EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-  CMD node -e "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+  CMD bun -e "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
-CMD ["node", ".output/server/index.mjs"]
+CMD ["bun", "run", ".output/server/index.mjs"]

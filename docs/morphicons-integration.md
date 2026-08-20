@@ -101,7 +101,7 @@ morphicons consumes geometry, not CSS class names: either a raw `d` string or an
 build-time extraction step, and its Lucide bodies carry a `<g>` wrapper whose
 acceptance by `svgToIcon` would have to be verified first.
 
-`pnpm add lucide` gives named `IconNode` exports that tree-shake to the ~20
+`bun add lucide` gives named `IconNode` exports that tree-shake to the ~20
 icons that actually morph, with stable module-scope references — which is what
 keeps morphicons' `WeakMap` plan cache warm. Same upstream geometry as
 `@iconify-json/lucide`, so there is no visual drift between a morphing icon and
@@ -134,7 +134,7 @@ sizing in classes exactly like the rest of the codebase — `class="size-5"`, ne
 ### 1. Dependencies
 
 ```bash
-pnpm add morphicons lucide
+bun add morphicons lucide
 ```
 
 `morphicons` declares `vue >=3.3` as an optional peer; nothing else is needed.
@@ -402,7 +402,7 @@ morph, and each of these looks tempting.
 - **Performance.** One global rAF drives every instance; a settled morph
   unregisters itself. Nothing here morphs more than a handful of icons at once,
   and the status badge case is one `d` write per changed monitor.
-- **Typecheck and lint.** `pnpm typecheck` and `pnpm lint` must stay green;
+- **Typecheck and lint.** `bun run typecheck` and `bun run lint` must stay green;
   `IconInput` / `IconNode` types come from `morphicons/vue`.
 - **i18n parity.** Every new key must land in `en.json` *and* `de.json`. The two
   files must always have an identical key set.

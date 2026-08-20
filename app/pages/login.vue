@@ -18,11 +18,9 @@ const failed = ref(false)
 
 const redirectTarget = computed(() => typeof route.query.redirect === 'string' ? route.query.redirect : '/')
 
-watchEffect(() => {
-  if (loggedIn.value) {
-    navigateTo(redirectTarget.value)
-  }
-})
+if (loggedIn.value) {
+  await navigateTo(redirectTarget.value)
+}
 
 async function onSubmit(event: FormSubmitEvent<z.output<typeof loginSchema>>) {
   submitting.value = true

@@ -31,11 +31,15 @@ export const MONITOR_GROUP_ICONS = [
 
 export const MONITOR_GROUP_FALLBACK_ICON = MONITOR_GROUP_ICONS[0]
 
+const MONITOR_GROUP_ICON_SET = new Set<string>(MONITOR_GROUP_ICONS)
+
 /** Worst status first. A group reports the most severe state below it. */
 const STATUS_SEVERITY: MonitorStatus[] = ['down', 'pending', 'up', 'paused']
 
 export function monitorGroupIcon(group: Pick<MonitorGroup, 'icon'> | null | undefined): string {
-  return group?.icon || MONITOR_GROUP_FALLBACK_ICON
+  return group?.icon && MONITOR_GROUP_ICON_SET.has(group.icon)
+    ? group.icon
+    : MONITOR_GROUP_FALLBACK_ICON
 }
 
 function compareGroups(a: MonitorGroup, b: MonitorGroup): number {

@@ -1,4 +1,13 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+import { MONITOR_GROUP_ICONS } from './shared/utils/group'
+import { MONITOR_STATUS_ICONS, MONITOR_TYPE_ICONS } from './shared/utils/monitor'
+
+const dynamicIconNames = [
+  ...MONITOR_GROUP_ICONS,
+  ...Object.values(MONITOR_TYPE_ICONS),
+  ...Object.values(MONITOR_STATUS_ICONS)
+].map(name => name.replace(/^i-lucide-/, 'lucide:'))
+
 export default defineNuxtConfig({
   modules: [
     '@nuxt/eslint',
@@ -6,6 +15,17 @@ export default defineNuxtConfig({
     '@nuxtjs/i18n',
     'nuxt-auth-utils'
   ],
+
+  $development: {
+    runtimeConfig: {
+      session: {
+        cookie: {
+          /** Safari rejects Secure cookies served by the HTTP development server. */
+          secure: false
+        }
+      }
+    }
+  },
 
   devtools: {
     enabled: true
@@ -20,6 +40,12 @@ export default defineNuxtConfig({
   },
 
   runtimeConfig: {
+    session: {
+      cookie: {
+        /** Session cookies must only leave the browser over HTTPS in production. */
+        secure: true
+      }
+    },
     /** Absolute or cwd-relative path to the SQLite database file. */
     databasePath: './data/uptime.db',
     /** Folder holding the drizzle-kit generated migrations. */
@@ -58,15 +84,9 @@ export default defineNuxtConfig({
   compatibilityDate: '2026-06-30',
 
   nitro: {
-    // better-sqlite3 ships a native binding and must not be bundled.
+    preset: 'bun',
     externals: {
-      external: ['better-sqlite3']
-    }
-  },
-
-  vite: {
-    optimizeDeps: {
-      exclude: ['better-sqlite3']
+      external: ['bun:sqlite']
     }
   },
 
@@ -92,6 +112,14 @@ export default defineNuxtConfig({
       alwaysRedirect: false,
       fallbackLocale: 'en',
       redirectOn: 'root'
+    }
+  },
+
+  icon: {
+    provider: 'none',
+    clientBundle: {
+      icons: dynamicIconNames,
+      scan: true
     }
   }
 })

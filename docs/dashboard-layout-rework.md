@@ -143,7 +143,7 @@ The file keeps its name and is rewritten around the tables above:
 ### 3. Schema and migration
 
 Edit `server/database/schema.ts` (relative imports for the shared types, as
-always there), then `pnpm db:generate`. Confirm the generated SQL in `drizzle/`
+always there), then `bun run db:generate`. Confirm the generated SQL in `drizzle/`
 does the table rebuild SQLite needs for a dropped column.
 
 ### 4. Server
@@ -257,13 +257,13 @@ rule.
 
 1. Types, tokens and rules (`shared/`), then validation — everything else
    compiles against these.
-2. Schema, `pnpm db:generate`, server utils and endpoints.
+2. Schema, `bun run db:generate`, server utils and endpoints.
 3. `Grid.vue` and `WidgetView.vue`, dependency swap.
 4. Widget components and their container queries.
 5. Seed, locales, `CLAUDE.md`.
 
 Steps 1–2 leave the app broken in between; 3 onwards is verifiable in the
-browser. Finish with `pnpm typecheck` and `pnpm lint`, and check a seeded
+browser. Finish with `bun run typecheck` and `bun run lint`, and check a seeded
 dashboard at desktop, tablet and phone widths — including that the first paint
 is server-rendered, with no skeleton.
 

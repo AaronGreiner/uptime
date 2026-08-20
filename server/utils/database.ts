@@ -1,8 +1,8 @@
 import { existsSync, mkdirSync } from 'node:fs'
 import { dirname, isAbsolute, resolve } from 'node:path'
-import SqliteDatabase from 'better-sqlite3'
-import { drizzle } from 'drizzle-orm/better-sqlite3'
-import { migrate } from 'drizzle-orm/better-sqlite3/migrator'
+import { Database as BunSqliteDatabase } from 'bun:sqlite'
+import { drizzle } from 'drizzle-orm/bun-sqlite'
+import { migrate } from 'drizzle-orm/bun-sqlite/migrator'
 import * as schema from '../database/schema'
 
 export type Database = ReturnType<typeof createDatabase>
@@ -12,13 +12,13 @@ let instance: Database | null = null
 function createDatabase(filePath: string) {
   mkdirSync(dirname(filePath), { recursive: true })
 
-  const connection = new SqliteDatabase(filePath)
+  const connection = new BunSqliteDatabase(filePath, { create: true })
 
   // WAL keeps the scheduler writing while dashboards read.
-  connection.pragma('journal_mode = WAL')
-  connection.pragma('synchronous = NORMAL')
-  connection.pragma('foreign_keys = ON')
-  connection.pragma('busy_timeout = 5000')
+  connection.exec('PRAGMA journal_mode = WAL')
+  connection.exec('PRAGMA synchronous = NORMAL')
+  connection.exec('PRAGMA foreign_keys = ON')
+  connection.exec('PRAGMA busy_timeout = 5000')
 
   return drizzle(connection, { schema })
 }
@@ -47,7 +47,7 @@ export function migrateDatabase(): void {
   if (!existsSync(migrationsFolder)) {
     throw new Error(
       `Migrations folder not found at "${migrationsFolder}". `
-      + 'Run "pnpm db:generate" during development or make sure the drizzle folder '
+      + 'Run "bun run db:generate" during development or make sure the drizzle folder '
       + 'is shipped next to the server output and NUXT_MIGRATIONS_DIR points at it.'
     )
   }

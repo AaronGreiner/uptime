@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import z from 'zod'
 import { GRID_BREAKPOINTS } from './grid'
 import { MONITOR_INTERVAL_BOUNDS, MONITOR_PACKET_BOUNDS, MONITOR_RETRY_BOUNDS, MONITOR_TIMEOUT_BOUNDS } from './monitor'
 

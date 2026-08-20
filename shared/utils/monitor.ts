@@ -7,6 +7,18 @@ export const MONITOR_TIMEOUT_BOUNDS = { min: 1, max: 120 }
 export const MONITOR_RETRY_BOUNDS = { min: 0, max: 10 }
 export const MONITOR_PACKET_BOUNDS = { min: 1, max: 10 }
 
+export const MONITOR_TYPE_ICONS: Record<MonitorType, string> = {
+  http: 'i-lucide-globe',
+  ping: 'i-lucide-radio-tower'
+}
+
+export const MONITOR_STATUS_ICONS: Record<MonitorStatus, string> = {
+  up: 'i-lucide-circle-check',
+  down: 'i-lucide-circle-x',
+  pending: 'i-lucide-loader-circle',
+  paused: 'i-lucide-circle-pause'
+}
+
 /** Heartbeats travelling with a monitor, and drawn in its pulse bar. */
 export const MONITOR_HEARTBEAT_HISTORY = 40
 
@@ -43,16 +55,11 @@ export function monitorStatusColor(status: MonitorStatus): 'success' | 'error' |
 
 /** Icon standing for the kind of check, used wherever the type is not spelled out. */
 export function monitorTypeIcon(type: MonitorType): string {
-  return type === 'http' ? 'i-lucide-globe' : 'i-lucide-radio-tower'
+  return MONITOR_TYPE_ICONS[type]
 }
 
 export function monitorStatusIcon(status: MonitorStatus): string {
-  switch (status) {
-    case 'up': return 'i-lucide-circle-check'
-    case 'down': return 'i-lucide-circle-x'
-    case 'pending': return 'i-lucide-loader-circle'
-    case 'paused': return 'i-lucide-circle-pause'
-  }
+  return MONITOR_STATUS_ICONS[status]
 }
 
 /**
