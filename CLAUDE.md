@@ -75,9 +75,8 @@ elsewhere. Relative timestamps read `useNow()`, one shared clock ticked every
 second by `app/plugins/clock.client.ts`. Both plugins wait for `app:mounted`
 before moving anything, otherwise they rewrite the data hydration is comparing.
 
-`/api/status` still exists for callers outside the browser, but `useStatusSummary`
-derives the same figures from the monitor list so the sidebar stays in step
-without a request of its own.
+`/api/status` is there for callers outside the browser. Nothing in the interface
+requests it: every figure the application shows is derived from the monitor list.
 
 **Groups.** Monitors are organised in a tree. `monitor_groups.parent_id` is a
 self reference, `monitors.group_id` is nullable, and a null group puts the
@@ -87,6 +86,18 @@ tree is assembled: `buildMonitorGroupTree` turns the flat API response into
 nodes, `buildMonitorTree` attaches the monitors and rolls the status counts up
 towards the roots. Both sides use it — the sidebar through
 `useMonitorNavigation`, the list page through `useMonitorTree`.
+
+`useMonitorNavigation` also owns the sidebar tree itself. `AppMonitorNav` renders
+it through the recursive `AppMonitorNavList`, not through `UNavigationMenu`,
+because that component folds its levels with nested accordions whose state
+cannot be read or written from the outside. The rows are plain anchors for the
+same reason the fold is ours: the router treats every `/monitors?group=…` link
+as active on the bare list route, so `useMonitorNavigation` decides which single
+row is current, and revealing the path down to it is derived rather than stored,
+so the server renders the tree the browser is about to show. A group folded shut
+by hand beats that reveal until the current row moves on. Collapsed to icons the
+sidebar has no fold, so that mode hands `collapsedItems` to `UNavigationMenu` and
+lets it draw the popovers.
 
 `assertValidParent` in `server/utils/groups.ts` is the guard: it rejects a
 missing parent, a group nested into its own subtree, and any move that would
@@ -117,8 +128,8 @@ Queries for ranges up to 24 h read raw heartbeats, longer ranges read the hourly
 rollups — see `RAW_HEARTBEAT_RANGE_LIMIT_SECONDS`.
 
 **Application shell.** `app/layouts/default.vue` renders `UDashboardGroup` plus a
-collapsible, resizable `UDashboardSidebar` holding the navigation, the overall
-status card and the account controls. Every page then renders its own
+collapsible, resizable `UDashboardSidebar` holding the navigation and the account
+controls. Every page then renders its own
 `UDashboardPanel` with a `#header` (a `UDashboardNavbar`, optionally followed by a
 `UDashboardToolbar`) and a `#body`. Put the page title and its actions in the
 navbar, filters and contextual metadata in the toolbar. Each navbar needs a
@@ -138,6 +149,16 @@ one go.
 Because the panel is inset, its body owns the scrolling: the navbar and toolbar
 stay put while the content moves. Anything that needs to stay visible belongs in
 the panel header, not at the top of the body.
+
+**Stored interface state.** `useUiPreference` keeps a setting in a cookie, and
+everything that survives a reload goes through it or through the cookie storage
+of `UDashboardGroup`: the sidebar width and its collapsed flag, the folded
+groups, the range on the monitor detail page. Cookies rather than `localStorage`
+on purpose — all of it is rendered on the server, and a value that only arrives
+after hydration makes the layout jump. Vue does not rectify class or attribute
+mismatches during hydration either, so a wrong first render simply stays on
+screen. Anything you add here has to be readable while the page is rendered, not
+written by an effect afterwards.
 
 **Dashboards.** A dashboard owns widgets; each widget stores a position for all
 five breakpoints in `dashboard_widgets.layout`. The grid is `grid-layout-plus`

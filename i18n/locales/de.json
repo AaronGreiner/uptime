@@ -10,7 +10,10 @@
     "openMenu": "Menü öffnen",
     "signedInAs": "Angemeldet als {username}",
     "monitoring": "Überwachung",
-    "brand": "Uptime"
+    "brand": "Uptime",
+    "expandAll": "Alle aufklappen",
+    "collapseAll": "Alle zuklappen",
+    "toggleGroup": "{name} auf- oder zuklappen"
   },
   "common": {
     "save": "Speichern",
@@ -56,6 +59,7 @@
   "monitor": {
     "title": "Monitore",
     "count": "keine Monitore | 1 Monitor | {count} Monitore",
+    "downCount": "kein Monitor ausgefallen | 1 Monitor ausgefallen | {count} Monitore ausgefallen",
     "create": "Neuer Monitor",
     "edit": "Monitor bearbeiten",
     "created": "Monitor „{name}“ angelegt.",
@@ -312,13 +316,5 @@
     "statusCodes": "Einzelne Codes oder Bereiche verwenden, zum Beispiel 200-299,301",
     "timeoutTooLong": "Das Zeitlimit darf das Prüfintervall nicht überschreiten",
     "monitorRequired": "Monitor für dieses Widget auswählen"
-  },
-  "sidebar": {
-    "allUp": "Alle Systeme erreichbar",
-    "someDown": "kein Monitor ausgefallen | 1 Monitor ausgefallen | {count} Monitore ausgefallen",
-    "somePending": "keine Prüfung unklar | 1 Prüfung unklar | {count} Prüfungen unklar",
-    "empty": "Noch keine Monitore",
-    "upOfTotal": "{up} von {total} erreichbar",
-    "uptimeShort": "{value} · 24 h"
   }
 }

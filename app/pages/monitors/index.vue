@@ -349,7 +349,7 @@ async function confirmGroupDelete() {
               variant="subtle"
               size="sm"
             >
-              {{ $t('sidebar.someDown', section.node.totals.down) }}
+              {{ $t('monitor.downCount', section.node.totals.down) }}
             </UBadge>
             <span
               v-else

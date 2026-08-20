@@ -7,7 +7,6 @@ const router = useRouter()
 const appName = useRuntimeConfig().public.appName
 
 const { data: dashboards, refresh: refreshDashboards } = useDashboards()
-const { items: monitorItems } = useMonitorNavigation()
 
 // One live connection for the whole application: every page reads the same
 // monitor cache, and the check results are pushed straight into it. Groups are
@@ -16,35 +15,26 @@ useLiveMonitors()
 
 const createDashboardOpen = ref(false)
 
-const navigation = computed<NavigationMenuItem[][]>(() => {
-  const groups: NavigationMenuItem[][] = [[
-    { label: t('nav.dashboards'), type: 'label' },
-    ...dashboards.value.map(dashboard => ({
-      label: dashboard.name,
-      icon: dashboard.isDefault ? 'i-lucide-layout-dashboard' : 'i-lucide-layout-panel-left',
-      to: `/d/${dashboard.slug}`
-    })),
-    ...(isAdmin.value
-      ? [{
-          label: t('dashboard.create'),
-          icon: 'i-lucide-plus',
-          onSelect: () => { createDashboardOpen.value = true }
-        }]
-      : [])
-  ], [
-    { label: t('nav.monitoring'), type: 'label' },
-    ...monitorItems.value
-  ]]
+const dashboardNavigation = computed<NavigationMenuItem[]>(() => [
+  { label: t('nav.dashboards'), type: 'label' },
+  ...dashboards.value.map(dashboard => ({
+    label: dashboard.name,
+    icon: dashboard.isDefault ? 'i-lucide-layout-dashboard' : 'i-lucide-layout-panel-left',
+    to: `/d/${dashboard.slug}`
+  })),
+  ...(isAdmin.value
+    ? [{
+        label: t('dashboard.create'),
+        icon: 'i-lucide-plus',
+        onSelect: () => { createDashboardOpen.value = true }
+      }]
+    : [])
+])
 
-  if (isAdmin.value) {
-    groups.push([
-      { label: t('nav.settings'), type: 'label' },
-      { label: t('settings.account'), icon: 'i-lucide-user-cog', to: '/settings' }
-    ])
-  }
-
-  return groups
-})
+const settingsNavigation = computed<NavigationMenuItem[]>(() => [
+  { label: t('nav.settings'), type: 'label' },
+  { label: t('settings.account'), icon: 'i-lucide-user-cog', to: '/settings' }
+])
 
 async function onDashboardCreated(slug: string) {
   await refreshDashboards()
@@ -55,8 +45,9 @@ async function onDashboardCreated(slug: string) {
 <template>
   <UDashboardGroup
     unit="rem"
-    storage="local"
+    storage="cookie"
     storage-key="uptime-sidebar"
+    :storage-options="{ maxAge: UI_PREFERENCE_MAX_AGE_SECONDS, sameSite: 'lax', path: '/' }"
   >
     <UDashboardSidebar
       id="uptime"
@@ -69,6 +60,9 @@ async function onDashboardCreated(slug: string) {
         // No divider towards the content: the panel already reads as its own
         // surface. The vertical padding lines the brand up with the navbar.
         root: 'border-none py-3 sm:py-4',
+        // The three navigation blocks sit closer together than the theme's
+        // default, so a section reads as a break rather than as a new screen.
+        body: 'gap-2',
         footer: 'flex-col items-stretch gap-2',
         header: 'gap-2'
       }"
@@ -86,19 +80,38 @@ async function onDashboardCreated(slug: string) {
         </NuxtLink>
       </template>
 
+      <!--
+        Three separate blocks rather than one menu with three lists: the
+        monitoring tree carries its own fold state and cannot be expressed as
+        `NavigationMenuItem`s while it is expanded.
+      -->
       <template #default="{ collapsed }">
         <UNavigationMenu
-          :items="navigation"
+          :items="dashboardNavigation"
           :collapsed="collapsed"
           orientation="vertical"
           tooltip
           popover
         />
+
+        <div class="shrink-0 h-px bg-border" />
+
+        <AppMonitorNav :collapsed="collapsed" />
+
+        <template v-if="isAdmin">
+          <div class="shrink-0 h-px bg-border" />
+
+          <UNavigationMenu
+            :items="settingsNavigation"
+            :collapsed="collapsed"
+            orientation="vertical"
+            tooltip
+            popover
+          />
+        </template>
       </template>
 
       <template #footer="{ collapsed }">
-        <AppSidebarStatus :collapsed="collapsed" />
-
         <div
           class="flex items-center gap-1"
           :class="collapsed ? 'flex-col' : ''"

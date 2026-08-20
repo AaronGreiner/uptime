@@ -10,7 +10,10 @@
     "openMenu": "Open menu",
     "signedInAs": "Signed in as {username}",
     "monitoring": "Monitoring",
-    "brand": "Uptime"
+    "brand": "Uptime",
+    "expandAll": "Expand all",
+    "collapseAll": "Collapse all",
+    "toggleGroup": "Fold {name} open or closed"
   },
   "common": {
     "save": "Save",
@@ -56,6 +59,7 @@
   "monitor": {
     "title": "Monitors",
     "count": "no monitors | 1 monitor | {count} monitors",
+    "downCount": "no monitors down | 1 monitor down | {count} monitors down",
     "create": "New monitor",
     "edit": "Edit monitor",
     "created": "Monitor \"{name}\" created.",
@@ -312,13 +316,5 @@
     "statusCodes": "Use single codes or ranges, for example 200-299,301",
     "timeoutTooLong": "The timeout must not exceed the check interval",
     "monitorRequired": "Select a monitor for this widget"
-  },
-  "sidebar": {
-    "allUp": "All systems up",
-    "someDown": "no monitors down | 1 monitor down | {count} monitors down",
-    "somePending": "no checks pending | 1 check pending | {count} checks pending",
-    "empty": "No monitors yet",
-    "upOfTotal": "{up} of {total} up",
-    "uptimeShort": "{value} · 24 h"
   }
 }

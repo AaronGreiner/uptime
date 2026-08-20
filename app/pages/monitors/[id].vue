@@ -2,7 +2,7 @@
 import type { Heartbeat, MonitorStatsPoint, MonitorUptime } from '#shared/types/monitor'
 import type { StatsRange } from '#shared/types/stats'
 import { MONITOR_RECENT_CHECK_LIMIT, appendHeartbeat } from '#shared/utils/monitor'
-import { STATS_RANGES } from '#shared/utils/stats'
+import { STATS_RANGES, isStatsRange } from '#shared/utils/stats'
 
 const route = useRoute()
 const router = useRouter()
@@ -20,7 +20,8 @@ if (error.value) {
 
 useSeoMeta({ title: () => monitor.value?.name ?? t('monitor.title') })
 
-const range = ref<StatsRange>('24h')
+// The chosen range carries over to the next monitor and survives a reload.
+const range = useUiPreference<StatsRange>('stats-range', () => '24h', isStatsRange)
 
 const { data: stats, refresh: refreshStats } = await useAsyncData(
   () => `monitor-stats-${monitorId.value}-${range.value}`,
