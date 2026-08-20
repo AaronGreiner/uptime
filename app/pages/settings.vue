@@ -128,7 +128,7 @@ async function onSubmit(event: FormSubmitEvent<z.output<typeof accountUpdateSche
         icon="i-lucide-settings"
       >
         <template #leading>
-          <UDashboardSidebarCollapse />
+          <AppSidebarCollapse />
         </template>
       </UDashboardNavbar>
     </template>

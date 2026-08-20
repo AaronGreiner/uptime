@@ -99,7 +99,7 @@ const showToolbar = computed(() => Boolean(dashboard.value?.description) || edit
         icon="i-lucide-layout-dashboard"
       >
         <template #leading>
-          <UDashboardSidebarCollapse />
+          <AppSidebarCollapse />
         </template>
 
         <template #right>

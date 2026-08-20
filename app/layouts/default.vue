@@ -54,12 +54,13 @@ async function onDashboardCreated(slug: string) {
       collapsible
       resizable
       :min-size="13"
+      :collapsed-size="4"
       :default-size="15"
       :max-size="24"
       :ui="{
         // No divider towards the content: the panel already reads as its own
         // surface. The vertical padding lines the brand up with the navbar.
-        root: 'border-none py-3 sm:py-4',
+        root: 'border-none py-3 sm:py-4 transition-[width] duration-300 ease-out motion-reduce:transition-none data-[dragging=true]:transition-none',
         // The three navigation blocks sit closer together than the theme's
         // default, so a section reads as a break rather than as a new screen.
         body: 'gap-2',

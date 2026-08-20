@@ -117,7 +117,7 @@ const recentChecks = computed(() => [...(heartbeats.value ?? [])].reverse())
     <template #header>
       <UDashboardNavbar :title="monitor.name">
         <template #leading>
-          <UDashboardSidebarCollapse />
+          <AppSidebarCollapse />
           <UButton
             to="/monitors"
             icon="i-lucide-arrow-left"

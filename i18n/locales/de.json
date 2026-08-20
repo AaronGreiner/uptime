@@ -13,6 +13,8 @@
     "brand": "Uptime",
     "expandAll": "Alle aufklappen",
     "collapseAll": "Alle zuklappen",
+    "expandSidebar": "Navigation aufklappen",
+    "collapseSidebar": "Navigation zuklappen",
     "toggleGroup": "{name} auf- oder zuklappen"
   },
   "common": {

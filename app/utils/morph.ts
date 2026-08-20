@@ -1,4 +1,6 @@
 import {
+  ArrowLeftToLine,
+  ArrowRightToLine,
   Check,
   ChevronsDownUp,
   ChevronsUpDown,
@@ -26,6 +28,8 @@ import type { MonitorStatus } from '#shared/types/monitor'
  * caches its plans in a WeakMap keyed by the IconNode reference.
  */
 export const MORPH_ICONS = {
+  arrowLeftToLine: ArrowLeftToLine,
+  arrowRightToLine: ArrowRightToLine,
   check: Check,
   chevronsDownUp: ChevronsDownUp,
   chevronsUpDown: ChevronsUpDown,

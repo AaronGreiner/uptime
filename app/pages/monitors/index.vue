@@ -242,7 +242,7 @@ async function confirmGroupDelete() {
         icon="i-lucide-activity"
       >
         <template #leading>
-          <UDashboardSidebarCollapse />
+          <AppSidebarCollapse />
         </template>
 
         <template #right>

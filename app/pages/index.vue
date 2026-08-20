@@ -17,7 +17,7 @@ if (target.value) {
         icon="i-lucide-layout-dashboard"
       >
         <template #leading>
-          <UDashboardSidebarCollapse />
+          <AppSidebarCollapse />
         </template>
       </UDashboardNavbar>
     </template>

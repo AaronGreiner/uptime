@@ -13,6 +13,8 @@
     "brand": "Uptime",
     "expandAll": "Expand all",
     "collapseAll": "Collapse all",
+    "expandSidebar": "Expand navigation",
+    "collapseSidebar": "Collapse navigation",
     "toggleGroup": "Fold {name} open or closed"
   },
   "common": {
