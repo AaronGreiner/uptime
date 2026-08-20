@@ -54,6 +54,31 @@ selects monitors whose `monitor_state.next_check_at` has passed, runs up to
 updated `monitor_state`. An in-flight set prevents a slow check from being queued
 twice.
 
+**Live updates.** `server/api/events.get.ts` is a server sent event stream, and
+`server/utils/live.ts` is the in-process bus feeding it. `recordCheckResult`
+publishes a `monitor.checked` event carrying the new state, the recomputed 24 h
+uptime and the heartbeat row it just inserted — the same shape `/api/monitors`
+returns, so a browser patches its cache instead of refetching the list.
+
+`app/plugins/live.ts` holds one stream per tab and hands it to
+`useLiveMonitors()`, called once from the dashboard layout. Every card, widget,
+sidebar entry and status figure reads that one `useMonitors()` cache, so patching
+it updates the whole application at once. Anything the payload cannot carry — the
+aggregated chart buckets — subscribes through `onMonitorChecked()` and refetches
+just itself.
+
+The stream is closed while the tab is hidden, because browsers cap the
+connections per origin and background tabs would starve the visible one.
+Reopening reports the gap through `onResumed`, which reloads the list; `usePolling`
+is only the slow safety net behind that, and it also picks up monitors created
+elsewhere. Relative timestamps read `useNow()`, one shared clock ticked every
+second by `app/plugins/clock.client.ts`. Both plugins wait for `app:mounted`
+before moving anything, otherwise they rewrite the data hydration is comparing.
+
+`/api/status` still exists for callers outside the browser, but `useStatusSummary`
+derives the same figures from the monitor list so the sidebar stays in step
+without a request of its own.
+
 **Groups.** Monitors are organised in a tree. `monitor_groups.parent_id` is a
 self reference, `monitors.group_id` is nullable, and a null group puts the
 monitor at the root next to the top level groups. Depth is capped by

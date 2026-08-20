@@ -10,13 +10,13 @@ const route = useRoute()
 const router = useRouter()
 
 const { data: monitors, refresh } = await useMonitors()
-const { refresh: refreshSummary } = useStatusSummary()
 const { tree, flatTree, byId, rootMonitors, rootTotals, refreshGroups } = useMonitorTree()
 
 useSeoMeta({ title: () => t('monitor.title') })
 
+/** Only needed after an edit; check results arrive over the event stream. */
 async function reload() {
-  await Promise.all([refresh(), refreshSummary(), refreshGroups()])
+  await Promise.all([refresh(), refreshGroups()])
 }
 
 const { pending, checkNow, toggleActive, remove } = useMonitorActions(reload)

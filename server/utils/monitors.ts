@@ -1,13 +1,14 @@
 import { desc, eq, sql } from 'drizzle-orm'
 import type { Heartbeat, Monitor, MonitorState, MonitorStatsPoint, MonitorUptime, MonitorWithState } from '../../shared/types/monitor'
 import type { StatsRange } from '../../shared/types/stats'
+import { MONITOR_HEARTBEAT_HISTORY } from '../../shared/utils/monitor'
 import { RAW_HEARTBEAT_RANGE_LIMIT_SECONDS, STATS_RANGE_SECONDS, statsBucketSeconds } from '../../shared/utils/stats'
 import { heartbeats, monitors, monitorState } from '../database/schema'
 import type { MonitorRow, MonitorStateRow } from '../database/schema'
 import { nowInSeconds } from '../services/scheduler'
 
 /** Heartbeats rendered in the pulse bar of a monitor card. */
-export const DEFAULT_HEARTBEAT_COUNT = 40
+export const DEFAULT_HEARTBEAT_COUNT = MONITOR_HEARTBEAT_HISTORY
 
 const EMPTY_STATE: MonitorState = {
   status: 'pending',
@@ -273,7 +274,7 @@ export function getHeartbeats(monitorId: number, limit: number): Heartbeat[] {
     .reverse()
 }
 
-function emptyUptime(): MonitorUptime {
+export function emptyUptime(): MonitorUptime {
   return { ratio: null, upCount: 0, downCount: 0, avgLatencyMs: null }
 }
 

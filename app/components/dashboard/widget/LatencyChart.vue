@@ -19,7 +19,10 @@ const { data, refresh, status } = useAsyncData(
   { watch: [range, () => props.widget.monitorId], immediate: Boolean(props.widget.monitorId) }
 )
 
-usePolling(refresh, 30_000)
+// The buckets are aggregated server side, so a fresh check means a refetch.
+onMonitorChecked(() => {
+  void refresh()
+}, () => props.widget.monitorId)
 </script>
 
 <template>

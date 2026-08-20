@@ -2,8 +2,9 @@ import { and, eq, isNull, lte, or } from 'drizzle-orm'
 import type { MonitorStatus } from '../../shared/types/monitor'
 import type { NotificationEvent } from '../../shared/types/notification'
 import { monitorTarget } from '../../shared/utils/monitor'
+import { STATS_RANGE_SECONDS } from '../../shared/utils/stats'
 import { heartbeats, monitorState, monitors } from '../database/schema'
-import type { MonitorRow, MonitorStateRow } from '../database/schema'
+import type { HeartbeatRow, MonitorRow, MonitorStateRow } from '../database/schema'
 import { executeCheck } from './checks'
 import type { CheckResult } from './checks'
 import { dispatchNotificationEvent } from './notifications'
@@ -141,18 +142,20 @@ export function recordCheckResult(monitor: MonitorRow, result: CheckResult): Not
     ? 'up'
     : consecutiveFailures > monitor.retries ? 'down' : 'pending'
 
-  database.insert(heartbeats).values({
+  // Returned rather than run: the identifier makes the pushed heartbeat the very
+  // same row a later refetch would deliver, so the two can never be drawn twice.
+  const heartbeat = database.insert(heartbeats).values({
     monitorId: monitor.id,
     checkedAt: now,
     status: result.status,
     latencyMs: result.latencyMs,
     statusCode: result.statusCode,
     message: result.message
-  }).run()
+  }).returning().get()
 
   const certificateExpiresAt = result.certificateExpiresAt ?? previous?.certificateExpiresAt ?? null
 
-  database.insert(monitorState).values({
+  const current = database.insert(monitorState).values({
     monitorId: monitor.id,
     status,
     lastCheckedAt: now,
@@ -180,9 +183,31 @@ export function recordCheckResult(monitor: MonitorRow, result: CheckResult): Not
       statusChangedAt: status === previousStatus ? previous?.statusChangedAt ?? now : now,
       updatedAt: now
     }
-  }).run()
+  }).returning().get()
+
+  publishCheckResult(monitor, current, heartbeat)
 
   return buildNotificationEvent(monitor, previous, status, previousStatus, result, certificateExpiresAt, now)
+}
+
+/**
+ * Pushes the result to every connected browser. The payload mirrors the shape
+ * the monitor list returns, so a client can patch its cache in place instead of
+ * asking for the whole list again.
+ */
+function publishCheckResult(monitor: MonitorRow, state: MonitorStateRow, heartbeat: HeartbeatRow): void {
+  // The uptime is a query of its own, worth skipping while nobody is watching.
+  if (!hasLiveListeners()) {
+    return
+  }
+
+  publishLiveEvent({
+    type: 'monitor.checked',
+    monitorId: monitor.id,
+    state: serializeMonitorState(monitor, state),
+    uptime24h: calculateUptimeBulk([monitor.id], STATS_RANGE_SECONDS['24h']).get(monitor.id) ?? emptyUptime(),
+    heartbeat
+  })
 }
 
 function buildNotificationEvent(

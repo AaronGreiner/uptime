@@ -1,13 +1,14 @@
-/** Shared clock so every relative timestamp on the page updates together. */
-export function useNow(intervalMs = 15_000) {
-  const now = useState('clock', () => Date.now())
-
-  usePolling(() => {
-    now.value = Date.now()
-  }, intervalMs)
-
-  return now
+/**
+ * The one clock of the application, so every relative timestamp on the page
+ * updates together and in step with the incoming check results. Ticked once a
+ * second by `plugins/clock.client.ts`.
+ */
+export function useNow(): Ref<number> {
+  return useState('clock', () => Date.now())
 }
+
+/** Resolution of the shared clock, and therefore how stale it can be. */
+const CLOCK_TICK_SECONDS = 1
 
 const RELATIVE_UNITS: Array<[Intl.RelativeTimeFormatUnit, number]> = [
   ['year', 365 * 86_400],
@@ -34,7 +35,12 @@ export function useFormatters() {
       return t('common.never')
     }
 
-    const deltaSeconds = unixSeconds - Math.floor(now.value / 1000)
+    const rawDelta = unixSeconds - Math.floor(now.value / 1000)
+
+    // A result that lands right after a tick is up to a second ahead of the
+    // clock reading it. That is the clock being coarse, not a future check, and
+    // reporting it as `in 1 second` would be nonsense.
+    const deltaSeconds = rawDelta > 0 && rawDelta <= CLOCK_TICK_SECONDS ? 0 : rawDelta
     const magnitude = Math.abs(deltaSeconds)
     const [unit, size] = RELATIVE_UNITS.find(([, seconds]) => magnitude >= seconds) ?? RELATIVE_UNITS.at(-1)!
 

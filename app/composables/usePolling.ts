@@ -1,9 +1,12 @@
 /**
- * Runs a callback on an interval while the tab is visible. Monitoring data is
- * refreshed by polling because a self-hosted single-node app does not warrant a
- * websocket layer.
+ * Runs a callback on an interval while the tab is visible. Fresh data arrives
+ * over the event stream (`plugins/live.ts`); this is the slow safety net behind
+ * it, reconciling whatever a closed or stalled stream missed.
+ *
+ * Becoming visible deliberately does not fire the callback: the stream reopens
+ * at the same moment and reports the gap through `onResumed`.
  */
-export function usePolling(callback: () => unknown, intervalMs = 10_000) {
+export function usePolling(callback: () => unknown, intervalMs = 60_000) {
   if (import.meta.server) {
     return
   }
@@ -22,16 +25,11 @@ export function usePolling(callback: () => unknown, intervalMs = 10_000) {
       return
     }
 
-    timer = setInterval(() => {
-      if (document.visibilityState === 'visible') {
-        callback()
-      }
-    }, intervalMs)
+    timer = setInterval(callback, intervalMs)
   }
 
   const onVisibilityChange = () => {
     if (document.visibilityState === 'visible') {
-      callback()
       start()
     } else {
       stop()

@@ -1,4 +1,4 @@
-import type { Monitor, MonitorStatus, MonitorType } from '../types/monitor'
+import type { Heartbeat, Monitor, MonitorStatus, MonitorType } from '../types/monitor'
 
 export const MONITOR_TYPES: MonitorType[] = ['http', 'ping']
 
@@ -6,6 +6,25 @@ export const MONITOR_INTERVAL_BOUNDS = { min: 20, max: 86_400 }
 export const MONITOR_TIMEOUT_BOUNDS = { min: 1, max: 120 }
 export const MONITOR_RETRY_BOUNDS = { min: 0, max: 10 }
 export const MONITOR_PACKET_BOUNDS = { min: 1, max: 10 }
+
+/** Heartbeats travelling with a monitor, and drawn in its pulse bar. */
+export const MONITOR_HEARTBEAT_HISTORY = 40
+
+/** Heartbeats listed as recent checks on the monitor detail page. */
+export const MONITOR_RECENT_CHECK_LIMIT = 50
+
+/**
+ * Appends a heartbeat to an oldest first list and trims it back to `limit`.
+ * A result that is already in the list is ignored, so a pushed event and a
+ * refetch that crossed paths cannot draw the same check twice.
+ */
+export function appendHeartbeat(list: Heartbeat[], heartbeat: Heartbeat, limit: number): Heartbeat[] {
+  if (list.some(entry => entry.id === heartbeat.id)) {
+    return list
+  }
+
+  return [...list, heartbeat].slice(-limit)
+}
 
 /** Human readable target of a monitor, used in lists and notifications. */
 export function monitorTarget(monitor: Pick<Monitor, 'type' | 'url' | 'hostname'>): string {

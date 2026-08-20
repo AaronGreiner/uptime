@@ -14,9 +14,8 @@ const monitor = computed(() => props.monitors.find(entry => entry.id === props.w
 const range = computed<StatsRange>(() => props.widget.config.range ?? '24h')
 
 /**
- * The 24 h figure travels with the monitor list, every other range needs its own
- * request. Longer ranges are answered from the hourly rollups and change slowly,
- * so a one minute refresh is plenty.
+ * The 24 h figure travels with the monitor list and is already live. Every other
+ * range is aggregated server side and needs its own request.
  */
 const { data: stats, refresh } = useAsyncData(
   () => `uptime-${props.widget.id}-${range.value}`,
@@ -34,7 +33,9 @@ const { data: stats, refresh } = useAsyncData(
   { watch: [range, () => props.widget.monitorId] }
 )
 
-usePolling(refresh, 60_000)
+onMonitorChecked(() => {
+  void refresh()
+}, () => props.widget.monitorId)
 
 const uptime = computed(() => stats.value ?? monitor.value?.uptime24h ?? null)
 

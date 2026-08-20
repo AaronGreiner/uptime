@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { Heartbeat, MonitorStatsPoint, MonitorUptime } from '#shared/types/monitor'
 import type { StatsRange } from '#shared/types/stats'
+import { MONITOR_RECENT_CHECK_LIMIT, appendHeartbeat } from '#shared/utils/monitor'
 import { STATS_RANGES } from '#shared/utils/stats'
 
 const route = useRoute()
@@ -31,15 +32,26 @@ const { data: stats, refresh: refreshStats } = await useAsyncData(
 
 const { data: heartbeats, refresh: refreshHeartbeats } = await useAsyncData(
   () => `monitor-heartbeats-${monitorId.value}`,
-  () => $fetch<Heartbeat[]>(`/api/monitors/${monitorId.value}/heartbeats`, { query: { limit: 50 } }),
+  () => $fetch<Heartbeat[]>(`/api/monitors/${monitorId.value}/heartbeats`, { query: { limit: MONITOR_RECENT_CHECK_LIMIT } }),
   { watch: [monitorId], default: () => [] }
 )
 
+/** Only needed after an edit; check results arrive over the event stream. */
 async function reload() {
   await Promise.all([refresh(), refreshStats(), refreshHeartbeats()])
 }
 
-usePolling(reload, 15_000)
+// The state and the heartbeat travel with the event, the chart buckets have to
+// be recomputed server side, so that is the only thing refetched here.
+onMonitorChecked((event) => {
+  if (monitor.value) {
+    monitor.value = applyCheckResult(monitor.value, event)
+  }
+
+  heartbeats.value = appendHeartbeat(heartbeats.value, event.heartbeat, MONITOR_RECENT_CHECK_LIMIT)
+
+  void refreshStats()
+}, monitorId)
 
 const { pending, checkNow, toggleActive, remove } = useMonitorActions(reload)
 
