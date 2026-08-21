@@ -120,12 +120,16 @@ const showToolbar = computed(() => Boolean(dashboard.value?.description) || edit
               color="neutral"
               variant="subtle"
               :label="$t('dashboard.addWidget')"
+              :aria-label="$t('dashboard.addWidget')"
+              :ui="{ base: 'px-2 sm:px-2.5', label: 'hidden sm:inline' }"
               @click="openWidgetModal(null)"
             />
             <UButton
               :color="editing ? 'primary' : 'neutral'"
               :variant="editing ? 'solid' : 'subtle'"
               :label="$t(editing ? 'dashboard.editModeDone' : 'dashboard.editMode')"
+              :aria-label="$t(editing ? 'dashboard.editModeDone' : 'dashboard.editMode')"
+              :ui="{ base: 'px-2 sm:px-2.5', label: 'hidden sm:inline' }"
               @click="editing = !editing"
             >
               <template #leading="{ ui }">

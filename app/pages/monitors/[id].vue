@@ -128,7 +128,10 @@ const recentChecks = computed(() => [...(heartbeats.value ?? [])].reverse())
         </template>
 
         <template #trailing>
-          <MonitorStatusBadge :status="monitor.state.status" />
+          <MonitorStatusBadge
+            :status="monitor.state.status"
+            mobile-icon-only
+          />
         </template>
 
         <template #right>
@@ -138,6 +141,8 @@ const recentChecks = computed(() => [...(heartbeats.value ?? [])].reverse())
               variant="subtle"
               :loading="pending === monitor.id"
               :label="$t('monitor.actions.checkNow')"
+              :aria-label="$t('monitor.actions.checkNow')"
+              :ui="{ base: 'px-2 sm:px-2.5', label: 'hidden sm:inline' }"
               @click="checkNow(monitor)"
             >
               <template #leading="{ ui }">

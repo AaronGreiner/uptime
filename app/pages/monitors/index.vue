@@ -252,11 +252,15 @@ async function confirmGroupDelete() {
               color="neutral"
               variant="subtle"
               :label="$t('group.create')"
+              :aria-label="$t('group.create')"
+              :ui="{ base: 'px-2 sm:px-2.5', label: 'hidden sm:inline' }"
               @click="openGroupForm(null)"
             />
             <UButton
               icon="i-lucide-plus"
               :label="$t('monitor.create')"
+              :aria-label="$t('monitor.create')"
+              :ui="{ base: 'px-2 sm:px-2.5', label: 'hidden sm:inline' }"
               @click="openForm(null)"
             />
           </template>
@@ -265,34 +269,32 @@ async function confirmGroupDelete() {
 
       <UDashboardToolbar
         v-if="monitors.length"
-        :ui="{ left: 'min-w-0 flex-1' }"
+        :ui="{ root: 'block py-2 sm:flex sm:py-0' }"
       >
-        <template #left>
+        <div class="grid w-full grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)_auto] items-center gap-1.5 sm:flex">
           <UInput
             v-model="search"
             icon="i-lucide-search"
             :placeholder="$t('common.search')"
-            class="min-w-0 flex-1 sm:flex-none sm:w-56"
+            class="col-span-3 min-w-0 w-full sm:col-span-1 sm:w-56 sm:flex-none"
           />
           <USelectMenu
             v-model="statusFilter"
             :items="statusItems"
             value-key="value"
             :search-input="false"
-            class="w-36"
+            class="min-w-0 w-full sm:w-36 sm:flex-none"
           />
           <USelectMenu
             v-if="tree.length"
             :model-value="groupFilter"
             :items="groupFilterItems"
             value-key="value"
-            class="w-44"
+            class="min-w-0 w-full sm:w-44 sm:flex-none"
             @update:model-value="setGroupFilter($event)"
           />
-        </template>
 
-        <template #right>
-          <span class="hidden sm:inline text-sm text-dimmed tabular-nums whitespace-nowrap">
+          <span class="hidden sm:inline sm:ms-auto text-sm text-dimmed tabular-nums whitespace-nowrap">
             {{ $t('monitor.count', filtered.length) }}
           </span>
 
@@ -316,7 +318,7 @@ async function confirmGroupDelete() {
               </template>
             </UButton>
           </UTooltip>
-        </template>
+        </div>
       </UDashboardToolbar>
     </template>
 
@@ -382,7 +384,7 @@ async function confirmGroupDelete() {
 
           <div
             v-if="section.monitors.length"
-            class="grid gap-4 sm:gap-6 sm:grid-cols-2 2xl:grid-cols-3"
+            class="grid gap-3 sm:gap-6 sm:grid-cols-2 2xl:grid-cols-3"
           >
             <MonitorCard
               v-for="monitor in section.monitors"
@@ -425,7 +427,7 @@ async function confirmGroupDelete() {
 
       <div
         v-else-if="filtered.length"
-        class="grid gap-4 sm:gap-6 sm:grid-cols-2 2xl:grid-cols-3"
+        class="grid gap-3 sm:gap-6 sm:grid-cols-2 2xl:grid-cols-3"
       >
         <MonitorCard
           v-for="monitor in filtered"

@@ -164,7 +164,7 @@ onBeforeUnmount(() => {
 <template>
   <div
     ref="grid"
-    class="grid grid-cols-2 sm:grid-cols-6 lg:grid-cols-12 gap-4 auto-rows-[68px]"
+    class="grid grid-cols-2 sm:grid-cols-6 lg:grid-cols-12 gap-x-3 gap-y-4 sm:gap-4 auto-rows-[68px] lg:auto-rows-[60px]"
   >
     <DashboardWidgetView
       v-for="(widget, index) in widgets"

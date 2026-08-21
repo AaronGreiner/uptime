@@ -52,7 +52,7 @@
     "signIn": "Sign in",
     "signOut": "Sign out",
     "signInTitle": "Admin sign in",
-    "signInDescription": "Only the admin account can create or change monitors and dashboards. Everything else is public.",
+    "signInDescription": "Sign in to edit monitors and dashboards. All views remain public.",
     "username": "Username",
     "password": "Password",
     "showPassword": "Show password",
@@ -198,7 +198,7 @@
     "deleted": "Dashboard \"{name}\" deleted.",
     "editMode": "Edit layout",
     "editModeDone": "Done",
-    "editModeHint": "Use the drag handle to reorder widgets and the arrow controls to resize them. Changes are saved automatically.",
+    "editModeHint": "Drag widgets to reorder; use the arrows to resize. The layout saves automatically.",
     "addWidget": "Add widget",
     "layoutSaved": "Layout saved.",
     "fields": {
@@ -291,10 +291,10 @@
   "settings": {
     "title": "Settings",
     "account": "Admin account",
-    "accountDescription": "Change the credentials of the single admin account.",
+    "accountDescription": "Change the admin credentials.",
     "currentPassword": "Current password",
     "newPassword": "New password",
-    "newPasswordHint": "Leave empty to keep the current password. At least 10 characters.",
+    "newPasswordHint": "Leave blank to keep it; use at least 10 characters.",
     "wrongPassword": "The current password is incorrect.",
     "updated": "Account updated.",
     "appearance": "Appearance",
@@ -314,10 +314,10 @@
     },
     "data": {
       "title": "Data",
-      "description": "Bulk actions on everything this instance has recorded.",
+      "description": "Manage demo data or delete all data.",
       "clear": {
         "label": "Delete all data",
-        "hint": "Removes every monitor, group, dashboard and all recorded history. The admin account and this instance's settings stay.",
+        "hint": "Deletes monitors, groups, dashboards, and history. The account and settings remain.",
         "action": "Delete everything",
         "title": "Delete all data?",
         "description": "Every monitor, group, dashboard and heartbeat is removed permanently. This cannot be undone.",
@@ -325,7 +325,7 @@
       },
       "demo": {
         "label": "Reset demo data",
-        "hint": "Deletes everything first, then creates fresh demo dashboards, groups, monitors and generated history.",
+        "hint": "Replaces all data with demo dashboards, groups, monitors, and history.",
         "action": "Seed demo data",
         "title": "Replace everything with demo data?",
         "description": "The existing data is deleted first. The demo monitors point at real public endpoints and are checked as soon as they exist.",

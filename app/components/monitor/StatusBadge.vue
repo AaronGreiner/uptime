@@ -5,9 +5,11 @@ const props = withDefaults(defineProps<{
   status: MonitorStatus
   size?: 'sm' | 'md' | 'lg'
   variant?: 'subtle' | 'soft' | 'solid' | 'outline'
+  mobileIconOnly?: boolean
 }>(), {
   size: 'sm',
-  variant: 'subtle'
+  variant: 'subtle',
+  mobileIconOnly: false
 })
 
 const color = computed(() => monitorStatusColor(props.status))
@@ -20,6 +22,8 @@ const icon = computed(() => monitorStatusMorphIcon(props.status))
     :variant="variant"
     :size="size"
     :label="$t(`status.${status}`)"
+    :aria-label="$t(`status.${status}`)"
+    :ui="mobileIconOnly ? { base: 'px-1.5 sm:px-2', label: 'hidden sm:inline' } : undefined"
     class="transition-colors"
   >
     <template #leading="{ ui }">

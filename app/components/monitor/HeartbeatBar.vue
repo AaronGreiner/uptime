@@ -33,13 +33,13 @@ const newest = computed(() => props.heartbeats.at(-1) ?? null)
 <template>
   <div class="flex flex-col gap-1.5 @container">
     <div
-      class="flex items-end gap-[2px] h-8"
+      class="flex items-end gap-px @[18rem]:gap-[2px] h-8"
       @mouseleave="hovered = null"
     >
       <div
         v-for="(heartbeat, index) in slots"
         :key="heartbeat?.id ?? `empty-${index}`"
-        class="flex-1 min-w-[3px] rounded-[2px] transition-[opacity,height] duration-150"
+        class="flex-1 min-w-[2px] @[18rem]:min-w-[3px] rounded-[2px] transition-[opacity,height] duration-150"
         :class="[
           heartbeat === null ? 'h-4 bg-elevated' : heartbeat.status === 'up' ? 'h-full bg-success' : 'h-full bg-error',
           hovered && heartbeat && hovered.id !== heartbeat.id ? 'opacity-40' : 'opacity-100'

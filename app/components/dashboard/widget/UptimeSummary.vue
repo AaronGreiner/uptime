@@ -65,7 +65,7 @@ const tone = computed(() => {
       {{ widget.config.title || monitor.name }}
     </p>
     <p
-      class="text-2xl @[18rem]:text-3xl @[30rem]:text-4xl font-semibold tabular-nums leading-tight"
+      class="text-2xl @[18rem]:text-3xl @[24rem]:text-4xl font-semibold tabular-nums leading-tight"
       :class="tone"
     >
       {{ formatUptime(uptime?.ratio ?? null) }}

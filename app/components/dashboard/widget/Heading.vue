@@ -13,7 +13,7 @@ const classes = computed(() => ({
 </script>
 
 <template>
-  <div class="h-full min-w-0 flex items-center">
+  <div class="h-full min-w-0 flex items-end pb-2">
     <p
       class="text-highlighted truncate-target"
       :class="classes"

@@ -19,10 +19,10 @@ export default defineAppConfig({
          * `min-h-svh`, which would otherwise push the panel past the viewport
          * once the margin is added.
          */
-        root: 'min-h-0 m-3 sm:m-4 rounded-xl border border-default bg-elevated/40 overflow-hidden',
+        root: 'min-h-0 m-2 sm:m-4 rounded-xl border border-default bg-elevated/40 overflow-hidden',
         // The panel margin already provides breathing room, so the inner padding
         // is a touch tighter than the default to give the content its width back.
-        body: 'p-4 sm:p-5 gap-4 sm:gap-5'
+        body: 'p-3 sm:p-5 gap-5 sm:gap-6'
       }
     }
   }

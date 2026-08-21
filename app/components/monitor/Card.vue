@@ -23,9 +23,9 @@ const target = computed(() => monitorTarget(props.monitor))
   <UCard
     variant="outline"
     class="h-full"
-    :ui="{ root: 'flex flex-col overflow-hidden @container', body: 'flex-1 flex flex-col gap-4 min-h-0 overflow-y-auto' }"
+    :ui="{ root: 'flex flex-col overflow-hidden @container', body: 'flex-1 flex flex-col gap-3 @[14rem]:gap-4 min-h-0 overflow-y-auto' }"
   >
-    <div class="flex items-start justify-between gap-3">
+    <div class="flex flex-col items-stretch gap-2 @[14rem]:flex-row @[14rem]:items-start @[14rem]:justify-between @[14rem]:gap-3">
       <div class="min-w-0 flex-1">
         <p
           v-if="groupPath"
@@ -48,7 +48,7 @@ const target = computed(() => monitorTarget(props.monitor))
         </p>
       </div>
 
-      <div class="flex items-center gap-1 shrink-0">
+      <div class="flex items-center gap-1 self-start shrink-0">
         <slot name="actions" />
         <MonitorStatusBadge :status="monitor.state.status" />
       </div>

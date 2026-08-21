@@ -52,7 +52,7 @@
     "signIn": "Anmelden",
     "signOut": "Abmelden",
     "signInTitle": "Admin-Anmeldung",
-    "signInDescription": "Nur das Admin-Konto darf Monitore und Dashboards anlegen oder ändern. Alles andere ist öffentlich sichtbar.",
+    "signInDescription": "Zum Bearbeiten als Admin anmelden. Alle Ansichten bleiben öffentlich.",
     "username": "Benutzername",
     "password": "Passwort",
     "showPassword": "Passwort anzeigen",
@@ -198,7 +198,7 @@
     "deleted": "Dashboard „{name}“ gelöscht.",
     "editMode": "Layout bearbeiten",
     "editModeDone": "Fertig",
-    "editModeHint": "Widgets am Griff neu anordnen und mit den Pfeilen in der Größe ändern. Änderungen werden automatisch gespeichert.",
+    "editModeHint": "Widgets ziehen; Größe mit den Pfeilen ändern. Das Layout wird automatisch gespeichert.",
     "addWidget": "Widget hinzufügen",
     "layoutSaved": "Layout gespeichert.",
     "fields": {
@@ -291,10 +291,10 @@
   "settings": {
     "title": "Einstellungen",
     "account": "Admin-Konto",
-    "accountDescription": "Zugangsdaten des einzigen Admin-Kontos ändern.",
+    "accountDescription": "Admin-Zugangsdaten ändern.",
     "currentPassword": "Aktuelles Passwort",
     "newPassword": "Neues Passwort",
-    "newPasswordHint": "Leer lassen, um das Passwort zu behalten. Mindestens 10 Zeichen.",
+    "newPasswordHint": "Leer lassen, um es zu behalten; mindestens 10 Zeichen.",
     "wrongPassword": "Das aktuelle Passwort ist falsch.",
     "updated": "Konto aktualisiert.",
     "appearance": "Darstellung",
@@ -314,10 +314,10 @@
     },
     "data": {
       "title": "Daten",
-      "description": "Massenaktionen für alles, was diese Instanz aufgezeichnet hat.",
+      "description": "Demodaten verwalten oder alle Daten löschen.",
       "clear": {
         "label": "Alle Daten löschen",
-        "hint": "Entfernt alle Monitore, Gruppen, Dashboards und den gesamten Verlauf. Das Admin-Konto und die Einstellungen dieser Instanz bleiben erhalten.",
+        "hint": "Löscht Monitore, Gruppen, Dashboards und Verlauf. Konto und Einstellungen bleiben.",
         "action": "Alles löschen",
         "title": "Alle Daten löschen?",
         "description": "Alle Monitore, Gruppen, Dashboards und Heartbeats werden dauerhaft entfernt. Das lässt sich nicht rückgängig machen.",
@@ -325,7 +325,7 @@
       },
       "demo": {
         "label": "Demodaten zurücksetzen",
-        "hint": "Löscht zuerst alles und erzeugt anschließend frische Demo-Dashboards, Demogruppen, Demomonitore und einen generierten Verlauf.",
+        "hint": "Ersetzt alle Daten durch Demo-Dashboards, -Gruppen, -Monitore und Verlauf.",
         "action": "Demodaten erzeugen",
         "title": "Alles durch Demodaten ersetzen?",
         "description": "Die vorhandenen Daten werden zuerst gelöscht. Die Demomonitore zeigen auf echte öffentliche Endpunkte und werden geprüft, sobald sie existieren.",
