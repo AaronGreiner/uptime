@@ -1,95 +1,94 @@
-import type { GridBreakpoint, WidgetLayout, WidgetPosition, WidgetType } from '../types/dashboard'
+import type { WidgetHeight, WidgetType, WidgetWidth } from '../types/dashboard'
 
-/** Ordered from largest to smallest, matching the grid component. */
-export const GRID_BREAKPOINTS: GridBreakpoint[] = ['lg', 'md', 'sm', 'xs', 'xxs']
+/** Ordered from narrowest to widest; the resize controls step through this order. */
+export const WIDGET_WIDTHS = ['quarter', 'third', 'half', 'twoThirds', 'full'] as const
 
-/** Minimum viewport width in pixels at which a breakpoint becomes active. */
-export const GRID_BREAKPOINT_WIDTHS: Record<GridBreakpoint, number> = {
-  lg: 1280,
-  md: 996,
-  sm: 768,
-  xs: 480,
-  xxs: 0
-}
-
-/** Column count per breakpoint. */
-export const GRID_COLUMNS: Record<GridBreakpoint, number> = {
-  lg: 12,
-  md: 10,
-  sm: 6,
-  xs: 4,
-  xxs: 2
-}
-
-export const GRID_ROW_HEIGHT = 40
-export const GRID_MARGIN: [number, number] = [16, 16]
-
-/** Default footprint of a freshly added widget, expressed in `lg` columns. */
-export const WIDGET_DEFAULT_SIZE: Record<WidgetType, { w: number, h: number, minW: number, minH: number }> = {
-  'monitor': { w: 4, h: 4, minW: 2, minH: 3 },
-  'uptime-summary': { w: 3, h: 3, minW: 2, minH: 2 },
-  'latency-chart': { w: 6, h: 5, minW: 3, minH: 4 },
-  'status-overview': { w: 12, h: 3, minW: 3, minH: 2 },
-  'heading': { w: 12, h: 1, minW: 2, minH: 1 }
-}
-
-/** Below this breakpoint a widget always spans the full width of the grid. */
-const STACKED_BREAKPOINTS: GridBreakpoint[] = ['xs', 'xxs']
+/** Ordered from shortest to tallest; the resize controls step through this order. */
+export const WIDGET_HEIGHTS = ['slim', 'compact', 'standard', 'tall'] as const
 
 /**
- * Scales a position defined for the `lg` breakpoint down to every other
- * breakpoint so a new widget has a sensible layout everywhere at once. Width and
- * column offset shrink proportionally, which keeps widgets side by side instead
- * of collapsing them into one column. On phone sized grids widgets go full width
- * instead, because a half column card is too narrow to read.
+ * Keep every responsive class in one literal string. Tailwind cannot emit class
+ * names assembled from fragments at runtime.
  */
-export function buildDefaultWidgetLayout(type: WidgetType, x: number, y: number): WidgetLayout {
-  const size = WIDGET_DEFAULT_SIZE[type]
-
-  return GRID_BREAKPOINTS.reduce((layout, breakpoint) => {
-    const columns = GRID_COLUMNS[breakpoint]
-    const scale = columns / GRID_COLUMNS.lg
-    const stacked = STACKED_BREAKPOINTS.includes(breakpoint)
-    const width = stacked ? columns : Math.max(1, Math.min(columns, Math.round(size.w * scale)))
-
-    layout[breakpoint] = {
-      x: stacked ? 0 : Math.max(0, Math.min(columns - width, Math.round(x * scale))),
-      y,
-      w: width,
-      h: stacked ? stackedHeight(type, size.h) : size.h
-    }
-
-    return layout
-  }, {} as WidgetLayout)
+export const WIDGET_WIDTH_CLASS: Record<WidgetWidth, string> = {
+  quarter: 'col-span-1 sm:col-span-3 lg:col-span-3',
+  third: 'col-span-2 sm:col-span-3 lg:col-span-4',
+  half: 'col-span-2 sm:col-span-6 lg:col-span-6',
+  twoThirds: 'col-span-2 sm:col-span-6 lg:col-span-8',
+  full: 'col-span-2 sm:col-span-6 lg:col-span-12'
 }
 
-/**
- * Narrow cards reflow their content into more rows, so the tallest widgets get
- * extra height on phone sized grids.
- */
-function stackedHeight(type: WidgetType, height: number): number {
-  return type === 'status-overview' ? height + 3 : height
+export const WIDGET_HEIGHT_CLASS: Record<WidgetHeight, string> = {
+  slim: 'row-span-1',
+  compact: 'row-span-2',
+  standard: 'row-span-3',
+  tall: 'row-span-5'
 }
 
-/** Fills in missing breakpoints so a partially stored layout stays usable. */
-export function normalizeWidgetLayout(type: WidgetType, layout: Partial<WidgetLayout> | null | undefined): WidgetLayout {
-  const fallback = buildDefaultWidgetLayout(type, 0, 0)
-
-  return GRID_BREAKPOINTS.reduce((result, breakpoint) => {
-    const position = layout?.[breakpoint]
-
-    result[breakpoint] = isWidgetPosition(position) ? position : fallback[breakpoint]
-
-    return result
-  }, {} as WidgetLayout)
+interface WidgetSizeRule {
+  widths: readonly WidgetWidth[]
+  heights: readonly WidgetHeight[]
+  defaultWidth: WidgetWidth
+  defaultHeight: WidgetHeight
 }
 
-function isWidgetPosition(value: unknown): value is WidgetPosition {
-  if (!value || typeof value !== 'object') {
-    return false
+export const WIDGET_SIZE_RULES = {
+  'monitor': {
+    widths: WIDGET_WIDTHS,
+    heights: ['compact', 'standard'],
+    defaultWidth: 'third',
+    defaultHeight: 'standard'
+  },
+  'uptime-summary': {
+    widths: ['quarter', 'third', 'half'],
+    heights: ['compact', 'standard'],
+    defaultWidth: 'quarter',
+    defaultHeight: 'compact'
+  },
+  'latency-chart': {
+    widths: ['half', 'twoThirds', 'full'],
+    heights: ['standard', 'tall'],
+    defaultWidth: 'half',
+    defaultHeight: 'standard'
+  },
+  'status-overview': {
+    widths: ['half', 'twoThirds', 'full'],
+    heights: ['compact', 'standard'],
+    defaultWidth: 'full',
+    defaultHeight: 'compact'
+  },
+  'heading': {
+    widths: ['full'],
+    heights: ['slim'],
+    defaultWidth: 'full',
+    defaultHeight: 'slim'
   }
+} as const satisfies Record<WidgetType, WidgetSizeRule>
 
-  const position = value as Record<string, unknown>
+export function clampWidgetSize(
+  type: WidgetType,
+  width?: WidgetWidth | null,
+  height?: WidgetHeight | null
+): { width: WidgetWidth, height: WidgetHeight } {
+  const rule: WidgetSizeRule = WIDGET_SIZE_RULES[type]
 
-  return ['x', 'y', 'w', 'h'].every(key => typeof position[key] === 'number' && Number.isFinite(position[key]))
+  return {
+    width: width && rule.widths.includes(width) ? width : rule.defaultWidth,
+    height: height && rule.heights.includes(height) ? height : rule.defaultHeight
+  }
+}
+
+export function stepWidgetWidth(type: WidgetType, width: WidgetWidth, direction: -1 | 1): WidgetWidth | null {
+  return stepSize(WIDGET_SIZE_RULES[type].widths, width, direction)
+}
+
+export function stepWidgetHeight(type: WidgetType, height: WidgetHeight, direction: -1 | 1): WidgetHeight | null {
+  return stepSize(WIDGET_SIZE_RULES[type].heights, height, direction)
+}
+
+function stepSize<T extends string>(allowed: readonly T[], value: T, direction: -1 | 1): T | null {
+  const current = allowed.indexOf(value)
+  const next = current + direction
+
+  return current >= 0 && next >= 0 && next < allowed.length ? allowed[next]! : null
 }

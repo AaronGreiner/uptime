@@ -52,6 +52,16 @@ async function removeWidget(widget: DashboardWidget) {
   }
 }
 
+async function duplicateWidget(widget: DashboardWidget) {
+  try {
+    await $fetch(`/api/dashboards/${dashboard.value!.id}/widgets/${widget.id}/duplicate`, { method: 'POST' })
+    await refreshDashboard()
+    toast.add({ title: t('widget.duplicated'), color: 'success', icon: 'i-lucide-check' })
+  } catch (fetchError) {
+    toast.add({ title: t('common.error'), description: resolveErrorMessage(fetchError), color: 'error' })
+  }
+}
+
 async function deleteDashboard() {
   deleting.value = true
 
@@ -172,6 +182,7 @@ const showToolbar = computed(() => Boolean(dashboard.value?.description) || edit
         :monitors="monitors"
         :editing="editing"
         @edit-widget="openWidgetModal($event)"
+        @duplicate-widget="duplicateWidget($event)"
         @remove-widget="removeWidget($event)"
       />
 

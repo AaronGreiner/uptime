@@ -8,17 +8,9 @@ export type WidgetType
     | 'status-overview'
     | 'heading'
 
-/** Breakpoints mirrored from grid-layout-plus, largest to smallest. */
-export type GridBreakpoint = 'lg' | 'md' | 'sm' | 'xs' | 'xxs'
+export type WidgetWidth = 'quarter' | 'third' | 'half' | 'twoThirds' | 'full'
 
-export interface WidgetPosition {
-  x: number
-  y: number
-  w: number
-  h: number
-}
-
-export type WidgetLayout = Record<GridBreakpoint, WidgetPosition>
+export type WidgetHeight = 'slim' | 'compact' | 'standard' | 'tall'
 
 export interface WidgetConfig {
   /** Overrides the auto-generated widget title. */
@@ -39,7 +31,9 @@ export interface DashboardWidget {
   type: WidgetType
   monitorId: number | null
   config: WidgetConfig
-  layout: WidgetLayout
+  position: number
+  width: WidgetWidth
+  height: WidgetHeight
   createdAt: number
   updatedAt: number
 }

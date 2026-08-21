@@ -1,5 +1,5 @@
 import z from 'zod'
-import { GRID_BREAKPOINTS } from './grid'
+import { WIDGET_HEIGHTS, WIDGET_WIDTHS } from './grid'
 import { MONITOR_INTERVAL_BOUNDS, MONITOR_PACKET_BOUNDS, MONITOR_RETRY_BOUNDS, MONITOR_TIMEOUT_BOUNDS } from './monitor'
 
 export const HTTP_METHODS = ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'] as const
@@ -166,17 +166,6 @@ export const dashboardInputSchema = z.object({
 
 export type DashboardInput = z.output<typeof dashboardInputSchema>
 
-const widgetPositionSchema = z.object({
-  x: z.number().int().min(0).max(48),
-  y: z.number().int().min(0).max(1000),
-  w: z.number().int().min(1).max(48),
-  h: z.number().int().min(1).max(100)
-})
-
-export const widgetLayoutSchema = z.object(
-  Object.fromEntries(GRID_BREAKPOINTS.map(breakpoint => [breakpoint, widgetPositionSchema]))
-) as z.ZodType<Record<(typeof GRID_BREAKPOINTS)[number], z.output<typeof widgetPositionSchema>>>
-
 export const widgetConfigSchema = z.object({
   title: z.string().trim().max(120, { error: message('validation.tooLong', { max: 120 }) }).optional(),
   range: z.enum(['1h', '24h', '7d', '30d', '1y']).optional(),
@@ -189,7 +178,8 @@ export const widgetInputSchema = z.object({
   type: z.enum(['monitor', 'uptime-summary', 'latency-chart', 'status-overview', 'heading']),
   monitorId: z.number().int().positive().nullish().transform(value => value ?? null),
   config: widgetConfigSchema.default({}),
-  layout: widgetLayoutSchema.optional()
+  width: z.enum(WIDGET_WIDTHS).optional(),
+  height: z.enum(WIDGET_HEIGHTS).optional()
 }).superRefine((value, context) => {
   const requiresMonitor = value.type === 'monitor' || value.type === 'latency-chart' || value.type === 'uptime-summary'
 
@@ -204,7 +194,9 @@ export type WidgetInput = z.output<typeof widgetInputSchema>
 export const dashboardLayoutSchema = z.object({
   widgets: z.array(z.object({
     id: z.number().int().positive(),
-    layout: widgetLayoutSchema
+    position: z.number().int().min(0).max(1000),
+    width: z.enum(WIDGET_WIDTHS),
+    height: z.enum(WIDGET_HEIGHTS)
   })).max(200)
 })
 

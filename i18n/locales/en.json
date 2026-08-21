@@ -198,7 +198,7 @@
     "deleted": "Dashboard \"{name}\" deleted.",
     "editMode": "Edit layout",
     "editModeDone": "Done",
-    "editModeHint": "Drag widgets to move them and pull the bottom right corner to resize. Changes are saved automatically.",
+    "editModeHint": "Use the drag handle to reorder widgets and the arrow controls to resize them. Changes are saved automatically.",
     "addWidget": "Add widget",
     "layoutSaved": "Layout saved.",
     "fields": {
@@ -225,8 +225,30 @@
   "widget": {
     "add": "Add widget",
     "edit": "Widget settings",
+    "duplicate": "Duplicate widget",
+    "duplicated": "Widget duplicated.",
     "remove": "Remove widget",
+    "reorder": "Reorder widget",
     "monitorMissing": "The referenced monitor no longer exists.",
+    "width": {
+      "quarter": "Quarter",
+      "third": "Third",
+      "half": "Half",
+      "twoThirds": "Two thirds",
+      "full": "Full width"
+    },
+    "height": {
+      "slim": "Slim",
+      "compact": "Compact",
+      "standard": "Standard",
+      "tall": "Tall"
+    },
+    "resize": {
+      "wider": "Make wider",
+      "narrower": "Make narrower",
+      "taller": "Make taller",
+      "shorter": "Make shorter"
+    },
     "type": {
       "monitor": "Monitor card",
       "uptime-summary": "Uptime figure",
@@ -303,11 +325,11 @@
       },
       "demo": {
         "label": "Reset demo data",
-        "hint": "Deletes everything first, then creates a fresh set of demo groups, monitors and generated history.",
+        "hint": "Deletes everything first, then creates fresh demo dashboards, groups, monitors and generated history.",
         "action": "Seed demo data",
         "title": "Replace everything with demo data?",
         "description": "The existing data is deleted first. The demo monitors point at real public endpoints and are checked as soon as they exist.",
-        "done": "Created {monitors} demo monitors in {groups} groups with {days} days of history."
+        "done": "Created {dashboards} dashboards and {monitors} demo monitors in {groups} groups with {days} days of history."
       }
     }
   },

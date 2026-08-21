@@ -90,11 +90,7 @@ async function onSubmit(event: FormSubmitEvent<WidgetInput>) {
         : `/api/dashboards/${props.dashboardId}/widgets`,
       {
         method: isEdit.value ? 'PATCH' : 'POST',
-        body: {
-          ...event.data,
-          // The layout of an existing widget is owned by the grid, not the form.
-          layout: props.widget?.layout
-        }
+        body: event.data
       }
     )
 

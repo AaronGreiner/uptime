@@ -29,14 +29,14 @@ onMonitorChecked(() => {
   <UCard
     v-if="monitor"
     variant="outline"
-    class="h-full"
-    :ui="{ root: 'flex flex-col overflow-hidden', body: 'flex-1 flex flex-col gap-3 min-h-0' }"
+    class="h-full @container"
+    :ui="{ root: 'flex flex-col overflow-hidden', body: 'flex-1 flex flex-col gap-2 @[28rem]:gap-3 min-h-0' }"
   >
     <div class="flex items-baseline justify-between gap-3">
-      <p class="font-medium text-highlighted truncate-target">
+      <p class="text-sm @[24rem]:text-base font-medium text-highlighted truncate-target">
         {{ widget.config.title || monitor.name }}
       </p>
-      <p class="text-xs text-dimmed shrink-0">
+      <p class="text-[0.6875rem] @[24rem]:text-xs text-dimmed shrink-0">
         {{ $t(`range.${range}`) }}
       </p>
     </div>

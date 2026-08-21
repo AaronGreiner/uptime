@@ -10,7 +10,7 @@ const props = defineProps<{
 const monitor = computed(() => props.monitors.find(entry => entry.id === props.widget.monitorId) ?? null)
 
 /** Very short cells drop the metric row so the pulse bar stays visible. */
-const dense = computed(() => props.widget.layout.lg.h <= 3)
+const dense = computed(() => props.widget.height === 'compact')
 </script>
 
 <template>

@@ -7,8 +7,8 @@ Uptime Kuma, built with Nuxt 4, Nuxt UI 4 and SQLite.
   account. A single admin account can create and change things.
 - **Dashboard shell** — collapsible, resizable sidebar whose width and folded
   groups are remembered; every page gets its own navbar and toolbar.
-- **Editable dashboards** — drag and resize widgets on a real grid, with a
-  layout stored per breakpoint.
+- **Editable dashboards** — reorder widgets and size them with constrained
+  width and height tokens that adapt across screen sizes.
 - **HTTP(S) and ping monitors** — status code ranges, keyword matching, custom
   headers, TLS certificate expiry, ICMP round trip times.
 - **Nested groups** — organise monitors into a tree, browse it from the sidebar,
@@ -71,7 +71,7 @@ annotated list.
 | `NUXT_SCHEDULER_TICK_INTERVAL_MS` | `1000` | How often due monitors are picked up. |
 | `NUXT_RETENTION_HEARTBEAT_DAYS` | `7` | Days of raw per-check results to keep. |
 | `NUXT_RETENTION_HOURLY_STATS_DAYS` | `365` | Days of hourly aggregates to keep. |
-| `NUXT_SEED_DEMO_DATA` | `false` | Seed demo monitors and a demo dashboard. See below. |
+| `NUXT_SEED_DEMO_DATA` | `false` | Seed demo monitors and showcase dashboards. See below. |
 | `NUXT_SEED_DEMO_HISTORY_DAYS` | `3` | Days of generated history for the demo monitors. |
 | `NUXT_PUBLIC_APP_NAME` | `Uptime` | Name shown in the header and page titles. |
 
@@ -80,17 +80,17 @@ recommended way once the instance is running.
 
 ### Demo data
 
-Setting `NUXT_SEED_DEMO_DATA=true` seeds four monitors, a pre-built dashboard
-showing every widget type, and a few days of generated history, so the UI has
-something to show immediately.
+Setting `NUXT_SEED_DEMO_DATA=true` seeds fourteen monitors, three pre-built
+dashboards showing different widget compositions, and a few days of generated
+history, so the UI has something to show immediately.
 
 - It runs **at most once**, and only on a database that has no monitors yet.
 - The demo monitors point at **real public endpoints** (`nuxt.com`,
   `api.github.com`, `1.1.1.1`, `example.com`). Enabling this makes the scheduler
   send actual requests to those hosts.
-- Turning the flag back off does not remove anything already seeded. Delete the
-  demo monitors and the `Demo` dashboard in the UI, or start from a fresh
-  database file.
+- Turning the flag back off does not remove anything already seeded. Use the
+  data controls in **Settings** to remove or replace the demo data, or start from
+  a fresh database file.
 
 Leave it at `false` for a real deployment.
 

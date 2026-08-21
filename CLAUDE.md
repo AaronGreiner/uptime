@@ -81,7 +81,9 @@ Reopening reports the gap through `onResumed`, which reloads the list; `usePolli
 is only the slow safety net behind that, and it also picks up monitors created
 elsewhere. Relative timestamps read `useNow()`, one shared clock ticked every
 second by `app/plugins/clock.client.ts`. Both plugins wait for `app:mounted`
-before moving anything, otherwise they rewrite the data hydration is comparing.
+before moving anything; the clock also waits for the initial suspense to finish
+hydrating, otherwise it rewrites relative timestamps the client is still
+comparing.
 
 `/api/status` is there for callers outside the browser. Nothing in the interface
 requests it: every figure the application shows is derived from the monitor list.
@@ -185,12 +187,13 @@ CSS. Keep labels on the surrounding control when it is interactive; otherwise
 pass an i18n-translated `label` to `AppMorphIcon`. Any initial icon must remain
 SSR-safe: client-only state may change it only after hydration.
 
-**Dashboards.** A dashboard owns widgets; each widget stores a position for all
-five breakpoints in `dashboard_widgets.layout`. The grid is `grid-layout-plus`
-wrapped by `app/components/dashboard/Grid.vue`, which keeps one layout array per
-breakpoint and writes the active one back on `layout-updated`. Saving is
-debounced and skipped when the serialised layout has not changed, which is what
-keeps the initial mount from triggering a write.
+**Dashboards.** A dashboard owns an ordered list of widgets. Each widget stores
+its position plus width and height tokens; the allowed sizes and their literal
+responsive CSS classes live in `shared/utils/grid.ts`. A plain CSS grid in
+`app/components/dashboard/Grid.vue` renders the list on the server, while
+Sortable only changes its order in edit mode. Saving is debounced and skipped
+when the serialised layout has not changed, which keeps the initial mount from
+triggering a write.
 
 **Validation.** zod schemas in `shared/utils/validation.ts` are the single source
 of truth: the same schema drives `UForm` on the client and `readValidatedBody`
@@ -230,9 +233,9 @@ check. The dispatcher logs and swallows.
   `drizzle-orm/bun-sqlite`; do not reintroduce a Node-native SQLite package.
 - Timestamps are Unix **seconds** everywhere in the database and API. Only
   convert to milliseconds at the edge, when handing a value to `Date` or `Intl`.
-- The grid mutates the layout array it is given in place. `Grid.vue` therefore
-  keeps the very same array reference in its per breakpoint map; replacing it
-  resets the component.
+- Widget width classes in `shared/utils/grid.ts` must stay complete literal class
+  strings. Tailwind does not emit class names assembled from fragments at
+  runtime.
 - `UCard` sets `overflow-hidden`, which disables the automatic minimum size of a
   flex item. Cards are given `shrink-0` in `app.config.ts` so they are not
   squashed inside the panel's flex column; do not remove it.

@@ -58,19 +58,19 @@ const tone = computed(() => {
   <UCard
     v-if="monitor"
     variant="outline"
-    class="h-full"
+    class="h-full @container"
     :ui="{ root: 'flex', body: 'flex-1 flex flex-col justify-center gap-1 min-h-0 overflow-y-auto' }"
   >
-    <p class="text-sm text-muted truncate-target">
+    <p class="text-xs @[20rem]:text-sm text-muted truncate-target">
       {{ widget.config.title || monitor.name }}
     </p>
     <p
-      class="text-3xl font-semibold tabular-nums leading-tight"
+      class="text-2xl @[18rem]:text-3xl @[30rem]:text-4xl font-semibold tabular-nums leading-tight"
       :class="tone"
     >
       {{ formatUptime(uptime?.ratio ?? null) }}
     </p>
-    <p class="text-sm text-muted">
+    <p class="text-xs @[20rem]:text-sm text-muted">
       {{ $t('monitor.detail.uptime') }} · {{ $t(`range.${range}`) }}
     </p>
   </UCard>

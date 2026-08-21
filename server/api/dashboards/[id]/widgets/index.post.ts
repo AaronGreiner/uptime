@@ -1,5 +1,5 @@
 import { dashboardWidgets } from '../../../../database/schema'
-import { buildDefaultWidgetLayout } from '../../../../../shared/utils/grid'
+import { clampWidgetSize } from '../../../../../shared/utils/grid'
 import { widgetInputSchema } from '../../../../../shared/utils/validation'
 import { nowInSeconds } from '../../../../services/scheduler'
 
@@ -19,12 +19,14 @@ export default defineEventHandler(async (event) => {
   }
 
   const now = nowInSeconds()
+  const size = clampWidgetSize(input.type, input.width, input.height)
   const created = useDatabase().insert(dashboardWidgets).values({
     dashboardId: dashboard.id,
     type: input.type,
     monitorId: input.monitorId,
     config: input.config,
-    layout: input.layout ?? buildDefaultWidgetLayout(input.type, 0, nextFreeRow(dashboard.id)),
+    position: nextWidgetPosition(dashboard.id),
+    ...size,
     createdAt: now,
     updatedAt: now
   }).returning().get()

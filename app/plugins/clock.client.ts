@@ -39,10 +39,18 @@ export default defineNuxtPlugin((nuxtApp) => {
     }
   }
 
-  // Only once the markup is on the page: moving the clock any earlier would
-  // rewrite the very timestamps hydration is about to compare.
-  nuxtApp.hook('app:mounted', () => {
+  const activate = () => {
     document.addEventListener('visibilitychange', onVisibilityChange)
     start()
+  }
+
+  // Mount can happen while an async page suspense is still hydrating. Wait for
+  // both boundaries before moving the server-provided clock value.
+  nuxtApp.hook('app:mounted', () => {
+    if (nuxtApp.isHydrating) {
+      nuxtApp.hooks.hookOnce('app:suspense:resolve', activate)
+    } else {
+      activate()
+    }
   })
 })

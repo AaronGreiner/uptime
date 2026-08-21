@@ -1,7 +1,6 @@
 import { randomBytes } from 'node:crypto'
 import { eq, inArray } from 'drizzle-orm'
-import type { WidgetConfig, WidgetType } from '../../shared/types/dashboard'
-import { buildDefaultWidgetLayout } from '../../shared/utils/grid'
+import type { WidgetConfig, WidgetHeight, WidgetType, WidgetWidth } from '../../shared/types/dashboard'
 import { dashboards, dashboardWidgets, heartbeats, monitorGroups, monitors, monitorState, notificationChannels, settings, users } from '../database/schema'
 import { aggregateHourlyStats } from './maintenance'
 import { nowInSeconds } from './scheduler'
@@ -151,6 +150,7 @@ interface CreatedMonitor {
 
 /** What a demo seed produced, so the admin UI can report it back. */
 export interface DemoDataSummary {
+  dashboards: number
   groups: number
   monitors: number
   historyDays: number
@@ -191,8 +191,8 @@ export function reseedDemoData(): DemoDataSummary {
 }
 
 /**
- * Writes demo groups, monitors, synthetic history and a filled overview
- * dashboard. Expects an empty database, both callers make sure of that.
+ * Writes demo groups, monitors, synthetic history and showcase dashboards.
+ * Expects an empty database, both callers make sure of that.
  */
 function createDemoData(): DemoDataSummary {
   const database = useDatabase()
@@ -221,17 +221,22 @@ function createDemoData(): DemoDataSummary {
   }
 
   generateDemoHistory(created, seed.demoHistoryDays)
-  buildDemoDashboard(groupIds, created, now)
+  const dashboardCount = buildDemoDashboards(created, now)
 
   aggregateHourlyStats()
   setSetting(SETTING_KEYS.demoSeeded, true)
 
   console.info(
-    `[seed] Created ${groupIds.size} demo groups and ${created.length} demo monitors `
-    + `with ${seed.demoHistoryDays} days of generated history.`
+    `[seed] Created ${groupIds.size} demo groups, ${created.length} demo monitors and `
+    + `${dashboardCount} demo dashboards with ${seed.demoHistoryDays} days of generated history.`
   )
 
-  return { groups: groupIds.size, monitors: created.length, historyDays: seed.demoHistoryDays }
+  return {
+    dashboards: dashboardCount,
+    groups: groupIds.size,
+    monitors: created.length,
+    historyDays: seed.demoHistoryDays
+  }
 }
 
 /** Inserts the group tree parents first, so every parent id is known. */
@@ -340,68 +345,124 @@ function generateDemoHistory(created: CreatedMonitor[], days: number): void {
   })
 }
 
-/**
- * Fills the default dashboard rather than adding a second one: the overview is
- * where the app lands, so an empty grid there is the first thing a new install
- * sees. Sections follow the group tree, one heading per top level group.
- */
-function buildDemoDashboard(groupIds: Map<string, number>, created: CreatedMonitor[], now: number): void {
+/** Builds three dashboard compositions that demonstrate different grid layouts. */
+function buildDemoDashboards(created: CreatedMonitor[], now: number): number {
   const database = useDatabase()
-  const dashboard = database.select().from(dashboards).where(eq(dashboards.slug, OVERVIEW_SLUG)).get()
+  const overview = database.select().from(dashboards).where(eq(dashboards.slug, OVERVIEW_SLUG)).get()
 
-  if (!dashboard) {
-    return
+  if (!overview) {
+    return 0
   }
 
-  let row = 0
+  const production = database.insert(dashboards).values({
+    slug: 'production',
+    name: 'Production',
+    description: 'Customer-facing services and response times.',
+    isDefault: false,
+    position: 1,
+    createdAt: now,
+    updatedAt: now
+  }).returning().get()
+  const infrastructure = database.insert(dashboards).values({
+    slug: 'infrastructure',
+    name: 'Infrastructure',
+    description: 'DNS and edge services at a glance.',
+    isDefault: false,
+    position: 2,
+    createdAt: now,
+    updatedAt: now
+  }).returning().get()
+  const nextPositions = new Map<number, number>()
 
-  const place = (type: WidgetType, x: number, y: number, monitorId: number | null, config: WidgetConfig) => {
+  const monitorId = (name: string): number => {
+    const monitor = created.find(entry => entry.demo.name === name)
+
+    if (!monitor) {
+      throw new Error(`Demo monitor "${name}" was not created`)
+    }
+
+    return monitor.id
+  }
+
+  const place = (
+    dashboardId: number,
+    type: WidgetType,
+    width: WidgetWidth,
+    height: WidgetHeight,
+    linkedMonitorId: number | null,
+    config: WidgetConfig
+  ) => {
+    const position = nextPositions.get(dashboardId) ?? 0
+
     database.insert(dashboardWidgets).values({
-      dashboardId: dashboard.id,
+      dashboardId,
       type,
-      monitorId,
+      monitorId: linkedMonitorId,
       config,
-      layout: buildDefaultWidgetLayout(type, x, y),
+      position,
+      width,
+      height,
       createdAt: now,
       updatedAt: now
     }).run()
+
+    nextPositions.set(dashboardId, position + 1)
   }
 
-  place('status-overview', 0, row, null, {})
-  row += 3
+  const mainSite = monitorId('Nuxt')
+  const infrastructureMonitorNames = ['Cloudflare DNS', 'Google DNS', 'Quad9 DNS', 'Cloudflare Edge']
+  const productionMonitorNames = [
+    'Nuxt',
+    'Vue',
+    'Vite',
+    'GitHub API',
+    'npm Registry',
+    'Nuxt UI',
+    'MDN Web Docs'
+  ]
 
-  // Only the top level groups get a section, the nested ones would fragment the
-  // grid into rows of one or two cards.
-  for (const group of DEMO_GROUPS.filter(entry => !entry.parent)) {
-    const members = created.filter(
-      entry => entry.demo.group === group.key || entry.demo.group.startsWith(`${group.key}/`)
-    )
+  place(overview.id, 'status-overview', 'full', 'compact', null, {})
+  place(overview.id, 'heading', 'full', 'slim', null, { title: 'Production', level: 2 })
+  place(overview.id, 'latency-chart', 'twoThirds', 'tall', mainSite, { range: '24h' })
+  place(overview.id, 'monitor', 'third', 'standard', mainSite, { heartbeatCount: 40 })
+  place(overview.id, 'uptime-summary', 'third', 'compact', mainSite, { range: '7d' })
+  place(overview.id, 'heading', 'full', 'slim', null, { title: 'Infrastructure', level: 2 })
 
-    if (!members.length) {
-      continue
-    }
-
-    place('heading', 0, row, null, { title: group.name, level: 2 })
-    row += 1
-
-    members.forEach((member, index) => {
-      place('monitor', (index % 3) * 4, row + Math.floor(index / 3) * 4, member.id, { heartbeatCount: 40 })
-    })
-
-    row += Math.ceil(members.length / 3) * 4
+  for (const name of infrastructureMonitorNames) {
+    place(overview.id, 'monitor', 'quarter', 'compact', monitorId(name), { heartbeatCount: 40 })
   }
 
-  const flagship = created.find(entry => entry.demo.name === 'Nuxt')
-  const secondary = created.find(entry => entry.demo.name === 'GitHub API')
+  place(overview.id, 'heading', 'full', 'slim', null, { title: 'Vendors', level: 2 })
+  place(overview.id, 'monitor', 'half', 'standard', monitorId('Example Service'), { heartbeatCount: 40 })
+  place(overview.id, 'monitor', 'half', 'standard', monitorId('Billing (legacy)'), { heartbeatCount: 40 })
 
-  if (flagship && secondary) {
-    place('heading', 0, row, null, { title: 'Response time', level: 2 })
-    row += 1
+  place(production.id, 'status-overview', 'full', 'compact', null, {
+    monitorIds: productionMonitorNames.map(monitorId)
+  })
+  place(production.id, 'heading', 'full', 'slim', null, { title: 'Web', level: 2 })
+  place(production.id, 'latency-chart', 'twoThirds', 'tall', mainSite, { range: '24h' })
+  place(production.id, 'monitor', 'third', 'standard', mainSite, { heartbeatCount: 40 })
+  place(production.id, 'uptime-summary', 'third', 'compact', mainSite, { range: '30d' })
+  place(production.id, 'monitor', 'half', 'standard', monitorId('Vue'), { heartbeatCount: 40 })
+  place(production.id, 'monitor', 'half', 'standard', monitorId('Vite'), { heartbeatCount: 40 })
+  place(production.id, 'heading', 'full', 'slim', null, { title: 'APIs & Documentation', level: 2 })
 
-    place('latency-chart', 0, row, flagship.id, { range: '24h' })
-    place('uptime-summary', 6, row, flagship.id, { range: '7d' })
-    place('uptime-summary', 9, row, secondary.id, { range: '7d' })
+  for (const name of ['GitHub API', 'npm Registry', 'Nuxt UI', 'MDN Web Docs']) {
+    place(production.id, 'monitor', 'quarter', 'compact', monitorId(name), { heartbeatCount: 40 })
   }
+
+  place(infrastructure.id, 'status-overview', 'full', 'compact', null, {
+    monitorIds: infrastructureMonitorNames.map(monitorId)
+  })
+  place(infrastructure.id, 'heading', 'full', 'slim', null, { title: 'Network', level: 2 })
+  place(infrastructure.id, 'latency-chart', 'half', 'standard', monitorId('Cloudflare DNS'), { range: '24h' })
+  place(infrastructure.id, 'latency-chart', 'half', 'standard', monitorId('Cloudflare Edge'), { range: '24h' })
+
+  for (const name of infrastructureMonitorNames) {
+    place(infrastructure.id, 'monitor', 'quarter', 'compact', monitorId(name), { heartbeatCount: 40 })
+  }
+
+  return 3
 }
 
 /**

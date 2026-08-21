@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
+@source "../../../shared";
 
 @theme static {
   --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
@@ -27,35 +28,4 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-/*
- * grid-layout-plus injects its own stylesheet driven by CSS variables. Only the
- * variables and a few accents are overridden here so the grid follows the theme.
- */
-.vgl-layout {
-  --vgl-placeholder-bg: var(--ui-primary);
-  --vgl-placeholder-opacity: 12%;
-  --vgl-item-resizing-opacity: 80%;
-  --vgl-resizer-size: 16px;
-  --vgl-resizer-border-color: var(--ui-text-dimmed);
-  --vgl-resizer-border-width: 2px;
-}
-
-.vgl-item--placeholder {
-  border-radius: var(--ui-radius);
-}
-
-.vgl-item--dragging {
-  cursor: grabbing;
-}
-
-/* The resize corner only appears while the dashboard is in edit mode. */
-.vgl-item__resizer {
-  opacity: 0;
-  transition: opacity 150ms ease;
-}
-
-.vgl-item:hover > .vgl-item__resizer {
-  opacity: 1;
 }

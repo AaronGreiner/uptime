@@ -15,6 +15,13 @@
       "when": 1787161914132,
       "tag": "0001_charming_shriek",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1787241280477,
+      "tag": "0002_strange_gabe_jones",
+      "breakpoints": true
     }
   ]
 }

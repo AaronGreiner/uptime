@@ -198,7 +198,7 @@
     "deleted": "Dashboard „{name}“ gelöscht.",
     "editMode": "Layout bearbeiten",
     "editModeDone": "Fertig",
-    "editModeHint": "Widgets zum Verschieben ziehen, an der unteren rechten Ecke in der Größe ändern. Änderungen werden automatisch gespeichert.",
+    "editModeHint": "Widgets am Griff neu anordnen und mit den Pfeilen in der Größe ändern. Änderungen werden automatisch gespeichert.",
     "addWidget": "Widget hinzufügen",
     "layoutSaved": "Layout gespeichert.",
     "fields": {
@@ -225,8 +225,30 @@
   "widget": {
     "add": "Widget hinzufügen",
     "edit": "Widget-Einstellungen",
+    "duplicate": "Widget duplizieren",
+    "duplicated": "Widget dupliziert.",
     "remove": "Widget entfernen",
+    "reorder": "Widget verschieben",
     "monitorMissing": "Der verknüpfte Monitor existiert nicht mehr.",
+    "width": {
+      "quarter": "Viertelbreite",
+      "third": "Drittelbreite",
+      "half": "Halbe Breite",
+      "twoThirds": "Zwei Drittel",
+      "full": "Volle Breite"
+    },
+    "height": {
+      "slim": "Flach",
+      "compact": "Kompakt",
+      "standard": "Standard",
+      "tall": "Hoch"
+    },
+    "resize": {
+      "wider": "Breiter machen",
+      "narrower": "Schmaler machen",
+      "taller": "Höher machen",
+      "shorter": "Niedriger machen"
+    },
     "type": {
       "monitor": "Monitor-Karte",
       "uptime-summary": "Verfügbarkeitswert",
@@ -303,11 +325,11 @@
       },
       "demo": {
         "label": "Demodaten zurücksetzen",
-        "hint": "Löscht zuerst alles und erzeugt anschließend frische Demogruppen, Demomonitore und einen generierten Verlauf.",
+        "hint": "Löscht zuerst alles und erzeugt anschließend frische Demo-Dashboards, Demogruppen, Demomonitore und einen generierten Verlauf.",
         "action": "Demodaten erzeugen",
         "title": "Alles durch Demodaten ersetzen?",
         "description": "Die vorhandenen Daten werden zuerst gelöscht. Die Demomonitore zeigen auf echte öffentliche Endpunkte und werden geprüft, sobald sie existieren.",
-        "done": "{monitors} Demomonitore in {groups} Gruppen mit {days} Tagen Verlauf erstellt."
+        "done": "{dashboards} Dashboards und {monitors} Demomonitore in {groups} Gruppen mit {days} Tagen Verlauf erstellt."
       }
     }
   },

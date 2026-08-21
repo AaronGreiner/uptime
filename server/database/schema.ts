@@ -1,6 +1,6 @@
 import { index, integer, primaryKey, sqliteTable, text, unique } from 'drizzle-orm/sqlite-core'
 import type { AnySQLiteColumn } from 'drizzle-orm/sqlite-core'
-import type { WidgetConfig, WidgetLayout, WidgetType } from '../../shared/types/dashboard'
+import type { WidgetConfig, WidgetHeight, WidgetType, WidgetWidth } from '../../shared/types/dashboard'
 import type { HeartbeatStatus, MonitorStatus, MonitorType } from '../../shared/types/monitor'
 
 /** Unix seconds. SQLite has no native date type and integers sort cheaply. */
@@ -144,7 +144,9 @@ export const dashboardWidgets = sqliteTable('dashboard_widgets', {
   type: text('type').$type<WidgetType>().notNull(),
   monitorId: integer('monitor_id').references(() => monitors.id, { onDelete: 'cascade' }),
   config: text('config', { mode: 'json' }).$type<WidgetConfig>().notNull().default({}),
-  layout: text('layout', { mode: 'json' }).$type<WidgetLayout>().notNull(),
+  position: integer('position').notNull().default(0),
+  width: text('width').$type<WidgetWidth>().notNull().default('half'),
+  height: text('height').$type<WidgetHeight>().notNull().default('standard'),
   createdAt: timestamp('created_at').notNull(),
   updatedAt: timestamp('updated_at').notNull()
 }, table => [

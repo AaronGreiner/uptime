@@ -87,6 +87,7 @@ async function onSeedDemoData() {
     seedOpen.value = false
     toast.add({
       title: t('settings.data.demo.done', {
+        dashboards: summary.dashboards,
         monitors: summary.monitors,
         groups: summary.groups,
         days: summary.historyDays

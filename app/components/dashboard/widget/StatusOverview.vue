@@ -8,6 +8,14 @@ const props = defineProps<{
 }>()
 
 const { formatUptime, formatNumber } = useFormatters()
+const compact = computed(() => props.widget.height === 'compact')
+
+const cardUi = computed(() => ({
+  root: 'flex @container',
+  body: compact.value
+    ? 'flex-1 flex flex-col justify-start gap-2 min-h-0 overflow-y-auto p-3'
+    : 'flex-1 flex flex-col justify-center gap-4 min-h-0 overflow-y-auto'
+}))
 
 /** An empty monitor list in the widget config means "every monitor". */
 const scoped = computed(() => {
@@ -42,21 +50,31 @@ const tiles = computed(() => ([
   <UCard
     variant="outline"
     class="h-full"
-    :ui="{ root: 'flex @container', body: 'flex-1 flex flex-col justify-center gap-4 min-h-0 overflow-y-auto' }"
+    :ui="cardUi"
   >
     <p
       v-if="widget.config.title"
       class="font-medium text-highlighted truncate-target"
+      :class="compact ? 'text-sm leading-4' : ''"
     >
       {{ widget.config.title }}
     </p>
 
-    <div class="grid grid-cols-2 @[26rem]:grid-cols-3 @[46rem]:grid-cols-6 gap-3 @[26rem]:gap-4">
+    <div
+      class="grid grid-cols-2 @[26rem]:grid-cols-3 @[46rem]:grid-cols-6"
+      :class="compact ? 'gap-x-3 gap-y-1' : 'gap-3 @[26rem]:gap-4'"
+    >
       <div class="min-w-0">
-        <p class="text-sm text-muted leading-tight">
+        <p
+          class="text-muted"
+          :class="compact ? 'text-xs leading-4' : 'text-sm leading-tight'"
+        >
           {{ $t('widget.overview.total') }}
         </p>
-        <p class="text-xl @[26rem]:text-2xl font-semibold tabular-nums">
+        <p
+          class="font-semibold tabular-nums"
+          :class="compact ? 'text-lg leading-5' : 'text-xl @[26rem]:text-2xl'"
+        >
           {{ formatNumber(scoped.length) }}
         </p>
       </div>
@@ -66,22 +84,34 @@ const tiles = computed(() => ([
         :key="tile.key"
         class="min-w-0"
       >
-        <p class="text-sm text-muted leading-tight">
+        <p
+          class="text-muted"
+          :class="compact ? 'text-xs leading-4' : 'text-sm leading-tight'"
+        >
           {{ $t(`status.${tile.key}`) }}
         </p>
         <p
-          class="text-xl @[26rem]:text-2xl font-semibold tabular-nums"
-          :class="tile.class"
+          class="font-semibold tabular-nums"
+          :class="[tile.class, compact ? 'text-lg leading-5' : 'text-xl @[26rem]:text-2xl']"
         >
           {{ formatNumber(tile.value) }}
         </p>
       </div>
 
-      <div class="min-w-0 col-span-2 @[26rem]:col-span-3 @[46rem]:col-span-1">
-        <p class="text-sm text-muted leading-tight">
+      <div
+        class="min-w-0"
+        :class="compact ? '' : 'col-span-2 @[26rem]:col-span-3 @[46rem]:col-span-1'"
+      >
+        <p
+          class="text-muted"
+          :class="compact ? 'text-xs leading-4' : 'text-sm leading-tight'"
+        >
           {{ $t('widget.overview.avgUptime') }}
         </p>
-        <p class="text-xl @[26rem]:text-2xl font-semibold tabular-nums">
+        <p
+          class="font-semibold tabular-nums"
+          :class="compact ? 'text-lg leading-5' : 'text-xl @[26rem]:text-2xl'"
+        >
           {{ formatUptime(averageUptime) }}
         </p>
       </div>
