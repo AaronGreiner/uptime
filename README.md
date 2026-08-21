@@ -54,6 +54,22 @@ monitors need unprivileged ICMP sockets; the compose file sets the
 `net.ipv4.ping_group_range` sysctl for that. If your host forbids it, either drop
 ping monitors or grant the container `CAP_NET_RAW`.
 
+## Deploying
+
+Tagged releases ship to a server through GitHub Actions:
+`.github/workflows/deploy.yml` builds with Bun, uploads `.output/` and
+`drizzle/`, backs up the SQLite file, restarts a systemd unit and rolls back if
+the new build does not answer on `/api/health`.
+
+```bash
+git tag v1.0.0 && git push origin v1.0.0
+```
+
+Because `nitro.preset` is `bun` and the driver is `bun:sqlite`, the service runs
+on Bun rather than node, and `drizzle/` must sit next to the build — migrations
+are read from disk at boot. The full setup, the secrets to configure and the
+recovery steps are in [deploy/RUNBOOK.md](./deploy/RUNBOOK.md).
+
 ## Configuration
 
 Everything is set through environment variables. See `.env.example` for the

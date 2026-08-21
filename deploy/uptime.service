@@ -1,0 +1,27 @@
+# Installed on the server as /etc/systemd/system/uptime.service.
+# This copy is documentation: editing it here changes nothing until it is
+# copied over and systemctl daemon-reload runs. See deploy/RUNBOOK.md.
+[Unit]
+Description=Uptime (Nuxt SSR on Bun)
+After=network.target
+
+[Service]
+Type=simple
+User=root
+# WorkingDirectory must be the deploy root: the runtime config resolves both
+# databasePath (./data/uptime.db) and migrationsDir (./drizzle) against cwd.
+WorkingDirectory=/var/www/uptime
+# The app uses bun:sqlite and the nitro "bun" preset, so it cannot run on node.
+ExecStart=/usr/local/bin/bun /var/www/uptime/.output/server/index.mjs
+Restart=on-failure
+RestartSec=2
+
+Environment=NODE_ENV=production
+Environment=NITRO_HOST=127.0.0.1
+Environment=NITRO_PORT=3003
+
+# Secrets and tunables, written by the deploy workflow from GitHub secrets.
+EnvironmentFile=-/var/www/uptime/.env
+
+[Install]
+WantedBy=multi-user.target

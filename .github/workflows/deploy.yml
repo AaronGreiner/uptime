@@ -1,0 +1,190 @@
+# Ships a tagged release to the single server that hosts the instance.
+#
+# The app is a Nuxt SSR application built with the nitro "bun" preset and it
+# talks to SQLite through bun:sqlite, so both the build and the running service
+# need Bun — it cannot be started with node. The deployment copies the built
+# `.output/` plus the `drizzle/` migrations, which the server reads from disk at
+# boot, and restarts a systemd unit that Caddy proxies to.
+name: Deploy
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+# Two releases must never swap the same directory at the same time.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  # Keep in sync with the unit installed on the server (deploy/uptime.service).
+  SERVICE: uptime.service
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          # Keep in sync with "packageManager" in package.json and with the Bun
+          # installed on the server.
+          bun-version: 1.3.9
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build
+        env:
+          NODE_ENV: production
+        run: |
+          set -euo pipefail
+          bun run build
+          # The nitro preset comes from nuxt.config.ts; fail loudly if it changed.
+          test -f ./.output/server/index.mjs
+
+      - name: Set up the SSH key
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Upload the release to a staging directory
+        run: |
+          set -euo pipefail
+          REMOTE="${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}"
+          STAGE="${{ secrets.DEPLOY_PATH }}/.staging"
+
+          ssh "$REMOTE" "rm -rf '$STAGE' && mkdir -p '$STAGE/output' '$STAGE/drizzle'"
+          rsync -az --delete ./.output/ "$REMOTE:$STAGE/output/"
+          # Migrations are applied at boot from disk, not bundled into the server.
+          rsync -az --delete ./drizzle/ "$REMOTE:$STAGE/drizzle/"
+
+      - name: Write the runtime environment
+        env:
+          NUXT_SESSION_PASSWORD: ${{ secrets.NUXT_SESSION_PASSWORD }}
+          NUXT_ADMIN_USERNAME: ${{ secrets.NUXT_ADMIN_USERNAME }}
+          NUXT_ADMIN_PASSWORD: ${{ secrets.NUXT_ADMIN_PASSWORD }}
+          APP_NAME: ${{ vars.NUXT_PUBLIC_APP_NAME }}
+          HEARTBEAT_DAYS: ${{ vars.NUXT_RETENTION_HEARTBEAT_DAYS }}
+          HOURLY_STATS_DAYS: ${{ vars.NUXT_RETENTION_HOURLY_STATS_DAYS }}
+          SCHEDULER_CONCURRENCY: ${{ vars.NUXT_SCHEDULER_CONCURRENCY }}
+        run: |
+          set -euo pipefail
+          : "${NUXT_SESSION_PASSWORD:?missing repository secret NUXT_SESSION_PASSWORD}"
+
+          REMOTE="${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}"
+          DEST="${{ secrets.DEPLOY_PATH }}"
+
+          # systemd reads this file as KEY=value, one pair per line, unquoted.
+          # Values must not contain newlines or leading and trailing spaces.
+          umask 077
+          {
+            echo "# Written by .github/workflows/deploy.yml. Do not edit by hand."
+            echo "NUXT_SESSION_PASSWORD=${NUXT_SESSION_PASSWORD}"
+            echo "NUXT_ADMIN_USERNAME=${NUXT_ADMIN_USERNAME:-admin}"
+            echo "NUXT_ADMIN_PASSWORD=${NUXT_ADMIN_PASSWORD:-}"
+            echo "NUXT_PUBLIC_APP_NAME=${APP_NAME:-Uptime}"
+            echo "NUXT_RETENTION_HEARTBEAT_DAYS=${HEARTBEAT_DAYS:-7}"
+            echo "NUXT_RETENTION_HOURLY_STATS_DAYS=${HOURLY_STATS_DAYS:-365}"
+            echo "NUXT_SCHEDULER_CONCURRENCY=${SCHEDULER_CONCURRENCY:-10}"
+          } > runtime.env
+
+          # Piped through stdin so no secret ever appears in the remote argv.
+          ssh "$REMOTE" "umask 077 && cat > '$DEST/.env'" < runtime.env
+          rm -f runtime.env
+
+      - name: Back up the SQLite database
+        run: |
+          set -euo pipefail
+          REMOTE="${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}"
+          ssh "$REMOTE" "DEST='${{ secrets.DEPLOY_PATH }}' bash -s" <<'REMOTE_SCRIPT'
+          set -euo pipefail
+          DB="$DEST/data/uptime.db"
+
+          if [ ! -f "$DB" ]; then
+            echo "no database yet, skipping the backup"
+            exit 0
+          fi
+
+          mkdir -p "$DEST/data/backups"
+          OUT="$DEST/data/backups/uptime_$(date +%Y%m%d_%H%M%S).db"
+
+          # .backup is consistent while the scheduler keeps writing to the WAL.
+          if command -v sqlite3 >/dev/null; then
+            sqlite3 "$DB" ".backup '$OUT'"
+          else
+            cp "$DB" "$OUT"
+          fi
+          echo "backup written to $OUT"
+
+          ls -1dt "$DEST/data/backups"/uptime_*.db | tail -n +11 | xargs -r rm -f
+          REMOTE_SCRIPT
+
+      - name: Swap the release and restart the service
+        run: |
+          set -euo pipefail
+          REMOTE="${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}"
+          ssh "$REMOTE" "DEST='${{ secrets.DEPLOY_PATH }}' SERVICE='${SERVICE}' bash -s" <<'REMOTE_SCRIPT'
+          set -euo pipefail
+          STAGE="$DEST/.staging"
+          test -f "$STAGE/output/server/index.mjs"
+
+          systemctl stop "$SERVICE"
+
+          # Renames rather than copies: instant, and the previous release stays
+          # around for the rollback below. data/ and .env are untouched.
+          rm -rf "$DEST/.output.previous" "$DEST/drizzle.previous"
+          if [ -d "$DEST/.output" ]; then mv "$DEST/.output" "$DEST/.output.previous"; fi
+          if [ -d "$DEST/drizzle" ]; then mv "$DEST/drizzle" "$DEST/drizzle.previous"; fi
+          mv "$STAGE/output" "$DEST/.output"
+          mv "$STAGE/drizzle" "$DEST/drizzle"
+          rm -rf "$STAGE"
+
+          systemctl start "$SERVICE"
+          REMOTE_SCRIPT
+
+      - name: Verify the instance answers, roll back if it does not
+        run: |
+          set -euo pipefail
+          REMOTE="${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}"
+          ssh "$REMOTE" "DEST='${{ secrets.DEPLOY_PATH }}' SERVICE='${SERVICE}' bash -s" <<'REMOTE_SCRIPT'
+          set -euo pipefail
+          # The port lives in the unit only, so it is never duplicated here.
+          PORT="$(systemctl show "$SERVICE" -p Environment --value | tr ' ' '\n' | sed -n 's/^NITRO_PORT=//p')"
+          : "${PORT:?the unit does not set NITRO_PORT}"
+
+          for _ in $(seq 1 30); do
+            # -S is deliberately absent: a not-yet-listening port is expected here.
+            if curl -fs "http://127.0.0.1:$PORT/api/health" >/dev/null; then
+              echo "healthy on port $PORT"
+              exit 0
+            fi
+            sleep 1
+          done
+
+          echo "::error::the new release never answered on /api/health, rolling back"
+          journalctl -u "$SERVICE" -n 50 --no-pager || true
+
+          if [ -d "$DEST/.output.previous" ]; then
+            systemctl stop "$SERVICE"
+            rm -rf "$DEST/.output.failed" "$DEST/drizzle.failed"
+            mv "$DEST/.output" "$DEST/.output.failed"
+            mv "$DEST/drizzle" "$DEST/drizzle.failed"
+            mv "$DEST/.output.previous" "$DEST/.output"
+            mv "$DEST/drizzle.previous" "$DEST/drizzle"
+            systemctl start "$SERVICE"
+            # Migrations are forward only: a rollback restores the code, not the
+            # schema. Restore data/backups/ by hand when a migration is at fault.
+            echo "rolled back to the previous release"
+          fi
+          exit 1
+          REMOTE_SCRIPT
