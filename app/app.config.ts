@@ -18,8 +18,13 @@ export default defineAppConfig({
          * from the sidebar by a hard line. `min-h-0` replaces the theme's
          * `min-h-svh`, which would otherwise push the panel past the viewport
          * once the margin is added.
+         *
+         * Once the sidebar is on screen it owns the gutter towards the panel
+         * through its own padding, so the panel drops its leading margin: the
+         * panel border then falls on the sidebar's edge, which is both the seam
+         * the eye reads and the line the resize handle sits on.
          */
-        root: 'min-h-0 m-2 sm:m-4 rounded-xl border border-default bg-elevated/40 overflow-hidden',
+        root: 'min-h-0 m-2 sm:m-4 lg:ms-0 rounded-xl border border-default bg-elevated/40 overflow-hidden',
         // The panel margin already provides breathing room, so the inner padding
         // is a touch tighter than the default to give the content its width back.
         body: 'p-3 sm:p-5 gap-5 sm:gap-6'

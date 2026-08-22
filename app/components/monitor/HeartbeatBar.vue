@@ -48,9 +48,11 @@ const newest = computed(() => props.heartbeats.at(-1) ?? null)
       />
     </div>
 
+    <!-- The threshold is the card's stacked header minus its padding: a cell
+         that narrow is also too short to spend a row on timestamps. -->
     <div
       v-if="showLegend"
-      class="flex items-center justify-between gap-2 text-xs text-dimmed h-4"
+      class="hidden @[11rem]:flex items-center justify-between gap-2 text-xs text-dimmed h-4"
     >
       <template v-if="hovered">
         <span class="truncate-target">{{ formatDateTime(hovered.checkedAt) }}</span>

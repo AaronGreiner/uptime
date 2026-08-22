@@ -166,6 +166,13 @@ the layout. Use plain `UCard` for content blocks: its `title` and `description`
 props plus the `outline` variant give the header, the separator and the body in
 one go.
 
+The panel is inset on three sides only. Once the sidebar is on screen the panel
+drops its leading margin (`lg:ms-0`), because the sidebar's own padding already
+holds the gutter: the panel border then lands exactly on the sidebar's edge,
+which is the seam the eye reads and the line the resize handle sits on, and the
+collapsed rail centres its icons in the strip the reader actually sees. Padding
+the sidebar instead would move all three apart again.
+
 Because the panel is inset, its body owns the scrolling: the navbar and toolbar
 stay put while the content moves. Anything that needs to stay visible belongs in
 the panel header, not at the top of the body.
@@ -204,6 +211,16 @@ responsive CSS classes live in `shared/utils/grid.ts`. A plain CSS grid in
 Sortable only changes its order in edit mode. Saving is debounced and skipped
 when the serialised layout has not changed, which keeps the initial mount from
 triggering a write.
+
+A widget is exactly as tall as its cell, so its body clips and never scrolls.
+`overflow-y-auto` turns a single rounding pixel into a permanent scrollbar on
+every tile wherever the platform does not draw scrollbars as overlays, and
+centred content could not be scrolled into view anyway. Content that stops
+fitting has to be dropped at the container width where it does, not left to
+overflow: `MonitorCard` hides the target line while its header is stacked, and
+`MonitorHeartbeatBar` hides the legend below the same width. When you add a
+widget or a size, check every combination in `WIDGET_SIZE_RULES` against the
+shortest row height (`lg:auto-rows-[60px]`).
 
 **Validation.** zod schemas in `shared/utils/validation.ts` are the single source
 of truth: the same schema drives `UForm` on the client and `readValidatedBody`

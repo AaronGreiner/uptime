@@ -10,11 +10,13 @@ const props = defineProps<{
 const { formatUptime, formatNumber } = useFormatters()
 const compact = computed(() => props.widget.height === 'compact')
 
+// The cell height is fixed, so the body clips rather than growing a scrollbar
+// that centred content could never scroll into view anyway.
 const cardUi = computed(() => ({
   root: 'flex @container',
   body: compact.value
     ? 'flex-1 flex flex-col justify-center gap-1 min-h-0 overflow-hidden px-3 py-2 sm:p-4'
-    : 'flex-1 flex flex-col justify-center gap-4 min-h-0 overflow-y-auto'
+    : 'flex-1 flex flex-col justify-center gap-4 min-h-0 overflow-hidden'
 }))
 
 /** An empty monitor list in the widget config means "every monitor". */
@@ -99,8 +101,8 @@ const tiles = computed(() => ([
     </p>
 
     <div
-      class="grid grid-cols-2 @[26rem]:grid-cols-3 @[46rem]:grid-cols-6"
-      :class="compact ? 'gap-x-3 gap-y-1 @[46rem]:gap-2' : 'gap-3 @[26rem]:gap-4'"
+      class="grid grid-cols-2 @[22rem]:grid-cols-3 @[46rem]:grid-cols-6"
+      :class="compact ? 'gap-x-3 gap-y-1 @[46rem]:gap-2' : 'gap-3 @[22rem]:gap-4'"
     >
       <div
         v-for="tile in tiles"

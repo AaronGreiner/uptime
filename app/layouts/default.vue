@@ -69,9 +69,12 @@ async function onDashboardCreated(slug: string) {
       }"
     >
       <template #header="{ collapsed }">
+        <!-- Collapsed the mark is the only thing left in the rail, so it lines
+             up with the navigation icons below instead of with the label. -->
         <NuxtLink
           to="/"
           class="flex items-center gap-2 min-w-0 font-semibold text-highlighted"
+          :class="collapsed ? 'w-full justify-center' : ''"
         >
           <AppLogo class="size-7 shrink-0" />
           <span

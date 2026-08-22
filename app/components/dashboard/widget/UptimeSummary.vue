@@ -39,6 +39,17 @@ onMonitorChecked(() => {
 
 const uptime = computed(() => stats.value ?? monitor.value?.uptime24h ?? null)
 
+/*
+ * The figure grows with the widget's width, so the shortest cell trades padding
+ * for the row it needs. Clipping instead of scrolling: see MonitorCard.
+ */
+const cardUi = computed(() => ({
+  root: 'flex',
+  body: props.widget.height === 'compact'
+    ? 'p-3 sm:p-4 flex-1 flex flex-col justify-center gap-1 min-h-0 overflow-hidden'
+    : 'p-4 sm:p-6 flex-1 flex flex-col justify-center gap-1 min-h-0 overflow-hidden'
+}))
+
 const tone = computed(() => {
   const ratio = uptime.value?.ratio
 
@@ -59,7 +70,7 @@ const tone = computed(() => {
     v-if="monitor"
     variant="outline"
     class="h-full @container"
-    :ui="{ root: 'flex', body: 'flex-1 flex flex-col justify-center gap-1 min-h-0 overflow-y-auto' }"
+    :ui="cardUi"
   >
     <p class="text-xs @[20rem]:text-sm text-muted truncate-target">
       {{ widget.config.title || monitor.name }}

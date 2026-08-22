@@ -4,7 +4,7 @@ import type { MonitorWithState } from '#shared/types/monitor'
 const props = withDefaults(defineProps<{
   monitor: MonitorWithState
   heartbeatCount?: number
-  /** Hides the pulse bar and the metric row for very small grid cells. */
+  /** Drops the metric row and tightens the spacing for very small grid cells. */
   dense?: boolean
   /** Breadcrumb of the owning group, shown where the card stands on its own. */
   groupPath?: string
@@ -17,13 +17,27 @@ const props = withDefaults(defineProps<{
 const { formatLatency, formatUptime, formatRelativeTime } = useFormatters()
 
 const target = computed(() => monitorTarget(props.monitor))
+
+/*
+ * A dashboard cell has a fixed height, so the card clips instead of scrolling.
+ * Scrolling was never reachable here anyway, while a body overflowing by a
+ * single rounding pixel puts a scrollbar on every tile wherever the platform
+ * draws them permanently instead of as an overlay. The dense variant pairs the
+ * tighter spacing with the smaller cell it is made for.
+ */
+const cardUi = computed(() => ({
+  root: 'flex flex-col overflow-hidden @container',
+  body: props.dense
+    ? 'p-3 sm:p-4 flex-1 flex flex-col gap-2 min-h-0 overflow-hidden'
+    : 'p-4 sm:p-6 flex-1 flex flex-col gap-3 min-h-0 overflow-hidden'
+}))
 </script>
 
 <template>
   <UCard
     variant="outline"
     class="h-full"
-    :ui="{ root: 'flex flex-col overflow-hidden @container', body: 'flex-1 flex flex-col gap-3 @[14rem]:gap-4 min-h-0 overflow-y-auto' }"
+    :ui="cardUi"
   >
     <div class="flex flex-col items-stretch gap-2 @[14rem]:flex-row @[14rem]:items-start @[14rem]:justify-between @[14rem]:gap-3">
       <div class="min-w-0 flex-1">
@@ -40,8 +54,10 @@ const target = computed(() => monitorTarget(props.monitor))
         >
           {{ monitor.name }}
         </NuxtLink>
+        <!-- While the header stacks, the target costs the row the pulse bar
+             needs, so it returns together with the side by side header. -->
         <p
-          class="text-sm text-dimmed truncate-target"
+          class="hidden @[14rem]:block text-sm text-dimmed truncate-target"
           :title="target"
         >
           {{ target }}
