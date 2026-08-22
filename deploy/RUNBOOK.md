@@ -95,9 +95,19 @@ systemctl reload caddy
 
 ## DNS
 
-One `A` record, `uptime.aarongreiner.dev` → `87.106.223.169`. Caddy requests the
-certificate on the first request that reaches it and retries on its own, so the
-record can be created before or after the first deploy.
+One `A` record, `uptime.aarongreiner.dev` → `87.106.223.169`.
+
+**Create the record before the Caddy block, or reload afterwards.** Caddy asks
+for the certificate the moment the site block loads. If the name does not
+resolve yet, Let's Encrypt answers `NXDOMAIN` and Caddy backs off exponentially,
+quickly to intervals of an hour — it will not notice the record appearing in the
+meantime, and until then every browser gets `ERR_SSL_PROTOCOL_ERROR` because
+there is no certificate to complete the handshake. One reload resets that:
+
+```bash
+systemctl reload caddy
+journalctl -u caddy -f | grep uptime      # "certificate obtained successfully"
+```
 
 ```bash
 dig +short @8.8.8.8 uptime.aarongreiner.dev A     # must print the server IP
