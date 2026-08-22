@@ -337,7 +337,9 @@
     "notFound": "Not found",
     "notFoundDescription": "This page does not exist.",
     "dashboardNotFound": "This dashboard does not exist.",
+    "dashboardUnavailable": "The dashboard could not be loaded. Please try again.",
     "monitorNotFound": "This monitor does not exist.",
+    "monitorUnavailable": "The monitor could not be loaded. Please try again.",
     "backHome": "Back to the start page",
     "unauthorized": "Please sign in as admin to do that."
   },

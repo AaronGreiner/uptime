@@ -65,7 +65,11 @@ updated `monitor_state`. An in-flight set prevents a slow check from being queue
 twice.
 
 **Live updates.** `server/api/events.get.ts` is a server sent event stream, and
-`server/utils/live.ts` is the in-process bus feeding it. `recordCheckResult`
+`server/utils/live.ts` is the in-process bus feeding it. The endpoint builds the
+stream by hand instead of using h3's `createEventStream`, because that helper
+signals a dropped connection by rejecting promises the handler cannot reach, and
+an unhandled rejection ends the bun process. Whatever writes to a client has to
+survive that client disappearing mid frame. `recordCheckResult`
 publishes a `monitor.checked` event carrying the new state, the recomputed 24 h
 uptime and the heartbeat row it just inserted — the same shape `/api/monitors`
 returns, so a browser patches its cache instead of refetching the list.
@@ -78,7 +82,11 @@ aggregated chart buckets — subscribes through `onMonitorChecked()` and refetch
 just itself.
 
 The stream is closed while the tab is hidden, because browsers cap the
-connections per origin and background tabs would starve the visible one.
+connections per origin and background tabs would starve the visible one. Tab
+switches therefore disconnect constantly, which is the load the endpoint is
+written for. `LIVE_KEEP_ALIVE_MS` must also stay under the runtime's idle
+timeout — bun closes a connection after ten seconds of silence — otherwise a
+quiet stream is torn down between two pings.
 Reopening reports the gap through `onResumed`, which reloads the list; `usePolling`
 is only the slow safety net behind that, and it also picks up monitors created
 elsewhere. Relative timestamps read `useNow()`, one shared clock ticked every
@@ -257,3 +265,9 @@ check. The dispatcher logs and swallows.
   phones instead of shortening.
 - `nowInSeconds()` lives in `server/services/scheduler.ts` and is the one clock
   the server uses. Reuse it instead of inlining `Date.now()`.
+- An unhandled promise rejection terminates the bun process, and systemd restarts
+  it: every request in that window becomes a 502 behind Caddy.
+  `server/plugins/errors.ts` logs and swallows them so a single dropped browser
+  cannot stop the checks, but anything it prints still has a cause to remove.
+- A page that turns every failed request into a 404 lies during a restart. Only
+  a 404 from the server means the record is gone; see `app/pages/d/[slug].vue`.

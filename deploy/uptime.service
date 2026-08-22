@@ -19,6 +19,9 @@ RestartSec=2
 Environment=NODE_ENV=production
 Environment=NITRO_HOST=127.0.0.1
 Environment=NITRO_PORT=3003
+# Bun drops a connection that saw no traffic for ten seconds. The live event
+# stream pings well below that on its own, this is the headroom. See the runbook.
+Environment=NITRO_BUN_IDLE_TIMEOUT=120
 
 # Secrets and tunables, written by the deploy workflow from GitHub secrets.
 EnvironmentFile=-/var/www/uptime/.env

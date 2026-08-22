@@ -14,8 +14,17 @@ const { data: dashboard, error, refresh: refreshDashboard } = await useDashboard
 const { data: monitors } = await useMonitors()
 const { refresh: refreshDashboards } = useDashboards()
 
+// Only a 404 means the dashboard is gone. Anything else — a restart, a dropped
+// connection — is temporary, and claiming it does not exist would send the
+// reader after the wrong problem.
 if (error.value) {
-  throw createError({ statusCode: 404, statusMessage: t('error.dashboardNotFound'), fatal: true })
+  const missing = error.value.statusCode === 404
+
+  throw createError({
+    statusCode: missing ? 404 : (error.value.statusCode || 503),
+    statusMessage: t(missing ? 'error.dashboardNotFound' : 'error.dashboardUnavailable'),
+    fatal: true
+  })
 }
 
 useSeoMeta({ title: () => dashboard.value?.name ?? t('nav.dashboards') })

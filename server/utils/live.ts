@@ -1,7 +1,12 @@
 import type { LiveEvent } from '../../shared/types/live'
 
-/** How often an idle stream sends a comment so proxies keep it open. */
-export const LIVE_KEEP_ALIVE_MS = 25_000
+/**
+ * How often an idle stream pings, so proxies and the runtime keep it open. It
+ * has to stay below the shortest idle timeout in front of it: bun closes a
+ * connection that saw no traffic for ten seconds, and a browser sitting on a
+ * quiet monitor sees exactly that.
+ */
+export const LIVE_KEEP_ALIVE_MS = 5_000
 
 type LiveListener = (event: LiveEvent) => void
 

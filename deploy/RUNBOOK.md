@@ -45,6 +45,11 @@ follow from that, and both are easy to get wrong:
 - `drizzle/` has to ship next to the build. `migrateDatabase()` reads the folder
   from disk at boot; the migrations are not part of the server bundle. Without
   it the service refuses to start instead of silently running an old schema.
+- Bun closes a connection that saw no traffic for ten seconds, which is shorter
+  than a quiet `/api/events` stream. `NITRO_BUN_IDLE_TIMEOUT` in the unit raises
+  that; it is the only way to reach `Bun.serve`, and the maximum it accepts is
+  255. The stream's own keep alive stays below the limit either way, so this is
+  headroom rather than the mechanism.
 
 `WorkingDirectory` must stay the deploy root, because the runtime config
 resolves `databasePath` and `migrationsDir` relative to `process.cwd()`.

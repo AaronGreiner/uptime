@@ -15,8 +15,16 @@ const monitorId = computed(() => Number(route.params.id))
 
 const { data: monitor, error, refresh } = await useMonitor(monitorId)
 
+// See the dashboard page: a failed request is not proof that the monitor is
+// gone, only a 404 is.
 if (error.value) {
-  throw createError({ statusCode: 404, statusMessage: t('error.monitorNotFound'), fatal: true })
+  const missing = error.value.statusCode === 404
+
+  throw createError({
+    statusCode: missing ? 404 : (error.value.statusCode || 503),
+    statusMessage: t(missing ? 'error.monitorNotFound' : 'error.monitorUnavailable'),
+    fatal: true
+  })
 }
 
 useSeoMeta({ title: () => monitor.value?.name ?? t('monitor.title') })
