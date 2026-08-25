@@ -2,9 +2,9 @@ import { Buffer } from 'node:buffer'
 import { request as httpRequest } from 'node:http'
 import { request as httpsRequest } from 'node:https'
 import type { IncomingMessage, RequestOptions } from 'node:http'
-import type { TLSSocket } from 'node:tls'
 import { matchesExpectedStatus } from '../../../shared/utils/monitor'
 import type { MonitorRow } from '../../database/schema'
+import { probeCertificateExpiry } from './certificate'
 import type { CheckResult } from './types'
 
 const MAX_REDIRECTS = 5
@@ -14,14 +14,13 @@ const MAX_BODY_BYTES = 2 * 1024 * 1024
 interface RawResponse {
   statusCode: number
   body: string
-  certificateExpiresAt: number | null
   location: string | null
 }
 
 /**
  * Performs the HTTP(S) check. `node:https` is used instead of `fetch` because it
- * exposes the peer certificate, per request TLS options and redirect control on
- * a single connection.
+ * gives per request TLS options and manual redirect control on one connection.
+ * The certificate is read by a probe of its own, see `./certificate`.
  */
 export async function checkHttp(monitor: MonitorRow): Promise<CheckResult> {
   const startedAt = performance.now()
@@ -38,7 +37,14 @@ export async function checkHttp(monitor: MonitorRow): Promise<CheckResult> {
   }
 
   const deadline = monitor.timeoutSeconds * 1000
-  let certificateExpiresAt: number | null = null
+
+  // Runs alongside the request rather than after it, so reading the certificate
+  // costs no wall clock time and stays inside the monitor's own timeout. It
+  // reads the certificate of the configured URL, not of a redirect target: that
+  // is the handshake the check itself fails on once the certificate expires.
+  const certificate = target.protocol === 'https:' && monitor.checkCertificateExpiry
+    ? probeCertificateExpiry(target, deadline)
+    : Promise.resolve(null)
 
   try {
     let response: RawResponse | null = null
@@ -52,7 +58,6 @@ export async function checkHttp(monitor: MonitorRow): Promise<CheckResult> {
       }
 
       response = await sendRequest(monitor, target, remaining, redirects === 0)
-      certificateExpiresAt = response.certificateExpiresAt ?? certificateExpiresAt
 
       const isRedirect = response.location !== null && response.statusCode >= 300 && response.statusCode < 400
 
@@ -66,7 +71,7 @@ export async function checkHttp(monitor: MonitorRow): Promise<CheckResult> {
           latencyMs: Math.round(performance.now() - startedAt),
           statusCode: response.statusCode,
           message: `Too many redirects (>${MAX_REDIRECTS})`,
-          certificateExpiresAt
+          certificateExpiresAt: await certificate
         }
       }
 
@@ -82,7 +87,7 @@ export async function checkHttp(monitor: MonitorRow): Promise<CheckResult> {
         latencyMs,
         statusCode,
         message: `HTTP ${statusCode}, expected ${monitor.expectedStatusCodes}`,
-        certificateExpiresAt
+        certificateExpiresAt: await certificate
       }
     }
 
@@ -97,19 +102,19 @@ export async function checkHttp(monitor: MonitorRow): Promise<CheckResult> {
           message: found
             ? `Forbidden keyword "${monitor.keyword}" found`
             : `Keyword "${monitor.keyword}" not found`,
-          certificateExpiresAt
+          certificateExpiresAt: await certificate
         }
       }
     }
 
-    return { status: 'up', latencyMs, statusCode, message: `HTTP ${statusCode}`, certificateExpiresAt }
+    return { status: 'up', latencyMs, statusCode, message: `HTTP ${statusCode}`, certificateExpiresAt: await certificate }
   } catch (error) {
     return {
       status: 'down',
       latencyMs: null,
       statusCode: null,
       message: describeError(error, monitor.timeoutSeconds),
-      certificateExpiresAt
+      certificateExpiresAt: await certificate
     }
   }
 }
@@ -136,11 +141,22 @@ function sendRequest(monitor: MonitorRow, target: URL, timeoutMs: number, sendBo
       })
     }
 
+    let settled = false
+    let incoming: IncomingMessage | null = null
+
+    const finish = (handler: () => void) => {
+      if (settled) {
+        return
+      }
+
+      settled = true
+      clearTimeout(timer)
+      handler()
+    }
+
     const send = secure ? httpsRequest : httpRequest
     const request = send(target, options, (response: IncomingMessage) => {
-      const certificateExpiresAt = secure && monitor.checkCertificateExpiry
-        ? readCertificateExpiry(response.socket as TLSSocket)
-        : null
+      incoming = response
 
       const needsBody = Boolean(monitor.keyword)
       const chunks: Buffer[] = []
@@ -155,15 +171,12 @@ function sendRequest(monitor: MonitorRow, target: URL, timeoutMs: number, sendBo
         chunks.push(chunk)
       })
 
-      response.on('error', reject)
-      response.on('end', () => {
-        resolve({
-          statusCode: response.statusCode ?? 0,
-          body: needsBody ? Buffer.concat(chunks).toString('utf8') : '',
-          certificateExpiresAt,
-          location: response.headers.location ?? null
-        })
-      })
+      response.on('error', (error: Error) => finish(() => reject(error)))
+      response.on('end', () => finish(() => resolve({
+        statusCode: response.statusCode ?? 0,
+        body: needsBody ? Buffer.concat(chunks).toString('utf8') : '',
+        location: response.headers.location ?? null
+      })))
 
       // Discard the payload as fast as possible when no keyword is configured.
       if (!needsBody) {
@@ -171,12 +184,22 @@ function sendRequest(monitor: MonitorRow, target: URL, timeoutMs: number, sendBo
       }
     })
 
+    // The deadline covers the response body too, so it must survive the request
+    // side finishing: bun emits `close` on the ClientRequest as soon as the
+    // response headers arrive, and clearing the timer there left a stalled body
+    // with no deadline at all. The check then never returned, and the scheduler
+    // kept the monitor in its in-flight set forever.
+    //
+    // Rejecting before destroying is deliberate as well. Destroying the response
+    // makes bun emit `end` on it rather than an error, which would resolve the
+    // promise with a truncated body and report the timed out check as up.
     const timer = setTimeout(() => {
+      finish(() => reject(new TimeoutError()))
       request.destroy(new TimeoutError())
+      incoming?.destroy()
     }, timeoutMs)
 
-    request.on('error', reject)
-    request.on('close', () => clearTimeout(timer))
+    request.on('error', (error: Error) => finish(() => reject(error)))
 
     if (sendBody && monitor.body && monitor.method !== 'GET' && monitor.method !== 'HEAD') {
       request.write(monitor.body)
@@ -196,18 +219,6 @@ function normalizeHeaders(headers: Record<string, string> | null): Record<string
       .filter(([key, value]) => key.trim().length > 0 && typeof value === 'string')
       .map(([key, value]) => [key.trim().toLowerCase(), value])
   )
-}
-
-function readCertificateExpiry(socket: TLSSocket): number | null {
-  const certificate = typeof socket?.getPeerCertificate === 'function' ? socket.getPeerCertificate() : null
-
-  if (!certificate?.valid_to) {
-    return null
-  }
-
-  const expiresAt = Date.parse(certificate.valid_to)
-
-  return Number.isNaN(expiresAt) ? null : Math.floor(expiresAt / 1000)
 }
 
 class TimeoutError extends Error {

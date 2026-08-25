@@ -132,9 +132,14 @@ add the branch to `app/components/monitor/FormModal.vue`, and add the labels to
 both locale files.
 
 The HTTP executor deliberately uses `node:https` rather than `fetch`: it needs
-the peer certificate, per request TLS options and manual redirect control on one
-connection. The ping executor spawns the system `ping` binary, because raw ICMP
-sockets would require `CAP_NET_RAW`.
+per request TLS options and manual redirect control on one connection. The
+certificate is not read from that request but by `checks/certificate.ts`, which
+opens a TLS connection of its own — see the gotcha below. It runs alongside the
+request so it costs no wall clock time, caches a reading for six hours because
+certificates outlive any check interval, and reports the certificate of the
+configured URL rather than of a redirect target, since that is the handshake the
+check itself fails on once it expires. The ping executor spawns the system
+`ping` binary, because raw ICMP sockets would require `CAP_NET_RAW`.
 
 **Retries.** A failed check always writes a `down` heartbeat, but the monitor is
 only reported as `down` once `consecutive_failures > monitor.retries`. Until then
@@ -282,6 +287,23 @@ check. The dispatcher logs and swallows.
   phones instead of shortening.
 - `nowInSeconds()` lives in `server/services/scheduler.ts` and is the one clock
   the server uses. Reuse it instead of inlining `Date.now()`.
+- Bun emits `close` on a `node:http` `ClientRequest` as soon as the response
+  headers arrive, not when the response body ends, and destroying an
+  `IncomingMessage` makes it emit `end` rather than an error. Anything that
+  wraps a request in a promise has to keep its deadline running past `close` and
+  settle before it destroys anything, or a stalled body resolves as a success —
+  or never settles at all.
+- A check that never settles does not just lose one result: the scheduler holds
+  the monitor in its in-flight set until the promise returns, so that monitor
+  silently stops being checked until the process restarts. `executeCheck` puts a
+  watchdog around every executor for that reason; an executor still has to
+  enforce its own timeout, the watchdog is only the net.
+- Bun's `node:https` is backed by its native HTTP client, so there is no TLS
+  socket to reach: `response.socket` is a plain `net.Socket`, a custom
+  `createConnection` is ignored (as it is on node whenever `agent` is set, which
+  `agent: false` also does), and `getPeerCertificate` exists nowhere. Reading a
+  peer certificate means opening the connection with `node:tls` instead, which
+  behaves identically on both runtimes.
 - An unhandled promise rejection terminates the bun process, and systemd restarts
   it: every request in that window becomes a 502 behind Caddy.
   `server/plugins/errors.ts` logs and swallows them so a single dropped browser

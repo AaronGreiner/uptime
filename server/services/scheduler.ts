@@ -249,15 +249,27 @@ function enteredCertificateWarningWindow(
   certificateExpiresAt: number,
   now: number
 ): boolean {
-  const threshold = now + monitor.certificateExpiryWarningDays * 86_400
+  const window = monitor.certificateExpiryWarningDays * 86_400
 
-  if (certificateExpiresAt > threshold) {
+  if (certificateExpiresAt > now + window) {
     return false
   }
 
   const previousExpiry = previous?.certificateExpiresAt
+  const previousCheckedAt = previous?.lastCheckedAt
 
-  return !previousExpiry || previousExpiry > threshold
+  // Nothing to compare against, so the first reading is reported when it already
+  // sits inside the window.
+  if (!previousExpiry || !previousCheckedAt) {
+    return true
+  }
+
+  // The window moves, the expiry does not, so the crossing is only visible
+  // against the window as it stood at the previous check. Testing the previous
+  // expiry against the *current* threshold asks whether a value is past a bound
+  // it was just compared to two lines earlier: false for an unchanged
+  // certificate, which is every certificate that ages into its warning window.
+  return previousExpiry > previousCheckedAt + window
 }
 
 export function nowInSeconds(): number {
