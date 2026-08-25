@@ -304,8 +304,6 @@
     },
     "field": {
       "monitor": "Monitor",
-      "group": "Gruppe",
-      "ungrouped": "Keine Gruppe",
       "target": "Ziel",
       "status": "Status",
       "message": "Meldung",

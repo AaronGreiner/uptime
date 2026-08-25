@@ -42,12 +42,17 @@ export function eventKey(event: NotificationEvent): string {
   return NOTIFICATION_EVENT_KEYS[event.type]
 }
 
+/** Group breadcrumb followed by the monitor, ready to embed in a headline. */
+export function eventMonitorLabel(event: NotificationEvent): string {
+  return [...(event.monitor.groupPath ?? []), event.monitor.name].join(' › ')
+}
+
 export function eventTitle(event: NotificationEvent, t: Translate): string {
-  return t(`notification.event.${eventKey(event)}.title`, { monitor: event.monitor.name })
+  return t(`notification.event.${eventKey(event)}.title`, { monitor: eventMonitorLabel(event) })
 }
 
 export function eventSubject(event: NotificationEvent, t: Translate): string {
-  return t(`notification.event.${eventKey(event)}.subject`, { monitor: event.monitor.name })
+  return t(`notification.event.${eventKey(event)}.subject`, { monitor: eventMonitorLabel(event) })
 }
 
 /**
@@ -130,12 +135,7 @@ export function eventFacts(
   const renderTimestamp = options.renderTimestamp ?? (seconds => formatTimestamp(seconds, locale, timeZone))
   const renderDate = options.renderDate ?? (seconds => formatDate(seconds, locale, timeZone))
 
-  const groupPath = event.monitor.groupPath ?? []
   const facts = [
-    {
-      label: t('notification.field.group'),
-      value: groupPath.length ? groupPath.join(' › ') : t('notification.field.ungrouped')
-    },
     { label: t('notification.field.target'), value: event.monitor.target },
     { label: t('notification.field.status'), value: t(`status.${event.status}`) }
   ]

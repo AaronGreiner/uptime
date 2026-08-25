@@ -74,7 +74,9 @@ jobs:
           NUXT_ADMIN_USERNAME: ${{ secrets.NUXT_ADMIN_USERNAME }}
           NUXT_ADMIN_PASSWORD: ${{ secrets.NUXT_ADMIN_PASSWORD }}
           APP_NAME: ${{ vars.NUXT_PUBLIC_APP_NAME }}
-          APP_URL: ${{ vars.NUXT_PUBLIC_APP_URL }}
+          # Public information, not a secret. The repository variable remains
+          # the override when this deployment moves to a different origin.
+          APP_URL: ${{ vars.NUXT_PUBLIC_APP_URL || 'https://uptime.aarongreiner.dev' }}
           HEARTBEAT_DAYS: ${{ vars.NUXT_RETENTION_HEARTBEAT_DAYS }}
           HOURLY_STATS_DAYS: ${{ vars.NUXT_RETENTION_HOURLY_STATS_DAYS }}
           NOTIFICATION_DAYS: ${{ vars.NUXT_RETENTION_NOTIFICATION_DAYS }}
@@ -82,6 +84,16 @@ jobs:
         run: |
           set -euo pipefail
           : "${NUXT_SESSION_PASSWORD:?missing repository secret NUXT_SESSION_PASSWORD}"
+          : "${APP_URL:?missing public application URL}"
+
+          case "$APP_URL" in
+            https://*) ;;
+            *) echo "::error::NUXT_PUBLIC_APP_URL must be an https:// origin"; exit 1 ;;
+          esac
+
+          # Runtime links append their own paths, so keep the configured value
+          # as an origin even when the optional repository variable has a slash.
+          APP_URL="${APP_URL%/}"
 
           REMOTE="${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}"
           DEST="${{ secrets.DEPLOY_PATH }}"
@@ -95,7 +107,7 @@ jobs:
             echo "NUXT_ADMIN_USERNAME=${NUXT_ADMIN_USERNAME:-admin}"
             echo "NUXT_ADMIN_PASSWORD=${NUXT_ADMIN_PASSWORD:-}"
             echo "NUXT_PUBLIC_APP_NAME=${APP_NAME:-Uptime}"
-            echo "NUXT_PUBLIC_APP_URL=${APP_URL:-}"
+            echo "NUXT_PUBLIC_APP_URL=${APP_URL}"
             echo "NUXT_RETENTION_HEARTBEAT_DAYS=${HEARTBEAT_DAYS:-7}"
             echo "NUXT_RETENTION_HOURLY_STATS_DAYS=${HOURLY_STATS_DAYS:-365}"
             echo "NUXT_RETENTION_NOTIFICATION_DAYS=${NOTIFICATION_DAYS:-30}"

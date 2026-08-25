@@ -138,10 +138,11 @@ Optional repository *variables* tune the instance without a code change:
 `NUXT_SCHEDULER_CONCURRENCY`. The workflow falls back to the defaults from
 `.env.example` when they are unset.
 
-Set `NUXT_PUBLIC_APP_URL` to the public origin of the instance, without a
-trailing slash — `https://uptime.example.com`. Notifications link back to the
-monitor they are about, and while this is empty they leave the button out rather
-than sending everyone to localhost.
+This instance defaults `NUXT_PUBLIC_APP_URL` to
+`https://uptime.aarongreiner.dev` directly in the workflow. Set the repository
+variable to override that public origin when the deployment moves; it is public
+configuration, not a secret. A trailing slash is removed before the value is
+written. Notifications use it to link back to the monitor they are about.
 
 ## Notifications
 
