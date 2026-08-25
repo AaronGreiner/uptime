@@ -130,7 +130,12 @@ export function eventFacts(
   const renderTimestamp = options.renderTimestamp ?? (seconds => formatTimestamp(seconds, locale, timeZone))
   const renderDate = options.renderDate ?? (seconds => formatDate(seconds, locale, timeZone))
 
+  const groupPath = event.monitor.groupPath ?? []
   const facts = [
+    {
+      label: t('notification.field.group'),
+      value: groupPath.length ? groupPath.join(' › ') : t('notification.field.ungrouped')
+    },
     { label: t('notification.field.target'), value: event.monitor.target },
     { label: t('notification.field.status'), value: t(`status.${event.status}`) }
   ]

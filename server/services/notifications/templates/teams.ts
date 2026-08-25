@@ -36,9 +36,17 @@ export interface TeamsRenderOptions {
  */
 export function buildTeamsRequest(
   event: NotificationEvent,
-  options: TeamsRenderOptions & { format: 'card' | 'message' }
+  options: TeamsRenderOptions & { format: 'card' | 'message' | 'modern' }
 ): Record<string, unknown> {
-  return options.format === 'message' ? buildTeamsMessage(event, options) : buildTeamsPayload(event, options)
+  if (options.format === 'message') {
+    return buildTeamsMessage(event, options)
+  }
+
+  if (options.format === 'modern') {
+    return buildTeamsModernMessage(event, options)
+  }
+
+  return buildTeamsPayload(event, options)
 }
 
 /**
@@ -76,6 +84,45 @@ export function buildTeamsMessage(event: NotificationEvent, options: TeamsRender
   }
 
   return { type: 'message', text: lines.join('<br>') }
+}
+
+/**
+ * A richer HTML variant for the same Power Automate message action.
+ *
+ * Teams sanitises the message before rendering it and its desktop, web and
+ * mobile clients do not agree on every HTML detail. The semantic structure
+ * therefore remains readable when the inline spacing is stripped: a heading,
+ * a paragraph, a two-column table and a final link.
+ */
+export function buildTeamsModernMessage(
+  event: NotificationEvent,
+  options: TeamsRenderOptions
+): Record<string, unknown> {
+  const { t, language, timeZone } = options
+  const marker = toneMarker(toneFor(event))
+  const title = eventTitle(event, t)
+  const summary = eventSummary(event, t)
+  const link = monitorUrl(event.monitor.id)
+  const targetLabel = t('notification.field.target')
+  const facts = eventFacts(event, t, { locale: language, timeZone })
+
+  const rows = facts.map((fact) => {
+    const escapedValue = escapeHtml(fact.value)
+    const value = fact.label === targetLabel && /^https?:\/\//i.test(fact.value)
+      ? `<a href="${escapedValue}">${escapedValue}</a>`
+      : escapedValue
+
+    return `<tr><td style="padding:3px 18px 3px 0;vertical-align:top;white-space:nowrap"><strong>${escapeHtml(fact.label)}</strong></td><td style="padding:3px 0;vertical-align:top">${value}</td></tr>`
+  }).join('')
+
+  const action = link
+    ? `<p style="margin:16px 0 0"><strong><a href="${escapeHtml(link)}">${escapeHtml(t('notification.action.openMonitor'))} &rarr;</a></strong></p>`
+    : ''
+
+  return {
+    type: 'message',
+    text: `<div><h3 style="margin:0 0 8px">${escapeHtml(`${marker} ${title}`)}</h3><p style="margin:0 0 14px">${escapeHtml(summary)}</p><table role="presentation" cellpadding="0" cellspacing="0" style="border-collapse:collapse">${rows}</table>${action}</div>`
+  }
 }
 
 /**

@@ -74,6 +74,8 @@ export interface NotificationEvent {
     name: string
     type: string
     target: string
+    /** Group names from the root down to the monitor's direct group. */
+    groupPath: string[]
   }
   status: MonitorStatus
   message: string | null

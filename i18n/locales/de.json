@@ -304,6 +304,8 @@
     },
     "field": {
       "monitor": "Monitor",
+      "group": "Gruppe",
+      "ungrouped": "Keine Gruppe",
       "target": "Ziel",
       "status": "Status",
       "message": "Meldung",
@@ -413,18 +415,20 @@
         "workflowUrl": "Workflow-URL",
         "workflowUrlHint": "Die Webhook-URL ist die Berechtigung zum Posten und wird wie ein Passwort behandelt.",
         "setupTitle": "Webhook anlegen",
-        "setupDescription": "Öffnen Sie in Teams das Kanalmenü, wählen Sie Workflows und starten Sie mit der Vorlage „Beim Empfang einer Webhookanforderung in einem Kanal posten“. Für einen Vorschautext öffnen Sie den Flow anschließend, ersetzen „Post card in a chat or channel“ durch „Post message in a chat or channel“ und setzen deren Nachricht auf das Feld text aus dem Trigger. URLs alter Office-365-Connectors werden nicht angenommen.",
-        "formatLabel": "Aktion im Workflow",
-        "formatDescription": "Muss zu der Aktion passen, die Ihr Workflow verwendet. Beide lesen unterschiedliche Nutzdaten.",
+        "setupDescription": "Öffnen Sie in Teams das Kanalmenü, wählen Sie Workflows und starten Sie mit der Vorlage „Beim Empfang einer Webhookanforderung in einem Kanal posten“. Für beide Nachrichtenformate öffnen Sie den Flow anschließend, ersetzen „Post card in a chat or channel“ durch „Post message in a chat or channel“ und setzen deren Nachricht auf das Feld text aus dem Trigger. URLs alter Office-365-Connectors werden nicht angenommen.",
+        "formatLabel": "Ausgabeformat",
+        "formatDescription": "Die Adaptive Card nutzt die Kartenaktion. Beide Nachrichtenformate nutzen die Nachrichtenaktion im Workflow.",
         "format": {
-          "card": "Post card in a chat or channel",
-          "message": "Post message in a chat or channel"
+          "card": "Adaptive Card",
+          "message": "Einfache Nachricht",
+          "modern": "Modernes HTML (experimentell)"
         },
         "formatHint": {
-          "card": "Eine gestaltete Adaptive Card. Teams zeigt dafür keinen Vorschautext — Kanalliste und Aktivitätsfeed melden „Card“.",
-          "message": "Eine einfache Nachricht. Weniger Gestaltung, dafür zeigen Kanalliste, Aktivitätsfeed und Telefon, was passiert ist."
+          "card": "Nutzt „Post card in a chat or channel“. Teams zeigt dafür keinen Vorschautext — Kanalliste und Aktivitätsfeed melden „Card“.",
+          "message": "Nutzt „Post message in a chat or channel“. Eine kompakte, robuste Nachricht mit brauchbarer Vorschau auf jedem Gerät.",
+          "modern": "Nutzt „Post message in a chat or channel“. Ergänzt HTML-Überschrift, ausgerichtete Details und einen stärkeren Aktionslink; die Darstellung kann je nach Teams-Client abweichen."
         },
-        "timezoneHint": "Eine Nachricht trägt eine einmalig gerenderte Zeit. Eine Karte überlässt das Teams, das sie für jeden Leser auflöst."
+        "timezoneHint": "Beide Nachrichtenformate tragen eine einmalig gerenderte Zeit. Eine Karte überlässt das Teams, das sie für jeden Leser auflöst."
       }
     },
     "assignment": {

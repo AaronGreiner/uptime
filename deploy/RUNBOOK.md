@@ -162,7 +162,8 @@ ships with "Post card in a chat or channel", which posts a laid out card but no
 preview text — the channel list and the activity feed show "Card". For a preview,
 open the flow, replace that action with "Post message in a chat or channel", set
 its Message to the `text` field of the trigger body, and switch the channel to
-the message format.
+either the plain or experimental modern HTML message format. Both message
+formats use the same workflow action.
 
 Delivery is queued in the database and retried after 30 s, 2 min and 10 min
 before it is given up on, so a mail server that is briefly down costs nothing. A

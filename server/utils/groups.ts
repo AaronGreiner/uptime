@@ -37,6 +37,34 @@ export function getMonitorGroupRow(id: number): MonitorGroupRow | undefined {
   return useDatabase().select().from(monitorGroups).where(eq(monitorGroups.id, id)).get()
 }
 
+/** Group names from the root down to the monitor's direct group. */
+export function monitorGroupPath(groupId: number | null): string[] {
+  if (groupId === null) {
+    return []
+  }
+
+  const byId = new Map(listMonitorGroupRows().map(row => [row.id, row]))
+  const path: string[] = []
+  const seen = new Set<number>()
+  let current: number | null = groupId
+
+  // `seen` also makes this safe against a hand-edited cycle in the database.
+  while (current !== null && !seen.has(current)) {
+    seen.add(current)
+
+    const group = byId.get(current)
+
+    if (!group) {
+      break
+    }
+
+    path.unshift(group.name)
+    current = group.parentId
+  }
+
+  return path
+}
+
 /** Places a new group last among its siblings. */
 export function nextGroupPosition(parentId: number | null): number {
   const row = useDatabase()

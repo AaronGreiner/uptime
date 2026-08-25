@@ -18,6 +18,9 @@ export const NOTIFICATION_EVENT_TYPES = [
 
 export const NOTIFICATION_LOCALES = ['en', 'de'] as const
 
+/** Default for transports that have to render a timestamp before delivery. */
+export const NOTIFICATION_DEFAULT_TIME_ZONE = 'Europe/Berlin'
+
 export const NOTIFICATION_DELIVERY_STATUSES = ['pending', 'sent', 'failed'] as const
 
 /**

@@ -1,7 +1,12 @@
 import z from 'zod'
 import { WIDGET_HEIGHTS, WIDGET_WIDTHS } from './grid'
 import { MONITOR_INTERVAL_BOUNDS, MONITOR_PACKET_BOUNDS, MONITOR_RETRY_BOUNDS, MONITOR_TIMEOUT_BOUNDS } from './monitor'
-import { NOTIFICATION_LOCALES, NOTIFICATION_MODES, NOTIFICATION_PROVIDERS } from './notification'
+import {
+  NOTIFICATION_DEFAULT_TIME_ZONE,
+  NOTIFICATION_LOCALES,
+  NOTIFICATION_MODES,
+  NOTIFICATION_PROVIDERS
+} from './notification'
 
 export const HTTP_METHODS = ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'] as const
 
@@ -251,7 +256,7 @@ export const emailChannelConfigSchema = z.object({
     .string()
     .trim()
     .max(64, { error: message('validation.tooLong', { max: 64 }) })
-    .default('UTC')
+    .default(NOTIFICATION_DEFAULT_TIME_ZONE)
     .refine(isTimeZone, { error: message('validation.timezone') })
 })
 
@@ -286,17 +291,17 @@ export const teamsChannelConfigSchema = z.object({
     ),
   /**
    * Which workflow action the webhook is wired to. They read different payloads:
-   * `card` is for "Post card in a chat or channel", `message` for "Post message
-   * in a chat or channel" — the latter is the only one that produces a preview
-   * in the channel list and the activity feed.
+   * `card` is for "Post card in a chat or channel". Both message formats use
+   * "Post message in a chat or channel" and produce a useful preview in the
+   * channel list and the activity feed.
    */
-  format: z.enum(['card', 'message']).default('card'),
-  /** Only the message format renders a time; a card resolves it per viewer. */
+  format: z.enum(['card', 'message', 'modern']).default('card'),
+  /** Both message formats render a time; a card resolves it per viewer. */
   timezone: z
     .string()
     .trim()
     .max(64, { error: message('validation.tooLong', { max: 64 }) })
-    .default('UTC')
+    .default(NOTIFICATION_DEFAULT_TIME_ZONE)
     .refine(isTimeZone, { error: message('validation.timezone') })
 })
 

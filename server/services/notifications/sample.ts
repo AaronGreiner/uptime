@@ -20,12 +20,19 @@ export function buildSampleEvent(language: NotificationLocale): NotificationEven
   return {
     type: 'monitor.down',
     monitor: monitor
-      ? { id: monitor.id, name: monitor.name, type: monitor.type, target: monitorTarget(monitor) }
+      ? {
+          id: monitor.id,
+          name: monitor.name,
+          type: monitor.type,
+          target: monitorTarget(monitor),
+          groupPath: monitorGroupPath(monitor.groupId)
+        }
       : {
           id: 0,
           name: translate(language, 'notification.test.monitorName'),
           type: 'http',
-          target: 'https://example.com/health'
+          target: 'https://example.com/health',
+          groupPath: []
         },
     status: 'down',
     message: translate(language, 'notification.test.message', { app: useRuntimeConfig().public.appName }),

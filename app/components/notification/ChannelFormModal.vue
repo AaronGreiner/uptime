@@ -1,7 +1,12 @@
 <script setup lang="ts">
 import type { FormSubmitEvent } from '@nuxt/ui'
 import type { NotificationChannel, NotificationLocale, NotificationProviderId } from '#shared/types/notification'
-import { NOTIFICATION_LOCALES, NOTIFICATION_PROVIDERS, notificationProviderIcon } from '#shared/utils/notification'
+import {
+  NOTIFICATION_DEFAULT_TIME_ZONE,
+  NOTIFICATION_LOCALES,
+  NOTIFICATION_PROVIDERS,
+  notificationProviderIcon
+} from '#shared/utils/notification'
 import { notificationChannelFormSchema } from '#shared/utils/validation'
 
 const props = defineProps<{
@@ -35,10 +40,10 @@ const EMAIL_DEFAULTS = {
   to: [] as string[],
   replyTo: '',
   rejectUnauthorized: true,
-  timezone: 'UTC'
+  timezone: NOTIFICATION_DEFAULT_TIME_ZONE
 }
 
-const TEAMS_DEFAULTS = { workflowUrl: '', format: 'card', timezone: 'UTC' }
+const TEAMS_DEFAULTS = { workflowUrl: '', format: 'card', timezone: NOTIFICATION_DEFAULT_TIME_ZONE }
 
 function defaultsFor(provider: NotificationProviderId): Record<string, unknown> {
   return provider === 'teams' ? { ...TEAMS_DEFAULTS } : { ...EMAIL_DEFAULTS }
@@ -92,14 +97,14 @@ const languageItems = computed(() => NOTIFICATION_LOCALES.map(value => ({
   value
 })))
 
-const teamsFormatItems = computed(() => (['card', 'message'] as const).map(value => ({
+const teamsFormatItems = computed(() => (['card', 'message', 'modern'] as const).map(value => ({
   label: t(`notification.form.teams.format.${value}`),
   value,
   description: t(`notification.form.teams.formatHint.${value}`)
 })))
 
-/** The card resolves times per viewer, so the zone only applies to a message. */
-const showsTeamsTimezone = computed(() => state.value.config.format === 'message')
+/** The card resolves times per viewer, so the zone only applies to messages. */
+const showsTeamsTimezone = computed(() => state.value.config.format !== 'card')
 
 // Switching the transport throws the old settings away: they mean nothing to the
 // new one, and keeping them would submit fields it never validates.

@@ -222,7 +222,13 @@ function buildNotificationEvent(
   now: number
 ): NotificationEvent | null {
   const base = {
-    monitor: { id: monitor.id, name: monitor.name, type: monitor.type, target: monitorTarget(monitor) },
+    monitor: {
+      id: monitor.id,
+      name: monitor.name,
+      type: monitor.type,
+      target: monitorTarget(monitor),
+      groupPath: monitorGroupPath(monitor.groupId)
+    },
     status,
     message: result.message,
     latencyMs: result.latencyMs,
