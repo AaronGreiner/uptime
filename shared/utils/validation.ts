@@ -5,7 +5,9 @@ import {
   NOTIFICATION_DEFAULT_TIME_ZONE,
   NOTIFICATION_LOCALES,
   NOTIFICATION_MODES,
-  NOTIFICATION_PROVIDERS
+  NOTIFICATION_PROVIDERS,
+  TEAMS_NOTIFICATION_FORMATS,
+  normalizeTeamsNotificationFormat
 } from './notification'
 
 export const HTTP_METHODS = ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'] as const
@@ -291,12 +293,13 @@ export const teamsChannelConfigSchema = z.object({
     ),
   /**
    * Which workflow action the webhook is wired to. They read different payloads:
-   * `card` is for "Post card in a chat or channel". Both message formats use
-   * "Post message in a chat or channel" and produce a useful preview in the
-   * channel list and the activity feed.
+   * `card` is for "Post card in a chat or channel", `message` for "Post message
+   * in a chat or channel" — the latter produces a useful preview in the channel
+   * list and the activity feed. The preprocessor migrates the removed
+   * experimental `modern` value when an older stored channel is read.
    */
-  format: z.enum(['card', 'message', 'modern']).default('card'),
-  /** Both message formats render a time; a card resolves it per viewer. */
+  format: z.preprocess(normalizeTeamsNotificationFormat, z.enum(TEAMS_NOTIFICATION_FORMATS)).default('card'),
+  /** A message renders its time once; a card resolves it per viewer. */
   timezone: z
     .string()
     .trim()

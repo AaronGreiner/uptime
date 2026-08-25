@@ -8,19 +8,25 @@ import { resolveAssignedGroupIds } from '#shared/utils/notification'
  * — so these are only ever called from admin screens and dialogs.
  */
 export function useNotificationChannels() {
-  return useAsyncData<NotificationChannel[]>('notification-channels', () => $fetch('/api/notifications/channels'), {
+  const requestFetch = useRequestFetch()
+
+  return useAsyncData<NotificationChannel[]>('notification-channels', () => requestFetch('/api/notifications/channels'), {
     default: () => []
   })
 }
 
 export function useNotificationGroups() {
-  return useAsyncData<NotificationGroup[]>('notification-groups', () => $fetch('/api/notifications/groups'), {
+  const requestFetch = useRequestFetch()
+
+  return useAsyncData<NotificationGroup[]>('notification-groups', () => requestFetch('/api/notifications/groups'), {
     default: () => []
   })
 }
 
 export function useNotificationDeliveries() {
-  return useAsyncData<NotificationDelivery[]>('notification-deliveries', () => $fetch('/api/notifications/deliveries'), {
+  const requestFetch = useRequestFetch()
+
+  return useAsyncData<NotificationDelivery[]>('notification-deliveries', () => requestFetch('/api/notifications/deliveries'), {
     default: () => []
   })
 }

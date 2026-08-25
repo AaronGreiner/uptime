@@ -1,7 +1,7 @@
 import { asc, desc, eq, inArray, sql } from 'drizzle-orm'
 import type { NotificationAssignment } from '../../shared/types/monitor'
 import type { NotificationChannel, NotificationDelivery, NotificationGroup } from '../../shared/types/notification'
-import { resolveAssignedGroupIds } from '../../shared/utils/notification'
+import { normalizeTeamsNotificationFormat, resolveAssignedGroupIds } from '../../shared/utils/notification'
 import {
   monitorGroupNotificationGroups,
   monitorNotificationGroups,
@@ -232,7 +232,9 @@ export function serializeNotificationChannel(row: NotificationChannelRow): Notif
   if (provider) {
     for (const [key, value] of Object.entries(row.config)) {
       if (!provider.secretKeys.includes(key)) {
-        config[key] = value
+        config[key] = row.provider === 'teams' && key === 'format'
+          ? normalizeTeamsNotificationFormat(value)
+          : value
         continue
       }
 

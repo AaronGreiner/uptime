@@ -5,6 +5,8 @@ import {
   NOTIFICATION_DEFAULT_TIME_ZONE,
   NOTIFICATION_LOCALES,
   NOTIFICATION_PROVIDERS,
+  TEAMS_NOTIFICATION_FORMATS,
+  normalizeTeamsNotificationFormat,
   notificationProviderIcon
 } from '#shared/utils/notification'
 import { notificationChannelFormSchema } from '#shared/utils/validation'
@@ -49,6 +51,27 @@ function defaultsFor(provider: NotificationProviderId): Record<string, unknown> 
   return provider === 'teams' ? { ...TEAMS_DEFAULTS } : { ...EMAIL_DEFAULTS }
 }
 
+function configFor(provider: NotificationProviderId, channel?: NotificationChannel | null): Record<string, unknown> {
+  const config = {
+    ...defaultsFor(provider),
+    ...(channel?.provider === provider ? channel.config : {})
+  }
+
+  if (provider === 'teams') {
+    config.format = normalizeTeamsNotificationFormat(config.format)
+  }
+
+  // Stored secrets are represented by their placeholder, not by an empty value
+  // that the field schema would still try to validate as a replacement.
+  if (channel?.provider === provider) {
+    const secrets = new Set(channel.secretsSet)
+
+    return Object.fromEntries(Object.entries(config).filter(([key]) => !secrets.has(key)))
+  }
+
+  return config
+}
+
 function createState(channel?: NotificationChannel | null): ChannelFormState {
   const provider = channel?.provider ?? 'email'
 
@@ -57,9 +80,7 @@ function createState(channel?: NotificationChannel | null): ChannelFormState {
     provider,
     enabled: channel?.enabled ?? true,
     language: channel?.language ?? 'en',
-    // The stored config never carries the secrets, so the defaults fill the gaps
-    // and a blank secret field stays blank.
-    config: { ...defaultsFor(provider), ...(channel?.config ?? {}) }
+    config: configFor(provider, channel)
   }
 }
 
@@ -97,7 +118,7 @@ const languageItems = computed(() => NOTIFICATION_LOCALES.map(value => ({
   value
 })))
 
-const teamsFormatItems = computed(() => (['card', 'message', 'modern'] as const).map(value => ({
+const teamsFormatItems = computed(() => TEAMS_NOTIFICATION_FORMATS.map(value => ({
   label: t(`notification.form.teams.format.${value}`),
   value,
   description: t(`notification.form.teams.formatHint.${value}`)
@@ -109,7 +130,7 @@ const showsTeamsTimezone = computed(() => state.value.config.format !== 'card')
 // Switching the transport throws the old settings away: they mean nothing to the
 // new one, and keeping them would submit fields it never validates.
 watch(() => state.value.provider, (provider) => {
-  state.value.config = { ...defaultsFor(provider), ...(props.channel?.provider === provider ? props.channel.config : {}) }
+  state.value.config = configFor(provider, props.channel)
   tested.value = false
 })
 

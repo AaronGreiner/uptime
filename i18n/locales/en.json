@@ -413,20 +413,18 @@
         "workflowUrl": "Workflow URL",
         "workflowUrlHint": "The webhook URL is the permission to post, so it is stored like a password.",
         "setupTitle": "Creating the webhook",
-        "setupDescription": "In Teams, open the channel menu, choose Workflows and start from the \"Post to a channel when a webhook request is received\" template. For either message format, open the flow afterwards, replace \"Post card in a chat or channel\" with \"Post message in a chat or channel\" and set its Message to the trigger body's text field. Office 365 connector URLs are retired and are not accepted.",
+        "setupDescription": "In Teams, open the channel menu, choose Workflows and start from the \"Post to a channel when a webhook request is received\" template. For a message, open the flow afterwards, replace \"Post card in a chat or channel\" with \"Post message in a chat or channel\" and set its Message to the trigger body's text field. Office 365 connector URLs are retired and are not accepted.",
         "formatLabel": "Output format",
-        "formatDescription": "Adaptive Card uses the card action. Both message formats use the message action in your workflow.",
+        "formatDescription": "Must match the action used by your workflow.",
         "format": {
           "card": "Adaptive Card",
-          "message": "Plain message",
-          "modern": "Modern HTML (experimental)"
+          "message": "Message"
         },
         "formatHint": {
           "card": "Uses \"Post card in a chat or channel\". Teams shows no preview text for it — the channel list and the activity feed read \"Card\".",
-          "message": "Uses \"Post message in a chat or channel\". A compact, robust message with a useful preview on every client.",
-          "modern": "Uses \"Post message in a chat or channel\". Adds an HTML heading, aligned details and a stronger action link; rendering may differ between Teams clients."
+          "message": "Uses \"Post message in a chat or channel\". A compact, robust message with a useful preview on every client."
         },
-        "timezoneHint": "Both message formats carry a time rendered once. A card leaves it to Teams, which resolves it for each reader."
+        "timezoneHint": "A message carries a time rendered once. A card leaves it to Teams, which resolves it for each reader."
       }
     },
     "assignment": {

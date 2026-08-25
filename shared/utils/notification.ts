@@ -21,6 +21,13 @@ export const NOTIFICATION_LOCALES = ['en', 'de'] as const
 /** Default for transports that have to render a timestamp before delivery. */
 export const NOTIFICATION_DEFAULT_TIME_ZONE = 'Europe/Berlin'
 
+export const TEAMS_NOTIFICATION_FORMATS = ['card', 'message'] as const
+
+/** Reads channels saved while the removed experimental HTML format existed. */
+export function normalizeTeamsNotificationFormat(value: unknown): unknown {
+  return value === 'modern' ? 'message' : value
+}
+
 export const NOTIFICATION_DELIVERY_STATUSES = ['pending', 'sent', 'failed'] as const
 
 /**
