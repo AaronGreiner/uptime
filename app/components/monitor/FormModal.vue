@@ -54,7 +54,9 @@ function createState(monitor?: Monitor | null): MonitorInput {
     checkCertificateExpiry: monitor?.checkCertificateExpiry ?? true,
     certificateExpiryWarningDays: monitor?.certificateExpiryWarningDays ?? 14,
     hostname: monitor?.hostname ?? '',
-    packetCount: monitor?.packetCount ?? 3
+    packetCount: monitor?.packetCount ?? 3,
+    notificationMode: monitor?.notificationMode ?? 'inherit',
+    notificationGroupIds: monitor ? [...monitor.notificationGroupIds] : []
   }
 }
 
@@ -473,6 +475,14 @@ async function onSubmit(event: FormSubmitEvent<MonitorInput>) {
             </UFormField>
           </section>
         </template>
+
+        <section class="space-y-4">
+          <NotificationAssignmentField
+            v-model:mode="state.notificationMode"
+            v-model:group-ids="state.notificationGroupIds"
+            :inherit-from="state.groupId"
+          />
+        </section>
       </UForm>
     </template>
 

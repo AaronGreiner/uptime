@@ -7,7 +7,7 @@ import { heartbeats, monitorState, monitors } from '../database/schema'
 import type { HeartbeatRow, MonitorRow, MonitorStateRow } from '../database/schema'
 import { executeCheck } from './checks'
 import type { CheckResult } from './checks'
-import { dispatchNotificationEvent } from './notifications'
+import { enqueueNotificationEvent } from './notifications'
 
 /** Monitor ids currently being checked, so a slow check is never queued twice. */
 const inFlight = new Set<number>()
@@ -103,8 +103,10 @@ async function runCheck(monitor: MonitorRow): Promise<void> {
     const result = await executeCheck(monitor)
     const event = recordCheckResult(monitor, result)
 
+    // Queued rather than delivered: the monitor stays in the in-flight set until
+    // this returns, so a transport that hangs would stop it being checked again.
     if (event) {
-      await dispatchNotificationEvent(event)
+      enqueueNotificationEvent(event)
     }
   } catch (error) {
     console.error(`[scheduler] monitor ${monitor.id} failed:`, error)
@@ -224,7 +226,11 @@ function buildNotificationEvent(
     status,
     message: result.message,
     latencyMs: result.latencyMs,
-    occurredAt: now
+    occurredAt: now,
+    // How long the status being left had held, which is what a message means by
+    // "down for 4 minutes".
+    durationSeconds: previous?.statusChangedAt ? now - previous.statusChangedAt : null,
+    certificateExpiresAt
   }
 
   if (status === 'down' && previousStatus !== 'down') {

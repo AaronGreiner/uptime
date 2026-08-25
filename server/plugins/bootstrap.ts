@@ -1,5 +1,6 @@
 import { startMaintenance, stopMaintenance } from '../services/maintenance'
 import { registerBuiltinNotificationProviders } from '../services/notifications/providers'
+import { startNotificationQueue, stopNotificationQueue } from '../services/notifications/queue'
 import { rescheduleAllMonitors, startScheduler, stopScheduler } from '../services/scheduler'
 import { seedAdminUser, seedDefaultDashboard, seedDemoData } from '../services/seed'
 
@@ -25,10 +26,12 @@ export default defineNitroPlugin(async (nitro) => {
   }
 
   registerBuiltinNotificationProviders()
+  startNotificationQueue()
   startMaintenance()
 
   nitro.hooks.hook('close', () => {
     stopScheduler()
+    stopNotificationQueue()
     stopMaintenance()
   })
 

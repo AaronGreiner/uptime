@@ -1,10 +1,10 @@
-import type { MonitorStatus, MonitorWithState } from './monitor'
+import type { MonitorStatus, MonitorWithState, NotificationAssignment } from './monitor'
 
 /**
  * A node of the monitor tree. Groups nest into each other through `parentId`;
  * a null parent makes the group a root.
  */
-export interface MonitorGroup {
+export interface MonitorGroup extends NotificationAssignment {
   id: number
   name: string
   description: string | null

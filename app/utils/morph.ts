@@ -18,6 +18,7 @@ import {
   PencilRuler,
   Play,
   RefreshCw,
+  Send,
   Sun
 } from 'lucide'
 import type { IconNode } from 'morphicons/vue'
@@ -47,6 +48,7 @@ export const MORPH_ICONS = {
   pencilRuler: PencilRuler,
   play: Play,
   refreshCw: RefreshCw,
+  send: Send,
   sun: Sun
 } satisfies Record<string, IconNode>
 

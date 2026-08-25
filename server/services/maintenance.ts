@@ -99,4 +99,17 @@ export function pruneExpiredData(): void {
       .where(lt(monitorStatsHourly.bucketStart, now - retention.hourlyStatsDays * 86_400))
       .run()
   }
+
+  if (retention.notificationDays > 0) {
+    // The newest delivery per monitor and channel is kept whatever its age: it
+    // is what tells a later recovery whether the outage was ever announced. An
+    // outage lasting longer than the retention window would otherwise end in
+    // silence.
+    database.run(sql`
+      delete from notification_deliveries
+      where status in ('sent', 'failed')
+        and created_at < ${integerLiteral(now - retention.notificationDays * 86_400)}
+        and id not in (select max(id) from notification_deliveries group by monitor_id, channel_id)
+    `)
+  }
 }

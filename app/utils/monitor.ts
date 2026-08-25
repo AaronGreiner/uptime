@@ -27,6 +27,8 @@ export function toMonitorInput(monitor: Monitor): MonitorInput {
     checkCertificateExpiry: monitor.checkCertificateExpiry,
     certificateExpiryWarningDays: monitor.certificateExpiryWarningDays,
     hostname: monitor.hostname,
-    packetCount: monitor.packetCount
+    packetCount: monitor.packetCount,
+    notificationMode: monitor.notificationMode,
+    notificationGroupIds: monitor.notificationGroupIds
   }
 }

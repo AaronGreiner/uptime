@@ -281,6 +281,172 @@
       "avgUptime": "Avg. uptime, 24 h"
     }
   },
+  "notification": {
+    "event": {
+      "down": {
+        "subject": "[Down] {monitor}",
+        "title": "{monitor} is down",
+        "summary": "The check failed and the monitor has been reported as down.",
+        "label": "Outage"
+      },
+      "up": {
+        "subject": "[Recovered] {monitor}",
+        "title": "{monitor} is back up",
+        "summary": "The monitor is answering again.",
+        "label": "Recovery"
+      },
+      "certificate": {
+        "subject": "[Certificate] {monitor}",
+        "title": "The certificate for {monitor} expires soon",
+        "summary": "The TLS certificate is inside its warning window and needs renewing.",
+        "label": "Certificate expiring"
+      }
+    },
+    "field": {
+      "monitor": "Monitor",
+      "target": "Target",
+      "status": "Status",
+      "message": "Message",
+      "latency": "Response time",
+      "occurredAt": "Time",
+      "duration": "Previous status held for",
+      "certificateExpiresAt": "Certificate expires"
+    },
+    "action": {
+      "openMonitor": "Open monitor"
+    },
+    "test": {
+      "monitorName": "Example monitor",
+      "message": "This is a test message from {app}. No monitor is affected.",
+      "button": "Send test message",
+      "success": "Test message delivered",
+      "failed": "The test message could not be delivered"
+    },
+    "provider": {
+      "email": "Email",
+      "teams": "Microsoft Teams"
+    },
+    "footer": "Sent by {app} through the {channel} channel.",
+    "duration": {
+      "seconds": "{value} s",
+      "minutes": "{value} min",
+      "hours": "{value} h",
+      "days": "{value} d"
+    },
+    "title": "Notifications",
+    "language": {
+      "en": "English",
+      "de": "German"
+    },
+    "status": {
+      "disabled": "Disabled",
+      "error": "Delivery failing"
+    },
+    "channels": {
+      "title": "Channels",
+      "description": "Where notifications are delivered. Credentials never leave the server.",
+      "formDescription": "One transport with its own credentials and language.",
+      "create": "New channel",
+      "edit": "Edit channel",
+      "empty": "No channels yet. Add one to start delivering notifications.",
+      "created": "Channel “{name}” created",
+      "updated": "Channel “{name}” saved",
+      "deleted": "Channel “{name}” deleted",
+      "deleteTitle": "Delete channel",
+      "deleteMessage": "“{name}” is removed from every notification group and stops delivering. Its delivery history is deleted with it.",
+      "lastSuccess": "Last delivered {time}"
+    },
+    "groups": {
+      "title": "Notification groups",
+      "description": "A group bundles channels with the events they react to. Monitors are assigned to groups, not to channels.",
+      "formDescription": "Pick the channels and the events this group reacts to.",
+      "create": "New group",
+      "edit": "Edit group",
+      "namePlaceholder": "On-call",
+      "empty": "No groups yet. A group is what a monitor gets assigned to.",
+      "created": "Group “{name}” created",
+      "updated": "Group “{name}” saved",
+      "deleted": "Group “{name}” deleted",
+      "deleteTitle": "Delete notification group",
+      "deleteMessage": "Monitors assigned to “{name}” stop notifying. The channels themselves are kept.",
+      "default": "Default",
+      "defaultHint": "Applies to monitors that inherit all the way to the root without a decision.",
+      "enabledHint": "A disabled group delivers nothing, whatever is assigned to it.",
+      "noChannels": "No channels — this group delivers nothing.",
+      "noEvents": "No events — this group delivers nothing."
+    },
+    "form": {
+      "name": "Name",
+      "namePlaceholder": "Ops mailbox",
+      "provider": "Transport",
+      "language": "Language",
+      "languageHint": "Messages are written on the server, so the language is fixed per channel.",
+      "enabled": "Enabled",
+      "enabledHint": "A disabled channel is skipped without being removed.",
+      "description": "Description",
+      "channels": "Channels",
+      "channelsHint": "A channel named by two matching groups still receives one message.",
+      "channelsPlaceholder": "Select channels",
+      "events": "Events",
+      "eventsHint": "Which state changes this group reacts to.",
+      "secretStored": "Stored — leave blank to keep",
+      "smtp": {
+        "title": "SMTP server",
+        "host": "Host",
+        "port": "Port",
+        "username": "Username",
+        "password": "Password",
+        "secure": "Implicit TLS",
+        "secureHint": "On for port 465. Off uses STARTTLS when the server offers it.",
+        "rejectUnauthorized": "Verify certificate",
+        "rejectUnauthorizedHint": "Turn off only for a server with a self-signed certificate.",
+        "fromName": "Sender name",
+        "fromAddress": "Sender address",
+        "to": "Recipients",
+        "toHint": "Separated by commas.",
+        "replyTo": "Reply-to",
+        "timezone": "Time zone",
+        "timezoneHint": "Timestamps are rendered once, so an email cannot resolve them per reader."
+      },
+      "teams": {
+        "title": "Microsoft Teams",
+        "workflowUrl": "Workflow URL",
+        "workflowUrlHint": "The webhook URL is the permission to post, so it is stored like a password.",
+        "setupTitle": "Creating the webhook",
+        "setupDescription": "In Teams, open the channel menu, choose Workflows and start from the “Post to a channel when a webhook request is received” template. Office 365 connector URLs are retired and are not accepted."
+      }
+    },
+    "assignment": {
+      "label": "Notifications",
+      "description": "Which notification groups apply here.",
+      "groups": "Notification groups",
+      "groupsPlaceholder": "Select groups",
+      "noneSelected": "Nothing selected, so nothing is delivered.",
+      "inherits": "Inherits: {groups}",
+      "inheritsNothing": "Nothing is inherited, so nothing is delivered.",
+      "mode": {
+        "inherit": "Inherit",
+        "custom": "Choose here",
+        "muted": "Muted"
+      },
+      "modeHint": {
+        "inherit": "Takes whatever the group above decides.",
+        "custom": "Uses the groups selected here and stops the inheritance.",
+        "muted": "Delivers nothing, whatever the group above says."
+      }
+    },
+    "delivery": {
+      "title": "Deliveries",
+      "description": "The last messages the queue handled, newest first.",
+      "empty": "Nothing delivered yet.",
+      "attempts": "{count} attempts",
+      "status": {
+        "pending": "Queued",
+        "sent": "Sent",
+        "failed": "Failed"
+      }
+    }
+  },
   "range": {
     "1h": "1 hour",
     "24h": "24 hours",
@@ -344,6 +510,11 @@
     "unauthorized": "Please sign in as admin to do that."
   },
   "validation": {
+    "httpsUrl": "Enter an https:// URL",
+    "teamsLegacyConnector": "This is an Office 365 connector URL. Create a Teams workflow from the \"Post to a channel when a webhook request is received\" template and use its URL instead.",
+    "email": "Enter a valid email address",
+    "timezone": "Enter a valid IANA time zone, for example Europe/Berlin",
+    "recipientRequired": "Add at least one recipient",
     "required": "This field is required",
     "tooLong": "Use at most {max} characters",
     "tooShort": "Use at least {min} characters",

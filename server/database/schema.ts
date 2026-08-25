@@ -2,6 +2,13 @@ import { index, integer, primaryKey, sqliteTable, text, unique } from 'drizzle-o
 import type { AnySQLiteColumn } from 'drizzle-orm/sqlite-core'
 import type { WidgetConfig, WidgetHeight, WidgetType, WidgetWidth } from '../../shared/types/dashboard'
 import type { HeartbeatStatus, MonitorStatus, MonitorType } from '../../shared/types/monitor'
+import type {
+  NotificationDeliveryStatus,
+  NotificationEvent,
+  NotificationEventType,
+  NotificationLocale,
+  NotificationMode
+} from '../../shared/types/notification'
 
 /** Unix seconds. SQLite has no native date type and integers sort cheaply. */
 const timestamp = (name: string) => integer(name, { mode: 'number' })
@@ -34,6 +41,8 @@ export const monitorGroups = sqliteTable('monitor_groups', {
   parentId: integer('parent_id').references((): AnySQLiteColumn => monitorGroups.id, { onDelete: 'set null' }),
   /** Manual order among siblings. Ties are broken by name. */
   position: integer('position').notNull().default(0),
+  /** Where the monitors below this node take their notification groups from. */
+  notificationMode: text('notification_mode').$type<NotificationMode>().notNull().default('inherit'),
   createdAt: timestamp('created_at').notNull(),
   updatedAt: timestamp('updated_at').notNull()
 }, table => [
@@ -70,6 +79,9 @@ export const monitors = sqliteTable('monitors', {
   // Ping options
   hostname: text('hostname').notNull().default(''),
   packetCount: integer('packet_count').notNull().default(3),
+
+  /** `inherit` looks at the group tree, `custom` at the monitor's own rows. */
+  notificationMode: text('notification_mode').$type<NotificationMode>().notNull().default('inherit'),
 
   createdAt: timestamp('created_at').notNull(),
   updatedAt: timestamp('updated_at').notNull()
@@ -154,8 +166,11 @@ export const dashboardWidgets = sqliteTable('dashboard_widgets', {
 ])
 
 /**
- * Notification wiring. No provider implementation ships yet; the tables exist so
- * one can be added without a migration. See server/services/notifications.
+ * One transport with its credentials. `config` is provider specific and is only
+ * ever read back through a serialiser that masks the secrets in it.
+ *
+ * The error columns exist because a self-hosted instance has nobody watching
+ * stderr: a channel that stopped delivering has to be able to say so in the UI.
  */
 export const notificationChannels = sqliteTable('notification_channels', {
   id: integer('id').primaryKey({ autoIncrement: true }),
@@ -163,15 +178,87 @@ export const notificationChannels = sqliteTable('notification_channels', {
   provider: text('provider').notNull(),
   config: text('config', { mode: 'json' }).$type<Record<string, unknown>>().notNull().default({}),
   enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+  /** Messages are rendered on the server, where no browser locale exists. */
+  language: text('language').$type<NotificationLocale>().notNull().default('en'),
+  position: integer('position').notNull().default(0),
+  lastSuccessAt: timestamp('last_success_at'),
+  lastError: text('last_error'),
+  lastErrorAt: timestamp('last_error_at'),
   createdAt: timestamp('created_at').notNull(),
   updatedAt: timestamp('updated_at').notNull()
 })
 
-export const monitorNotificationChannels = sqliteTable('monitor_notification_channels', {
-  monitorId: integer('monitor_id').notNull().references(() => monitors.id, { onDelete: 'cascade' }),
+/**
+ * A named bundle of channels plus the events it reacts to. Monitors point at
+ * groups rather than at channels, so one channel can stay quiet in one group
+ * and loud in another without being configured twice.
+ */
+export const notificationGroups = sqliteTable('notification_groups', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').notNull(),
+  description: text('description'),
+  enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+  notifyDown: integer('notify_down', { mode: 'boolean' }).notNull().default(true),
+  notifyUp: integer('notify_up', { mode: 'boolean' }).notNull().default(true),
+  notifyCertificateExpiring: integer('notify_certificate_expiring', { mode: 'boolean' }).notNull().default(true),
+  /** Catches monitors whose inheritance walk reaches the root undecided. */
+  isDefault: integer('is_default', { mode: 'boolean' }).notNull().default(false),
+  position: integer('position').notNull().default(0),
+  createdAt: timestamp('created_at').notNull(),
+  updatedAt: timestamp('updated_at').notNull()
+}, table => [
+  index('notification_groups_default_idx').on(table.isDefault)
+])
+
+export const notificationGroupChannels = sqliteTable('notification_group_channels', {
+  groupId: integer('group_id').notNull().references(() => notificationGroups.id, { onDelete: 'cascade' }),
   channelId: integer('channel_id').notNull().references(() => notificationChannels.id, { onDelete: 'cascade' })
 }, table => [
-  primaryKey({ columns: [table.monitorId, table.channelId] })
+  primaryKey({ columns: [table.groupId, table.channelId] })
+])
+
+/** Assignment to a single monitor, used when its mode is `custom`. */
+export const monitorNotificationGroups = sqliteTable('monitor_notification_groups', {
+  monitorId: integer('monitor_id').notNull().references(() => monitors.id, { onDelete: 'cascade' }),
+  groupId: integer('group_id').notNull().references(() => notificationGroups.id, { onDelete: 'cascade' })
+}, table => [
+  primaryKey({ columns: [table.monitorId, table.groupId] })
+])
+
+/** Assignment to a node of the monitor tree, which everything below inherits. */
+export const monitorGroupNotificationGroups = sqliteTable('monitor_group_notification_groups', {
+  monitorGroupId: integer('monitor_group_id').notNull().references(() => monitorGroups.id, { onDelete: 'cascade' }),
+  groupId: integer('group_id').notNull().references(() => notificationGroups.id, { onDelete: 'cascade' })
+}, table => [
+  primaryKey({ columns: [table.monitorGroupId, table.groupId] })
+])
+
+/**
+ * One attempt to hand one event to one channel, and at the same time the queue
+ * the worker reads. Writing the row is the only notification work that happens
+ * while a check runs; everything that touches the network happens afterwards.
+ *
+ * A restart therefore loses nothing, and the same rows are what the delivery log
+ * in the UI reads.
+ */
+export const notificationDeliveries = sqliteTable('notification_deliveries', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  channelId: integer('channel_id').notNull().references(() => notificationChannels.id, { onDelete: 'cascade' }),
+  /** Cleared rather than cascaded: the history outlives the group that caused it. */
+  groupId: integer('group_id').references(() => notificationGroups.id, { onDelete: 'set null' }),
+  monitorId: integer('monitor_id').notNull().references(() => monitors.id, { onDelete: 'cascade' }),
+  eventType: text('event_type').$type<NotificationEventType>().notNull(),
+  /** The event as it was at enqueue time, so a retry reports the original facts. */
+  payload: text('payload', { mode: 'json' }).$type<NotificationEvent>().notNull(),
+  status: text('status').$type<NotificationDeliveryStatus>().notNull().default('pending'),
+  attempts: integer('attempts').notNull().default(0),
+  nextAttemptAt: timestamp('next_attempt_at').notNull(),
+  lastError: text('last_error'),
+  createdAt: timestamp('created_at').notNull(),
+  deliveredAt: timestamp('delivered_at')
+}, table => [
+  index('notification_deliveries_due_idx').on(table.status, table.nextAttemptAt),
+  index('notification_deliveries_monitor_idx').on(table.monitorId, table.channelId, table.createdAt)
 ])
 
 /** Free form key/value store for global, admin editable settings. */
@@ -188,3 +275,6 @@ export type HeartbeatRow = typeof heartbeats.$inferSelect
 export type DashboardRow = typeof dashboards.$inferSelect
 export type DashboardWidgetRow = typeof dashboardWidgets.$inferSelect
 export type UserRow = typeof users.$inferSelect
+export type NotificationChannelRow = typeof notificationChannels.$inferSelect
+export type NotificationGroupRow = typeof notificationGroups.$inferSelect
+export type NotificationDeliveryRow = typeof notificationDeliveries.$inferSelect

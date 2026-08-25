@@ -1,4 +1,17 @@
-import type { NotificationEvent } from '../../../shared/types/notification'
+import type { NotificationEvent, NotificationLocale } from '../../../shared/types/notification'
+
+/**
+ * Everything a provider needs besides the event itself. Passed as one object so
+ * adding context later does not change every provider's signature.
+ */
+export interface NotificationSendContext {
+  /** Provider specific settings, already through `validateConfig`. */
+  config: Record<string, unknown>
+  /** Language to render in. There is no browser locale on this side. */
+  language: NotificationLocale
+  /** Channel name, used where a message identifies its own source. */
+  channelName: string
+}
 
 /**
  * Contract every notification transport implements. Providers are registered at
@@ -10,10 +23,18 @@ export interface NotificationProvider {
   /** Translation key suffix used for the label in the UI. */
   readonly labelKey: string
   /**
+   * Config keys holding a secret. They are stripped from every API response, and
+   * a payload that omits one keeps the stored value instead of clearing it.
+   */
+  readonly secretKeys: readonly string[]
+  /**
    * Validates and normalises the raw channel configuration. Throwing here marks
-   * the channel as misconfigured instead of failing silently at delivery time.
+   * the delivery as failed instead of letting a broken channel fail silently.
    */
   validateConfig: (config: Record<string, unknown>) => Record<string, unknown>
-  /** Delivers a single event. Rejections are logged and do not retry. */
-  send: (event: NotificationEvent, config: Record<string, unknown>) => Promise<void>
+  /**
+   * Delivers a single event. Rejecting hands the delivery back to the queue,
+   * which retries it with a growing delay and eventually gives up.
+   */
+  send: (event: NotificationEvent, context: NotificationSendContext) => Promise<void>
 }

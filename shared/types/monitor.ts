@@ -1,3 +1,5 @@
+import type { NotificationMode } from './notification'
+
 /** Kinds of checks the scheduler knows how to execute. */
 export type MonitorType = 'http' | 'ping'
 
@@ -29,7 +31,14 @@ export interface MonitorPingOptions {
   packetCount: number
 }
 
-export interface Monitor extends MonitorHttpOptions, MonitorPingOptions {
+export interface NotificationAssignment {
+  /** Where this record takes its notification groups from. */
+  notificationMode: NotificationMode
+  /** Groups assigned directly; only consulted while the mode is `custom`. */
+  notificationGroupIds: number[]
+}
+
+export interface Monitor extends MonitorHttpOptions, MonitorPingOptions, NotificationAssignment {
   id: number
   name: string
   type: MonitorType

@@ -1,6 +1,7 @@
 import z from 'zod'
 import { WIDGET_HEIGHTS, WIDGET_WIDTHS } from './grid'
 import { MONITOR_INTERVAL_BOUNDS, MONITOR_PACKET_BOUNDS, MONITOR_RETRY_BOUNDS, MONITOR_TIMEOUT_BOUNDS } from './monitor'
+import { NOTIFICATION_LOCALES, NOTIFICATION_MODES, NOTIFICATION_PROVIDERS } from './notification'
 
 export const HTTP_METHODS = ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'] as const
 
@@ -26,7 +27,12 @@ const FALLBACK_MESSAGES: Record<string, string> = {
   'validation.timeoutTooLong': 'The timeout must not exceed the check interval',
   'validation.monitorRequired': 'Select a monitor for this widget',
   'validation.outOfRange': 'Enter a value between {min} and {max}',
-  'validation.tooShort': 'Use at least {min} characters'
+  'validation.tooShort': 'Use at least {min} characters',
+  'validation.email': 'Enter a valid email address',
+  'validation.timezone': 'Enter a valid IANA time zone, for example Europe/Berlin',
+  'validation.recipientRequired': 'Add at least one recipient',
+  'validation.httpsUrl': 'Enter an https:// URL',
+  'validation.teamsLegacyConnector': 'This is an Office 365 connector URL. Create a Teams workflow from the "Post to a channel when a webhook request is received" template and use its URL instead.'
 }
 
 type MessageParams = Record<string, string | number>
@@ -83,6 +89,18 @@ const optionalId = () => z
   .nullish()
   .transform(value => value ?? null)
 
+const idList = (max: number) => z.array(z.number().int().positive()).max(max).default([])
+
+/**
+ * Notification assignment, carried by monitors and by monitor groups alike.
+ * `notificationGroupIds` only matters while the mode is `custom`; the endpoints
+ * still store it, so switching to `inherit` and back does not lose the choice.
+ */
+const notificationAssignment = {
+  notificationMode: z.enum(NOTIFICATION_MODES).default('inherit'),
+  notificationGroupIds: idList(50)
+}
+
 export const monitorInputSchema = z.object({
   name: requiredText(120),
   type: z.enum(['http', 'ping'], { error: message('validation.required') }),
@@ -111,7 +129,9 @@ export const monitorInputSchema = z.object({
   certificateExpiryWarningDays: boundedNumber(1, 90).default(14),
 
   hostname: z.string().trim().max(253, { error: message('validation.tooLong', { max: 253 }) }).default(''),
-  packetCount: boundedNumber(MONITOR_PACKET_BOUNDS.min, MONITOR_PACKET_BOUNDS.max).default(3)
+  packetCount: boundedNumber(MONITOR_PACKET_BOUNDS.min, MONITOR_PACKET_BOUNDS.max).default(3),
+
+  ...notificationAssignment
 }).superRefine((value, context) => {
   if (value.timeoutSeconds > value.intervalSeconds) {
     context.addIssue({
@@ -147,7 +167,9 @@ export const monitorGroupInputSchema = z.object({
   description: optionalText(500),
   /** Free form so a future icon picker is not blocked by an enum here. */
   icon: optionalText(60),
-  parentId: optionalId()
+  parentId: optionalId(),
+
+  ...notificationAssignment
 })
 
 export type MonitorGroupInput = z.output<typeof monitorGroupInputSchema>
@@ -199,6 +221,135 @@ export const dashboardLayoutSchema = z.object({
     height: z.enum(WIDGET_HEIGHTS)
   })).max(200)
 })
+
+const emailAddress = () => z
+  .email({ error: message('validation.email') })
+  .trim()
+  .max(320, { error: message('validation.tooLong', { max: 320 }) })
+
+/**
+ * Configuration of an SMTP channel. `secure` means implicit TLS on connect,
+ * which is port 465; leaving it off uses STARTTLS when the server offers it.
+ */
+export const emailChannelConfigSchema = z.object({
+  host: requiredText(255),
+  port: boundedNumber(1, 65_535).default(587),
+  secure: z.boolean().default(false),
+  username: optionalText(255),
+  password: optionalText(500),
+  fromName: optionalText(120),
+  fromAddress: emailAddress(),
+  to: z.array(emailAddress()).min(1, { error: message('validation.recipientRequired') }).max(50),
+  replyTo: emailAddress().nullish().transform(value => value || null),
+  /** Off only for a server with a self-signed certificate on the local network. */
+  rejectUnauthorized: z.boolean().default(true),
+  /**
+   * Timestamps are rendered once, on the server. Unlike a Teams card an email
+   * cannot resolve them for whoever opens it, so the zone is part of the channel.
+   */
+  timezone: z
+    .string()
+    .trim()
+    .max(64, { error: message('validation.tooLong', { max: 64 }) })
+    .default('UTC')
+    .refine(isTimeZone, { error: message('validation.timezone') })
+})
+
+export type EmailChannelConfig = z.output<typeof emailChannelConfigSchema>
+
+function isTimeZone(value: string): boolean {
+  try {
+    new Intl.DateTimeFormat('en', { timeZone: value })
+
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Configuration of a Microsoft Teams channel.
+ *
+ * Only the Power Automate workflow webhook is supported. The Office 365
+ * connector it replaced is retired, and the message card it accepts produces no
+ * usable preview in the channel list — which is the whole reason this transport
+ * sends an adaptive card.
+ */
+export const teamsChannelConfigSchema = z.object({
+  workflowUrl: z
+    .url({ error: message('validation.httpsUrl') })
+    .max(2000, { error: message('validation.tooLong', { max: 2000 }) })
+    .refine(value => value.startsWith('https://'), { error: message('validation.httpsUrl') })
+    .refine(
+      value => !/^https:\/\/[^/]*\.webhook\.office\.com\//i.test(value),
+      { error: message('validation.teamsLegacyConnector') }
+    )
+})
+
+export type TeamsChannelConfig = z.output<typeof teamsChannelConfigSchema>
+
+/**
+ * A channel as the form sends it. `config` stays loose here and is handed to the
+ * provider, which owns the shape and validates it — see `emailChannelConfigSchema`
+ * and `teamsChannelConfigSchema`.
+ */
+export const notificationChannelInputSchema = z.object({
+  name: requiredText(120),
+  provider: z.enum(NOTIFICATION_PROVIDERS, { error: message('validation.required') }),
+  config: z.record(z.string(), z.unknown()).default({}),
+  enabled: z.boolean().default(true),
+  language: z.enum(NOTIFICATION_LOCALES).default('en')
+})
+
+export type NotificationChannelInput = z.output<typeof notificationChannelInputSchema>
+
+/** A saved channel, or an unsaved one, being tried out before it is stored. */
+export const notificationChannelTestSchema = notificationChannelInputSchema.extend({
+  /** Present while editing, so unchanged secrets can be taken from the stored row. */
+  id: optionalId()
+})
+
+export const notificationGroupInputSchema = z.object({
+  name: requiredText(120),
+  description: optionalText(500),
+  enabled: z.boolean().default(true),
+  notifyDown: z.boolean().default(true),
+  notifyUp: z.boolean().default(true),
+  notifyCertificateExpiring: z.boolean().default(true),
+  /** Applies to monitors whose inheritance walk ends without a decision. */
+  isDefault: z.boolean().default(false),
+  channelIds: idList(50)
+})
+
+export type NotificationGroupInput = z.output<typeof notificationGroupInputSchema>
+
+/**
+ * Shape the channel dialog validates against.
+ *
+ * The provider's own configuration is validated here too, so a wrong port or a
+ * missing recipient shows up on the field rather than as a toast after saving.
+ * Secrets that are already stored are exempt: the form never received them, a
+ * blank field means "unchanged", and the server merges the stored value back in
+ * before validating the result for real.
+ */
+export function notificationChannelFormSchema(storedSecrets: readonly string[] = []) {
+  const base = {
+    name: requiredText(120),
+    enabled: z.boolean(),
+    language: z.enum(NOTIFICATION_LOCALES)
+  }
+
+  const exempt = <T extends z.ZodObject>(schema: T) => {
+    const mask = Object.fromEntries(storedSecrets.map(key => [key, true as const]))
+
+    return storedSecrets.length ? schema.partial(mask as never) : schema
+  }
+
+  return z.discriminatedUnion('provider', [
+    z.object({ ...base, provider: z.literal('email'), config: exempt(emailChannelConfigSchema) }),
+    z.object({ ...base, provider: z.literal('teams'), config: exempt(teamsChannelConfigSchema) })
+  ])
+}
 
 export const loginSchema = z.object({
   username: requiredText(60),

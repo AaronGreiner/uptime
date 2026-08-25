@@ -16,11 +16,14 @@ export default defineEventHandler(async (event) => {
   const input = await readValidatedBody(event, monitorInputSchema.parse)
 
   assertGroupExists(input.groupId)
+  assertNotificationGroupsExist(input.notificationGroupIds)
 
   const database = useDatabase()
   const now = nowInSeconds()
+  const { notificationGroupIds, ...values } = input
 
-  database.update(monitors).set({ ...input, updatedAt: now }).where(eq(monitors.id, id)).run()
+  database.update(monitors).set({ ...values, updatedAt: now }).where(eq(monitors.id, id)).run()
+  setMonitorNotificationGroups(id, notificationGroupIds)
 
   // A changed interval or a resumed monitor should take effect immediately.
   database.update(monitorState).set({

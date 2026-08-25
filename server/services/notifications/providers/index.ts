@@ -1,27 +1,16 @@
+import { registerEmailProvider } from './email'
+import { registerTeamsProvider } from './teams'
+
 /**
- * Extension point for notification transports.
+ * Registration point for the notification transports. Called once from the boot
+ * plugin, before the queue worker starts, so a provider that is missing is a
+ * configuration error rather than a race.
  *
- * No transport ships with the application yet. To add one, implement
- * `NotificationProvider`, then call `registerNotificationProvider` from here.
- * Everything downstream - the channel table, the monitor assignment table and
- * the dispatch call in the scheduler - is already wired up.
- *
- * Example skeleton:
- *
- * ```ts
- * registerNotificationProvider({
- *   id: 'webhook',
- *   labelKey: 'webhook',
- *   validateConfig(config) {
- *     if (typeof config.url !== 'string') throw new Error('url is required')
- *     return { url: config.url }
- *   },
- *   async send(event, config) {
- *     await $fetch(config.url as string, { method: 'POST', body: event })
- *   }
- * })
- * ```
+ * Adding one means implementing `NotificationProvider` in this folder and
+ * registering it here. Everything downstream — the channels, the notification
+ * groups, the queue and its retries — is already wired up.
  */
 export function registerBuiltinNotificationProviders(): void {
-  // Intentionally empty until the first transport is implemented.
+  registerEmailProvider()
+  registerTeamsProvider()
 }

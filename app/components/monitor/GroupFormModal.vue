@@ -28,7 +28,9 @@ function createState(): MonitorGroupInput {
     name: props.group?.name ?? '',
     description: props.group?.description ?? null,
     icon: props.group?.icon ?? null,
-    parentId: props.group ? props.group.parentId : props.parentId ?? null
+    parentId: props.group ? props.group.parentId : props.parentId ?? null,
+    notificationMode: props.group?.notificationMode ?? 'inherit',
+    notificationGroupIds: props.group ? [...props.group.notificationGroupIds] : []
   }
 }
 
@@ -134,6 +136,7 @@ async function onSubmit(event: FormSubmitEvent<MonitorGroupInput>) {
     v-model:open="open"
     :title="$t(isEdit ? 'group.edit' : 'group.create')"
     :description="$t('group.formDescription')"
+    :ui="{ content: 'max-w-xl' }"
   >
     <template #body>
       <UForm
@@ -210,6 +213,14 @@ async function onSubmit(event: FormSubmitEvent<MonitorGroupInput>) {
             @update:model-value="state.description = String($event) || null"
           />
         </UFormField>
+
+        <USeparator />
+
+        <NotificationAssignmentField
+          v-model:mode="state.notificationMode"
+          v-model:group-ids="state.notificationGroupIds"
+          :inherit-from="state.parentId"
+        />
       </UForm>
     </template>
 

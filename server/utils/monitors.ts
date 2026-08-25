@@ -22,7 +22,7 @@ const EMPTY_STATE: MonitorState = {
   statusChangedAt: null
 }
 
-export function serializeMonitor(row: MonitorRow): Monitor {
+export function serializeMonitor(row: MonitorRow, notificationGroupIds: number[] = []): Monitor {
   return {
     id: row.id,
     name: row.name,
@@ -46,6 +46,8 @@ export function serializeMonitor(row: MonitorRow): Monitor {
     certificateExpiryWarningDays: row.certificateExpiryWarningDays,
     hostname: row.hostname,
     packetCount: row.packetCount,
+    notificationMode: row.notificationMode,
+    notificationGroupIds,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt
   }
@@ -84,9 +86,10 @@ export function listMonitorsWithState(heartbeatCount = DEFAULT_HEARTBEAT_COUNT):
   const ids = rows.map(row => row.monitor.id)
   const heartbeatsByMonitor = listRecentHeartbeats(ids, heartbeatCount)
   const uptimeByMonitor = calculateUptimeBulk(ids, STATS_RANGE_SECONDS['24h'])
+  const assignments = loadMonitorNotificationGroupIds()
 
   return rows.map(({ monitor, state }) => ({
-    ...serializeMonitor(monitor),
+    ...serializeMonitor(monitor, assignments.get(monitor.id) ?? []),
     state: serializeMonitorState(monitor, state),
     uptime24h: uptimeByMonitor.get(monitor.id) ?? emptyUptime(),
     recentHeartbeats: heartbeatsByMonitor.get(monitor.id) ?? []
@@ -107,7 +110,7 @@ export function getMonitorWithState(id: number, heartbeatCount = DEFAULT_HEARTBE
   }
 
   return {
-    ...serializeMonitor(row.monitor),
+    ...serializeMonitor(row.monitor, assignedToMonitor(id)),
     state: serializeMonitorState(row.monitor, row.state),
     uptime24h: calculateUptimeBulk([id], STATS_RANGE_SECONDS['24h']).get(id) ?? emptyUptime(),
     recentHeartbeats: listRecentHeartbeats([id], heartbeatCount).get(id) ?? []

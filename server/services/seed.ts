@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto'
 import { eq, inArray } from 'drizzle-orm'
 import type { WidgetConfig, WidgetHeight, WidgetType, WidgetWidth } from '../../shared/types/dashboard'
-import { dashboards, dashboardWidgets, heartbeats, monitorGroups, monitors, monitorState, notificationChannels, settings, users } from '../database/schema'
+import { dashboards, dashboardWidgets, heartbeats, monitorGroups, monitors, monitorState, notificationChannels, notificationGroups, settings, users } from '../database/schema'
 import { aggregateHourlyStats } from './maintenance'
 import { nowInSeconds } from './scheduler'
 
@@ -466,10 +466,10 @@ function buildDemoDashboards(created: CreatedMonitor[], now: number): number {
 }
 
 /**
- * Empties the instance: monitors with their whole history, the group tree,
- * every dashboard and every notification channel. The admin account survives,
- * and the empty overview dashboard is put back, so what is left is exactly what
- * a fresh install starts with.
+ * Empties the instance: monitors with their whole history, the group tree, every
+ * dashboard, and the notification channels and groups with their delivery log.
+ * The admin account survives, and the empty overview dashboard is put back, so
+ * what is left is exactly what a fresh install starts with.
  */
 export function clearAllData(): void {
   const database = useDatabase()
@@ -480,7 +480,11 @@ export function clearAllData(): void {
     transaction.delete(monitors).run()
     transaction.delete(monitorGroups).run()
     transaction.delete(dashboards).run()
+
+    // Both sides of the notification wiring, or the groups would survive as
+    // empty shells pointing at channels that are gone.
     transaction.delete(notificationChannels).run()
+    transaction.delete(notificationGroups).run()
 
     // Both markers describe data that no longer exists. Removing the rows keeps
     // the table in the state a fresh install has it in.

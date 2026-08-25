@@ -133,9 +133,35 @@ Repository → Settings → Secrets and variables → Actions.
 | `NUXT_ADMIN_PASSWORD` | optional. Only seeds the account on an empty database; later changes happen in the UI |
 
 Optional repository *variables* tune the instance without a code change:
-`NUXT_PUBLIC_APP_NAME`, `NUXT_RETENTION_HEARTBEAT_DAYS`,
-`NUXT_RETENTION_HOURLY_STATS_DAYS`, `NUXT_SCHEDULER_CONCURRENCY`. The workflow
-falls back to the defaults from `.env.example` when they are unset.
+`NUXT_PUBLIC_APP_NAME`, `NUXT_PUBLIC_APP_URL`, `NUXT_RETENTION_HEARTBEAT_DAYS`,
+`NUXT_RETENTION_HOURLY_STATS_DAYS`, `NUXT_RETENTION_NOTIFICATION_DAYS`,
+`NUXT_SCHEDULER_CONCURRENCY`. The workflow falls back to the defaults from
+`.env.example` when they are unset.
+
+Set `NUXT_PUBLIC_APP_URL` to the public origin of the instance, without a
+trailing slash — `https://uptime.example.com`. Notifications link back to the
+monitor they are about, and while this is empty they leave the button out rather
+than sending everyone to localhost.
+
+## Notifications
+
+Nothing is configured from the environment: channels and notification groups are
+created in the UI, under Settings → Notifications, and their credentials are
+stored in the database.
+
+What the host has to allow is outbound traffic: TCP 587 or 465 to the SMTP
+server, and 443 for a Teams workflow webhook. The systemd unit needs no change.
+
+A Teams channel expects a Power Automate workflow webhook, created in Teams from
+the "Post to a channel when a webhook request is received" template. The old
+Office 365 connector URLs on `*.webhook.office.com` are retired and are rejected
+when the channel is saved.
+
+Delivery is queued in the database and retried after 30 s, 2 min and 10 min
+before it is given up on, so a mail server that is briefly down costs nothing. A
+channel that keeps failing shows its last error on the notifications page, and
+the delivery log there lists what the queue did. `journalctl -u uptime -f` shows
+the same failures with `[notifications]` in front of them.
 
 Values are written to `/var/www/uptime/.env` as unquoted `KEY=value` lines, which
 is what systemd reads. They must not contain newlines or leading and trailing

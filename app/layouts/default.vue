@@ -33,6 +33,7 @@ const dashboardNavigation = computed<NavigationMenuItem[]>(() => [
 
 const settingsNavigation = computed<NavigationMenuItem[]>(() => [
   { label: t('nav.settings'), type: 'label' },
+  { label: t('notification.title'), icon: 'i-lucide-bell', to: '/notifications' },
   { label: t('settings.account'), icon: 'i-lucide-user-cog', to: '/settings' }
 ])
 

@@ -40,3 +40,23 @@ export function readWidgetId(event: H3Event): number {
 
   return id
 }
+
+export function readNotificationChannelId(event: H3Event): number {
+  const id = Number(getRouterParam(event, 'id'))
+
+  if (!Number.isInteger(id) || id <= 0) {
+    throw createError({ statusCode: 400, statusMessage: 'Invalid channel id' })
+  }
+
+  return id
+}
+
+export function readNotificationGroupId(event: H3Event): number {
+  const id = Number(getRouterParam(event, 'id'))
+
+  if (!Number.isInteger(id) || id <= 0) {
+    throw createError({ statusCode: 400, statusMessage: 'Invalid notification group id' })
+  }
+
+  return id
+}

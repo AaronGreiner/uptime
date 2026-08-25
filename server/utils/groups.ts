@@ -4,7 +4,7 @@ import { MONITOR_GROUP_MAX_DEPTH } from '../../shared/utils/group'
 import { monitorGroups, monitors } from '../database/schema'
 import type { MonitorGroupRow } from '../database/schema'
 
-export function serializeMonitorGroup(row: MonitorGroupRow): MonitorGroup {
+export function serializeMonitorGroup(row: MonitorGroupRow, notificationGroupIds: number[] = []): MonitorGroup {
   return {
     id: row.id,
     name: row.name,
@@ -12,6 +12,8 @@ export function serializeMonitorGroup(row: MonitorGroupRow): MonitorGroup {
     icon: row.icon,
     parentId: row.parentId,
     position: row.position,
+    notificationMode: row.notificationMode,
+    notificationGroupIds,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt
   }
@@ -26,7 +28,9 @@ export function listMonitorGroupRows(): MonitorGroupRow[] {
 }
 
 export function listMonitorGroups(): MonitorGroup[] {
-  return listMonitorGroupRows().map(serializeMonitorGroup)
+  const assignments = loadMonitorGroupNotificationGroupIds()
+
+  return listMonitorGroupRows().map(row => serializeMonitorGroup(row, assignments.get(row.id) ?? []))
 }
 
 export function getMonitorGroupRow(id: number): MonitorGroupRow | undefined {

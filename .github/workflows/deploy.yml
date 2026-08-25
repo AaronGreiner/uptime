@@ -74,8 +74,10 @@ jobs:
           NUXT_ADMIN_USERNAME: ${{ secrets.NUXT_ADMIN_USERNAME }}
           NUXT_ADMIN_PASSWORD: ${{ secrets.NUXT_ADMIN_PASSWORD }}
           APP_NAME: ${{ vars.NUXT_PUBLIC_APP_NAME }}
+          APP_URL: ${{ vars.NUXT_PUBLIC_APP_URL }}
           HEARTBEAT_DAYS: ${{ vars.NUXT_RETENTION_HEARTBEAT_DAYS }}
           HOURLY_STATS_DAYS: ${{ vars.NUXT_RETENTION_HOURLY_STATS_DAYS }}
+          NOTIFICATION_DAYS: ${{ vars.NUXT_RETENTION_NOTIFICATION_DAYS }}
           SCHEDULER_CONCURRENCY: ${{ vars.NUXT_SCHEDULER_CONCURRENCY }}
         run: |
           set -euo pipefail
@@ -93,8 +95,10 @@ jobs:
             echo "NUXT_ADMIN_USERNAME=${NUXT_ADMIN_USERNAME:-admin}"
             echo "NUXT_ADMIN_PASSWORD=${NUXT_ADMIN_PASSWORD:-}"
             echo "NUXT_PUBLIC_APP_NAME=${APP_NAME:-Uptime}"
+            echo "NUXT_PUBLIC_APP_URL=${APP_URL:-}"
             echo "NUXT_RETENTION_HEARTBEAT_DAYS=${HEARTBEAT_DAYS:-7}"
             echo "NUXT_RETENTION_HOURLY_STATS_DAYS=${HOURLY_STATS_DAYS:-365}"
+            echo "NUXT_RETENTION_NOTIFICATION_DAYS=${NOTIFICATION_DAYS:-30}"
             echo "NUXT_SCHEDULER_CONCURRENCY=${SCHEDULER_CONCURRENCY:-10}"
           } > runtime.env
 

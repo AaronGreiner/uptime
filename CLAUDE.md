@@ -47,6 +47,7 @@ server/
   api/          HTTP endpoints, file based routing
   database/     Drizzle schema
   services/     Scheduler, check executors, maintenance, seeding, notifications
+                (providers, templates, delivery queue)
   plugins/      Nitro boot hooks: migrations + seeds, then background workers
   utils/        Auto-imported server helpers (database, auth, queries)
 shared/         Types, constants and zod schemas used by both sides
@@ -250,22 +251,71 @@ secrets, the recovery steps — is in `deploy/RUNBOOK.md`.
 
 ## Notifications
 
-No transport ships yet, but everything around it does: the
-`notification_channels` and `monitor_notification_channels` tables, the
-`NotificationProvider` contract, the registry, and a `dispatchNotificationEvent`
-call in the scheduler that fires on `monitor.down`, `monitor.up` and
-`monitor.certificate-expiring`.
+Two transports ship: SMTP (`nodemailer`) and Microsoft Teams. Both live in
+`server/services/notifications/providers/` and are registered from that folder's
+`index.ts`.
 
-To add one:
+**Channels and groups.** A `notification_channels` row is one transport with its
+credentials and a fixed language. A `notification_groups` row bundles channels
+with the events it reacts to. Monitors point at groups, never at channels, so
+one channel can be quiet in one group and loud in another. Groups add up rather
+than restrict: a channel reached through a group that wants recoveries gets
+them, whatever a second group says.
 
-1. Implement `NotificationProvider` in
-   `server/services/notifications/providers/`.
-2. Register it from `registerBuiltinNotificationProviders()` in that folder's
-   `index.ts`.
-3. Add CRUD endpoints for channels and a management screen, plus locale keys.
+**Assignment.** `monitors.notification_mode` and `monitor_groups.notification_mode`
+are `inherit`, `custom` or `muted`. `custom` and `muted` are decisions and end
+the walk up the monitor tree; `inherit` passes it on. Reaching the root
+undecided falls back to the groups flagged `is_default`, which is what keeps a
+new monitor from being silently unreachable. The decision itself is
+`resolveAssignedGroupIds` in `shared/utils/notification.ts`, shared so the
+dialog previews exactly what the scheduler will do; `resolveNotificationGroups`
+in `server/utils/notifications.ts` builds the chain for it.
 
-Delivery failures must stay contained: a broken transport may never break a
-check. The dispatcher logs and swallows.
+**Queue.** The scheduler calls `enqueueNotificationEvent`, which is synchronous
+and touches nothing but SQLite: it resolves the groups, deduplicates the
+channels and writes one `notification_deliveries` row each. It runs while the
+monitor is still in the scheduler's in-flight set, so anything slow there would
+stop that monitor from ever being checked again — see the gotchas.
+
+`server/services/notifications/queue.ts` does the delivering, on its own interval
+started from `bootstrap.ts`. Each attempt runs against a watchdog, a failure is
+retried after 30 s, 2 min and 10 min, and the fourth gives up. The error lands on
+the delivery row and on the channel, because a self-hosted instance has nobody
+reading stderr. Rows survive a restart, so nothing is lost mid-flight.
+
+A recovery is only queued for a channel that was told about the outage: the last
+delivery for that monitor and channel decides. `pruneExpiredData` therefore keeps
+the newest row per monitor and channel whatever its age.
+
+**Rendering.** `format.ts` holds what both transports agree on — tone, title,
+summary, facts, the link back. The email template is a 600 px table with inline
+styles, a hidden preheader (the inbox preview line) and a dark variant behind
+`prefers-color-scheme`; the light rendering has to stand on its own, since a fair
+share of clients honour neither. The Teams payload is an adaptive card posted to
+a Power Automate workflow webhook — Office 365 connector URLs are rejected, they
+are retired and their message card shows no usable preview. The card opens with a
+plain `TextBlock` and the envelope carries `summary` for exactly that reason, and
+timestamps use `{{DATE()}}` so Teams resolves them per viewer. Adaptive cards only
+know the named styles `good`, `warning`, `attention` and `accent`; there is no
+place for a brand hex.
+
+Display text goes through `translate()` in `server/utils/i18n.ts`, which reads the
+locale files directly — there is no vue-i18n on this side and no browser locale,
+the language comes from the channel.
+
+**Secrets.** `/api/notifications/**` requires an admin session for reads too, the
+only place that departs from "read endpoints stay public": a channel holds SMTP
+credentials, and the Teams workflow URL is itself the permission to post.
+`serializeNotificationChannel` strips every key a provider declares in
+`secretKeys` and reports `secretsSet` instead, and a `PATCH` without a secret
+keeps the stored one. An unknown provider loses its whole config rather than part
+of it.
+
+To add a transport: implement `NotificationProvider` (including `secretKeys`),
+register it, add its config schema to `shared/utils/validation.ts`, extend
+`NOTIFICATION_PROVIDERS` in `shared/utils/notification.ts`, add the branch to
+`app/components/notification/ChannelFormModal.vue` and the labels to both locale
+files.
 
 ## Gotchas
 
@@ -310,3 +360,12 @@ check. The dispatcher logs and swallows.
   cannot stop the checks, but anything it prints still has a cause to remove.
 - A page that turns every failed request into a 404 lies during a restart. Only
   a 404 from the server means the record is gone; see `app/pages/d/[slug].vue`.
+- `enqueueNotificationEvent` must stay synchronous and free of network calls. It
+  runs inside `runCheck`, which holds the monitor in the scheduler's in-flight
+  set until it returns: a transport that accepts a connection and then goes
+  quiet would freeze the very monitor whose outage it is reporting.
+- Content in the default slot of `UDashboardPanel` replaces its header and body
+  entirely — the named slots are only the fallback. Modals and other siblings
+  belong inside `#body`.
+- Notification links need `public.appUrl`; it has no sensible default, so an
+  unset one drops the link rather than pointing at localhost.

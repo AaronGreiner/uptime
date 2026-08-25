@@ -8,15 +8,19 @@ export default defineEventHandler(async (event) => {
   const input = await readValidatedBody(event, monitorInputSchema.parse)
 
   assertGroupExists(input.groupId)
+  assertNotificationGroupsExist(input.notificationGroupIds)
 
   const database = useDatabase()
   const now = nowInSeconds()
+  const { notificationGroupIds, ...values } = input
 
   const created = database.insert(monitors).values({
-    ...input,
+    ...values,
     createdAt: now,
     updatedAt: now
   }).returning().get()
+
+  setMonitorNotificationGroups(created.id, notificationGroupIds)
 
   // Schedule the first check right away so the card is not empty for a minute.
   database.insert(monitorState).values({

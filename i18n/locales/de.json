@@ -281,6 +281,172 @@
       "avgUptime": "Ø Verfügbarkeit, 24 h"
     }
   },
+  "notification": {
+    "event": {
+      "down": {
+        "subject": "[Ausfall] {monitor}",
+        "title": "{monitor} ist ausgefallen",
+        "summary": "Die Prüfung ist fehlgeschlagen, der Monitor gilt als ausgefallen.",
+        "label": "Ausfall"
+      },
+      "up": {
+        "subject": "[Wiederhergestellt] {monitor}",
+        "title": "{monitor} ist wieder erreichbar",
+        "summary": "Der Monitor antwortet wieder.",
+        "label": "Wiederherstellung"
+      },
+      "certificate": {
+        "subject": "[Zertifikat] {monitor}",
+        "title": "Das Zertifikat von {monitor} läuft bald ab",
+        "summary": "Das TLS-Zertifikat ist in seinem Warnfenster und muss erneuert werden.",
+        "label": "Zertifikat läuft ab"
+      }
+    },
+    "field": {
+      "monitor": "Monitor",
+      "target": "Ziel",
+      "status": "Status",
+      "message": "Meldung",
+      "latency": "Antwortzeit",
+      "occurredAt": "Zeitpunkt",
+      "duration": "Vorheriger Status hielt",
+      "certificateExpiresAt": "Zertifikat läuft ab"
+    },
+    "action": {
+      "openMonitor": "Monitor öffnen"
+    },
+    "test": {
+      "monitorName": "Beispielmonitor",
+      "message": "Das ist eine Testnachricht von {app}. Es ist kein Monitor betroffen.",
+      "button": "Testnachricht senden",
+      "success": "Testnachricht zugestellt",
+      "failed": "Die Testnachricht konnte nicht zugestellt werden"
+    },
+    "provider": {
+      "email": "E-Mail",
+      "teams": "Microsoft Teams"
+    },
+    "footer": "Gesendet von {app} über den Kanal {channel}.",
+    "duration": {
+      "seconds": "{value} s",
+      "minutes": "{value} Min.",
+      "hours": "{value} Std.",
+      "days": "{value} T."
+    },
+    "title": "Benachrichtigungen",
+    "language": {
+      "en": "Englisch",
+      "de": "Deutsch"
+    },
+    "status": {
+      "disabled": "Deaktiviert",
+      "error": "Zustellung schlägt fehl"
+    },
+    "channels": {
+      "title": "Kanäle",
+      "description": "Wohin Benachrichtigungen gehen. Zugangsdaten verlassen den Server nie.",
+      "formDescription": "Ein Transportweg mit eigenen Zugangsdaten und eigener Sprache.",
+      "create": "Kanal anlegen",
+      "edit": "Kanal bearbeiten",
+      "empty": "Noch kein Kanal. Legen Sie einen an, damit Benachrichtigungen zugestellt werden.",
+      "created": "Kanal „{name}“ angelegt",
+      "updated": "Kanal „{name}“ gespeichert",
+      "deleted": "Kanal „{name}“ gelöscht",
+      "deleteTitle": "Kanal löschen",
+      "deleteMessage": "„{name}“ wird aus allen Benachrichtigungsgruppen entfernt und stellt nichts mehr zu. Die Zustellhistorie wird mitgelöscht.",
+      "lastSuccess": "Zuletzt zugestellt {time}"
+    },
+    "groups": {
+      "title": "Benachrichtigungsgruppen",
+      "description": "Eine Gruppe bündelt Kanäle mit den Ereignissen, auf die sie reagieren. Monitore werden Gruppen zugewiesen, nicht Kanälen.",
+      "formDescription": "Wählen Sie die Kanäle und die Ereignisse dieser Gruppe.",
+      "create": "Gruppe anlegen",
+      "edit": "Gruppe bearbeiten",
+      "namePlaceholder": "Rufbereitschaft",
+      "empty": "Noch keine Gruppe. Einer Gruppe wird ein Monitor zugewiesen.",
+      "created": "Gruppe „{name}“ angelegt",
+      "updated": "Gruppe „{name}“ gespeichert",
+      "deleted": "Gruppe „{name}“ gelöscht",
+      "deleteTitle": "Benachrichtigungsgruppe löschen",
+      "deleteMessage": "Monitore, die „{name}“ zugewiesen sind, benachrichtigen nicht mehr. Die Kanäle selbst bleiben bestehen.",
+      "default": "Standard",
+      "defaultHint": "Gilt für Monitore, deren Vererbung ohne Entscheidung bis zur Wurzel läuft.",
+      "enabledHint": "Eine deaktivierte Gruppe stellt nichts zu, gleich was ihr zugewiesen ist.",
+      "noChannels": "Keine Kanäle — diese Gruppe stellt nichts zu.",
+      "noEvents": "Keine Ereignisse — diese Gruppe stellt nichts zu."
+    },
+    "form": {
+      "name": "Name",
+      "namePlaceholder": "Ops-Postfach",
+      "provider": "Transportweg",
+      "language": "Sprache",
+      "languageHint": "Nachrichten entstehen auf dem Server, deshalb steht die Sprache am Kanal.",
+      "enabled": "Aktiv",
+      "enabledHint": "Ein deaktivierter Kanal wird übersprungen, statt gelöscht zu werden.",
+      "description": "Beschreibung",
+      "channels": "Kanäle",
+      "channelsHint": "Ein Kanal, den zwei passende Gruppen nennen, bekommt trotzdem eine Nachricht.",
+      "channelsPlaceholder": "Kanäle wählen",
+      "events": "Ereignisse",
+      "eventsHint": "Auf welche Statuswechsel diese Gruppe reagiert.",
+      "secretStored": "Gespeichert — leer lassen, um es zu behalten",
+      "smtp": {
+        "title": "SMTP-Server",
+        "host": "Host",
+        "port": "Port",
+        "username": "Benutzername",
+        "password": "Passwort",
+        "secure": "Implizites TLS",
+        "secureHint": "An für Port 465. Aus nutzt STARTTLS, sofern der Server es anbietet.",
+        "rejectUnauthorized": "Zertifikat prüfen",
+        "rejectUnauthorizedHint": "Nur bei einem Server mit selbst signiertem Zertifikat abschalten.",
+        "fromName": "Absendername",
+        "fromAddress": "Absenderadresse",
+        "to": "Empfänger",
+        "toHint": "Durch Kommas getrennt.",
+        "replyTo": "Antwort an",
+        "timezone": "Zeitzone",
+        "timezoneHint": "Zeitangaben entstehen einmalig, eine E-Mail kann sie nicht pro Leser auflösen."
+      },
+      "teams": {
+        "title": "Microsoft Teams",
+        "workflowUrl": "Workflow-URL",
+        "workflowUrlHint": "Die Webhook-URL ist die Berechtigung zum Posten und wird wie ein Passwort behandelt.",
+        "setupTitle": "Webhook anlegen",
+        "setupDescription": "Öffnen Sie in Teams das Kanalmenü, wählen Sie Workflows und starten Sie mit der Vorlage „Beim Empfang einer Webhookanforderung in einem Kanal posten“. URLs alter Office-365-Connectors werden nicht angenommen."
+      }
+    },
+    "assignment": {
+      "label": "Benachrichtigungen",
+      "description": "Welche Benachrichtigungsgruppen hier gelten.",
+      "groups": "Benachrichtigungsgruppen",
+      "groupsPlaceholder": "Gruppen wählen",
+      "noneSelected": "Nichts ausgewählt, also wird nichts zugestellt.",
+      "inherits": "Geerbt: {groups}",
+      "inheritsNothing": "Es wird nichts geerbt, also wird nichts zugestellt.",
+      "mode": {
+        "inherit": "Erben",
+        "custom": "Hier wählen",
+        "muted": "Stumm"
+      },
+      "modeHint": {
+        "inherit": "Übernimmt, was die übergeordnete Gruppe entscheidet.",
+        "custom": "Nutzt die hier gewählten Gruppen und beendet die Vererbung.",
+        "muted": "Stellt nichts zu, gleich was übergeordnet gilt."
+      }
+    },
+    "delivery": {
+      "title": "Zustellungen",
+      "description": "Die zuletzt bearbeiteten Nachrichten, neueste zuerst.",
+      "empty": "Bisher nichts zugestellt.",
+      "attempts": "{count} Versuche",
+      "status": {
+        "pending": "In der Warteschlange",
+        "sent": "Zugestellt",
+        "failed": "Fehlgeschlagen"
+      }
+    }
+  },
   "range": {
     "1h": "1 Stunde",
     "24h": "24 Stunden",
@@ -344,6 +510,11 @@
     "unauthorized": "Bitte melde dich als Admin an, um das zu tun."
   },
   "validation": {
+    "httpsUrl": "Geben Sie eine https://-URL ein",
+    "teamsLegacyConnector": "Das ist eine Office-365-Connector-URL. Legen Sie in Teams einen Workflow aus der Vorlage \"Beim Empfang einer Webhookanforderung in einem Kanal posten\" an und verwenden Sie dessen URL.",
+    "email": "Geben Sie eine gültige E-Mail-Adresse ein",
+    "timezone": "Geben Sie eine gültige IANA-Zeitzone ein, zum Beispiel Europe/Berlin",
+    "recipientRequired": "Fügen Sie mindestens einen Empfänger hinzu",
     "required": "Dieses Feld ist erforderlich",
     "tooLong": "Höchstens {max} Zeichen verwenden",
     "tooShort": "Mindestens {min} Zeichen verwenden",

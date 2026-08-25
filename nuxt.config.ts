@@ -1,12 +1,15 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 import { MONITOR_GROUP_ICONS } from './shared/utils/group'
 import { MONITOR_STATUS_ICONS, MONITOR_TYPE_ICONS } from './shared/utils/monitor'
+import { NOTIFICATION_PROVIDER_ICONS } from './shared/utils/notification'
 
+// Names assembled at runtime are invisible to the scanner, so they are listed.
 const dynamicIconNames = [
   ...MONITOR_GROUP_ICONS,
   ...Object.values(MONITOR_TYPE_ICONS),
-  ...Object.values(MONITOR_STATUS_ICONS)
-].map(name => name.replace(/^i-lucide-/, 'lucide:'))
+  ...Object.values(MONITOR_STATUS_ICONS),
+  ...Object.values(NOTIFICATION_PROVIDER_ICONS)
+].map(name => name.replace(/^i-lucide-/, 'lucide:').replace(/^i-simple-icons-/, 'simple-icons:'))
 
 export default defineNuxtConfig({
   modules: [
@@ -64,11 +67,25 @@ export default defineNuxtConfig({
       /** How often the scheduler looks for due monitors. */
       tickIntervalMs: 1000
     },
+    notifications: {
+      /** Set to false to queue notifications without ever delivering them. */
+      enabled: true,
+      /** Hard deadline for one delivery attempt, enforced by the queue. */
+      sendTimeoutMs: 15000,
+      /** Attempts per delivery before it is given up on. */
+      maxAttempts: 4,
+      /** How many deliveries the worker handles per tick. */
+      concurrency: 5,
+      /** How often the worker looks for due deliveries. */
+      tickIntervalMs: 2000
+    },
     retention: {
       /** Days of raw heartbeats to keep before they are pruned. */
       heartbeatDays: 7,
       /** Days of hourly aggregates to keep before they are pruned. */
-      hourlyStatsDays: 365
+      hourlyStatsDays: 365,
+      /** Days of delivery history to keep before it is pruned. */
+      notificationDays: 30
     },
     seed: {
       /** Creates demo monitors and dashboards on an empty database. */
@@ -77,7 +94,13 @@ export default defineNuxtConfig({
       demoHistoryDays: 7
     },
     public: {
-      appName: 'Uptime'
+      appName: 'Uptime',
+      /**
+       * Public base URL of this instance, without a trailing slash. Notifications
+       * link back to the monitor they are about; when this is empty they leave
+       * the link out rather than pointing at localhost.
+       */
+      appUrl: ''
     }
   },
 

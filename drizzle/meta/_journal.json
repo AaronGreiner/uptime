@@ -22,6 +22,20 @@
       "when": 1787241280477,
       "tag": "0002_strange_gabe_jones",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1787664748198,
+      "tag": "0003_notification_groups",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1787664753509,
+      "tag": "0004_drop_monitor_notification_channels",
+      "breakpoints": true
     }
   ]
 }

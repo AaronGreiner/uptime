@@ -16,18 +16,22 @@ export default defineEventHandler(async (event) => {
   const input = await readValidatedBody(event, monitorGroupInputSchema.parse)
 
   assertValidParent(id, input.parentId)
+  assertNotificationGroupsExist(input.notificationGroupIds)
 
   const now = nowInSeconds()
   // Moving to another parent appends the group there, otherwise the order among
   // the new siblings would depend on a position that means nothing to them.
   const position = input.parentId === existing.parentId ? existing.position : nextGroupPosition(input.parentId)
 
+  const { notificationGroupIds, ...values } = input
   const updated = useDatabase()
     .update(monitorGroups)
-    .set({ ...input, position, updatedAt: now })
+    .set({ ...values, position, updatedAt: now })
     .where(eq(monitorGroups.id, id))
     .returning()
     .get()
 
-  return serializeMonitorGroup(updated)
+  setMonitorGroupNotificationGroups(id, notificationGroupIds)
+
+  return serializeMonitorGroup(updated, notificationGroupIds)
 })
