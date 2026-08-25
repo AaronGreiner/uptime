@@ -38,7 +38,7 @@ const EMAIL_DEFAULTS = {
   timezone: 'UTC'
 }
 
-const TEAMS_DEFAULTS = { workflowUrl: '' }
+const TEAMS_DEFAULTS = { workflowUrl: '', format: 'card', timezone: 'UTC' }
 
 function defaultsFor(provider: NotificationProviderId): Record<string, unknown> {
   return provider === 'teams' ? { ...TEAMS_DEFAULTS } : { ...EMAIL_DEFAULTS }
@@ -91,6 +91,15 @@ const languageItems = computed(() => NOTIFICATION_LOCALES.map(value => ({
   label: t(`notification.language.${value}`),
   value
 })))
+
+const teamsFormatItems = computed(() => (['card', 'message'] as const).map(value => ({
+  label: t(`notification.form.teams.format.${value}`),
+  value,
+  description: t(`notification.form.teams.formatHint.${value}`)
+})))
+
+/** The card resolves times per viewer, so the zone only applies to a message. */
+const showsTeamsTimezone = computed(() => state.value.config.format === 'message')
 
 // Switching the transport throws the old settings away: they mean nothing to the
 // new one, and keeping them would submit fields it never validates.
@@ -400,6 +409,32 @@ async function onSubmit(event: FormSubmitEvent<ChannelFormState>) {
               v-model="state.config.workflowUrl as string"
               class="w-full"
               :placeholder="secretPlaceholder('workflowUrl') || 'https://prod-00.westeurope.logic.azure.com/workflows/…'"
+            />
+          </UFormField>
+
+          <UFormField
+            :label="$t('notification.form.teams.formatLabel')"
+            name="config.format"
+            :description="$t('notification.form.teams.formatDescription')"
+          >
+            <URadioGroup
+              v-model="state.config.format as string"
+              :items="teamsFormatItems"
+              variant="table"
+              class="w-full"
+            />
+          </UFormField>
+
+          <UFormField
+            v-if="showsTeamsTimezone"
+            :label="$t('notification.form.smtp.timezone')"
+            name="config.timezone"
+            :description="$t('notification.form.teams.timezoneHint')"
+          >
+            <UInput
+              v-model="state.config.timezone as string"
+              class="w-full"
+              placeholder="Europe/Berlin"
             />
           </UFormField>
 

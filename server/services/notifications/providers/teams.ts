@@ -2,7 +2,7 @@ import type { NotificationEvent } from '../../../../shared/types/notification'
 import { teamsChannelConfigSchema } from '../../../../shared/utils/validation'
 import type { TeamsChannelConfig } from '../../../../shared/utils/validation'
 import { registerNotificationProvider } from '../registry'
-import { buildTeamsPayload } from '../templates/teams'
+import { buildTeamsRequest } from '../templates/teams'
 import type { NotificationSendContext } from '../types'
 
 /** Body of an error response is quoted back, but not an entire error page. */
@@ -36,12 +36,13 @@ async function send(event: NotificationEvent, context: NotificationSendContext):
   const config = context.config as TeamsChannelConfig
   const runtime = useRuntimeConfig()
 
-  const payload = buildTeamsPayload(event, {
+  const payload = buildTeamsRequest(event, {
+    format: config.format,
     language: context.language,
     channelName: context.channelName,
-    // Only used for the fallback rendering; the card itself carries adaptive
-    // card date placeholders that Teams resolves per viewer.
-    timeZone: 'UTC',
+    // The card carries adaptive card date placeholders that Teams resolves per
+    // viewer, so this only matters for the message format.
+    timeZone: config.timezone,
     appName: runtime.public.appName,
     t: translator(context.language)
   })

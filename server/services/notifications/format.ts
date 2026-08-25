@@ -17,6 +17,26 @@ export function toneFor(event: NotificationEvent): NotificationTone {
   return event.type === 'monitor.certificate-expiring' ? 'warning' : 'down'
 }
 
+/**
+ * Marker in front of a headline that has to be readable at a glance, in a
+ * notification preview or a phone banner where nothing else survives.
+ */
+const TONE_MARKERS: Record<NotificationTone, string> = { down: '🔴', up: '✅', warning: '⚠️' }
+
+export function toneMarker(tone: NotificationTone): string {
+  return TONE_MARKERS[tone]
+}
+
+/** Escapes everything that came from a monitor, a check message or a URL. */
+export function escapeHtml(value: string): string {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll('\'', '&#39;')
+}
+
 /** Locale key segment for the event, e.g. `down`. */
 export function eventKey(event: NotificationEvent): string {
   return NOTIFICATION_EVENT_KEYS[event.type]

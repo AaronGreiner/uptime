@@ -1,5 +1,14 @@
 import type { NotificationEvent, NotificationLocale } from '../../../../shared/types/notification'
-import { eventFacts, eventSummary, eventTitle, monitorUrl, toIsoSeconds, toneFor } from '../format'
+import {
+  escapeHtml,
+  eventFacts,
+  eventSummary,
+  eventTitle,
+  monitorUrl,
+  toIsoSeconds,
+  toneFor,
+  toneMarker
+} from '../format'
 import type { NotificationTone, Translate } from '../format'
 
 /**
@@ -18,6 +27,55 @@ export interface TeamsRenderOptions {
   timeZone: string
   appName: string
   t: Translate
+}
+
+/**
+ * Picks the payload for the action the workflow behind the webhook actually
+ * uses. The two are not interchangeable: `card` is read by "Post card in a chat
+ * or channel", `message` by "Post message in a chat or channel".
+ */
+export function buildTeamsRequest(
+  event: NotificationEvent,
+  options: TeamsRenderOptions & { format: 'card' | 'message' }
+): Record<string, unknown> {
+  return options.format === 'message' ? buildTeamsMessage(event, options) : buildTeamsPayload(event, options)
+}
+
+/**
+ * A plain Teams message rather than a card.
+ *
+ * The card action gives no preview text at all — the channel list and the
+ * activity feed show "Card" or "Preview unavailable", whoever it is posted as.
+ * That is a limitation of the action, not of the card: the workflow builds the
+ * message itself, so nothing in the card JSON can reach the preview. A real
+ * message has a normal one, at the price of the card's layout.
+ *
+ * Teams renders a small subset of HTML in a message, so this stays with bold,
+ * line breaks and links.
+ */
+export function buildTeamsMessage(event: NotificationEvent, options: TeamsRenderOptions): Record<string, unknown> {
+  const { t, language, timeZone } = options
+  const marker = toneMarker(toneFor(event))
+  const title = eventTitle(event, t)
+  const summary = eventSummary(event, t)
+  const link = monitorUrl(event.monitor.id)
+
+  // No adaptive card date placeholders here: the message is plain text to
+  // Teams, so the time is rendered once, in the channel's configured zone.
+  const facts = eventFacts(event, t, { locale: language, timeZone })
+
+  const lines = [
+    `<b>${escapeHtml(`${marker} ${title}`)}</b>`,
+    escapeHtml(summary),
+    '',
+    ...facts.map(fact => `<b>${escapeHtml(fact.label)}:</b> ${escapeHtml(fact.value)}`)
+  ]
+
+  if (link) {
+    lines.push('', `<a href="${escapeHtml(link)}">${escapeHtml(t('notification.action.openMonitor'))}</a>`)
+  }
+
+  return { type: 'message', text: lines.join('<br>') }
 }
 
 /**

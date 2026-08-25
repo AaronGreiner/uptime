@@ -283,7 +283,21 @@ export const teamsChannelConfigSchema = z.object({
     .refine(
       value => !/^https:\/\/[^/]*\.webhook\.office\.com\//i.test(value),
       { error: message('validation.teamsLegacyConnector') }
-    )
+    ),
+  /**
+   * Which workflow action the webhook is wired to. They read different payloads:
+   * `card` is for "Post card in a chat or channel", `message` for "Post message
+   * in a chat or channel" — the latter is the only one that produces a preview
+   * in the channel list and the activity feed.
+   */
+  format: z.enum(['card', 'message']).default('card'),
+  /** Only the message format renders a time; a card resolves it per viewer. */
+  timezone: z
+    .string()
+    .trim()
+    .max(64, { error: message('validation.tooLong', { max: 64 }) })
+    .default('UTC')
+    .refine(isTimeZone, { error: message('validation.timezone') })
 })
 
 export type TeamsChannelConfig = z.output<typeof teamsChannelConfigSchema>

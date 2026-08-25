@@ -1,5 +1,5 @@
 import type { NotificationEvent, NotificationLocale } from '../../../../shared/types/notification'
-import { eventFacts, eventSubject, eventSummary, eventTitle, monitorUrl, toneFor } from '../format'
+import { escapeHtml, eventFacts, eventSubject, eventSummary, eventTitle, monitorUrl, toneFor } from '../format'
 import type { NotificationTone, Translate } from '../format'
 
 /**
@@ -179,14 +179,4 @@ function renderHtml(parts: EmailParts): string {
   </table>
 </body>
 </html>`
-}
-
-/** Escapes everything that came from a monitor, a check message or a URL. */
-function escapeHtml(value: string): string {
-  return value
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll('\'', '&#39;')
 }

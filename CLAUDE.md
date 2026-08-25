@@ -291,13 +291,25 @@ the newest row per monitor and channel whatever its age.
 summary, facts, the link back. The email template is a 600 px table with inline
 styles, a hidden preheader (the inbox preview line) and a dark variant behind
 `prefers-color-scheme`; the light rendering has to stand on its own, since a fair
-share of clients honour neither. The Teams payload is an adaptive card posted to
-a Power Automate workflow webhook — Office 365 connector URLs are rejected, they
-are retired and their message card shows no usable preview. The card opens with a
-plain `TextBlock` and the envelope carries `summary` for exactly that reason, and
-timestamps use `{{DATE()}}` so Teams resolves them per viewer. Adaptive cards only
-know the named styles `good`, `warning`, `attention` and `accent`; there is no
-place for a brand hex.
+share of clients honour neither. The Teams payload is posted to a Power Automate
+workflow webhook, in one of two shapes chosen per channel, because the two
+workflow actions read different bodies and neither can be guessed:
+
+- `card` builds an adaptive card for "Post card in a chat or channel". It is the
+  better looking one and the default, and it has **no preview text at all** — the
+  channel list and the activity feed show "Card" or "Preview unavailable"
+  depending on who it is posted as. That is the action's own limitation: the
+  workflow assembles the message, so nothing in the card JSON reaches the
+  preview. `summary` on the envelope and a leading plain `TextBlock` are set
+  anyway and neither helps, so do not spend another afternoon on it. Timestamps
+  use `{{DATE()}}` so Teams resolves them per viewer, and only the named styles
+  `good`, `warning`, `attention` and `accent` exist — there is no brand hex.
+- `message` sends `{ type, text }` with a small subset of HTML for "Post message
+  in a chat or channel". It gives up the layout and gets a real preview,
+  including on a phone. Its timestamp is rendered once, in the channel's zone.
+
+Office 365 connector URLs are rejected: they are retired, and the workflow
+actions do not accept the message card format they expect.
 
 Display text goes through `translate()` in `server/utils/i18n.ts`, which reads the
 locale files directly — there is no vue-i18n on this side and no browser locale,
