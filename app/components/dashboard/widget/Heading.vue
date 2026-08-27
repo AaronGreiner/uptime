@@ -1,7 +1,12 @@
 <script setup lang="ts">
 import type { DashboardWidget } from '#shared/types/dashboard'
+import type { MonitorWithState } from '#shared/types/monitor'
 
-const props = defineProps<{ widget: DashboardWidget }>()
+/** `monitors` is part of the contract every widget is rendered with. */
+const props = defineProps<{
+  widget: DashboardWidget
+  monitors: MonitorWithState[]
+}>()
 
 const level = computed(() => props.widget.config.level ?? 2)
 

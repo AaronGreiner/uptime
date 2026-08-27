@@ -1,50 +1,52 @@
 <script setup lang="ts">
 import type { Heartbeat } from '#shared/types/monitor'
+import { HEARTBEAT_BAR_CLASS, HEARTBEAT_ROW_CLASS } from '#shared/utils/monitor'
 
-const props = withDefaults(defineProps<{
+withDefaults(defineProps<{
   heartbeats: Heartbeat[]
-  /** Bars rendered in total. Missing checks are drawn as empty slots. */
-  count?: number
   showLegend?: boolean
 }>(), {
-  count: 40,
   showLegend: true
 })
 
 const { formatDateTime, formatLatency } = useFormatters()
 
-/**
- * Right aligned: the newest check is always the rightmost bar, older checks pad
- * the left with placeholders so the bar keeps a stable width.
- */
-const slots = computed<Array<Heartbeat | null>>(() => {
-  const recent = props.heartbeats.slice(-props.count)
-  const padding = Array.from({ length: Math.max(0, props.count - recent.length) }, () => null)
-
-  return [...padding, ...recent]
-})
-
 const hovered = ref<Heartbeat | null>(null)
-
-const oldest = computed(() => props.heartbeats.at(0) ?? null)
-const newest = computed(() => props.heartbeats.at(-1) ?? null)
 </script>
 
 <template>
   <div class="flex flex-col gap-1.5 @container">
+    <!--
+      The bars are a fixed size and the row decides how many of them fit, not how
+      wide each one is: the same stretch of history then reads the same width in
+      a dashboard cell, in the list and on the detail page.
+
+      Reversed rather than right aligned. A reversed row packs at its start,
+      which is the right edge, so the newest check is always in view and older
+      ones run off to the left — where a container that is a scroll container,
+      as `overflow-hidden` makes it, would otherwise flip an overflowing
+      `justify-end` back to the start and clip the newest instead. The fade
+      turns the cut into an edge rather than half a bar.
+    -->
     <div
-      class="flex items-end gap-px @[18rem]:gap-[2px] h-8"
+      class="flex flex-row-reverse h-8 overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_0.75rem)]"
+      :class="HEARTBEAT_ROW_CLASS"
       @mouseleave="hovered = null"
     >
       <div
-        v-for="(heartbeat, index) in slots"
-        :key="heartbeat?.id ?? `empty-${index}`"
-        class="flex-1 min-w-[2px] @[18rem]:min-w-[3px] rounded-[2px] transition-[opacity,height] duration-150"
+        v-for="heartbeat in [...heartbeats].reverse()"
+        :key="heartbeat.id"
+        class="h-full shrink-0 rounded-[2px] transition-opacity duration-150"
         :class="[
-          heartbeat === null ? 'h-4 bg-elevated' : heartbeat.status === 'up' ? 'h-full bg-success' : 'h-full bg-error',
-          hovered && heartbeat && hovered.id !== heartbeat.id ? 'opacity-40' : 'opacity-100'
+          HEARTBEAT_BAR_CLASS,
+          heartbeat.status === 'up' ? 'bg-success' : 'bg-error',
+          hovered && hovered.id !== heartbeat.id ? 'opacity-40' : 'opacity-100'
         ]"
         @mouseenter="hovered = heartbeat"
+      />
+      <div
+        v-if="!heartbeats.length"
+        class="h-4 w-full self-end rounded-[2px] bg-elevated"
       />
     </div>
 
@@ -63,11 +65,12 @@ const newest = computed(() => props.heartbeats.at(-1) ?? null)
           {{ hovered.status === 'up' ? formatLatency(hovered.latencyMs) : hovered.message }}
         </span>
       </template>
-      <template v-else-if="newest">
-        <span class="truncate-target hidden @[22rem]:inline">{{ formatDateTime(oldest?.checkedAt) }}</span>
-        <span class="shrink-0 ml-auto">{{ formatDateTime(newest.checkedAt) }}</span>
-      </template>
-      <span v-else>{{ $t('monitor.detail.noHistory') }}</span>
+      <!--
+        Nothing but the reserved height until a bar is hovered. How far back the
+        row reaches depends on how many bars fit, which it is never told, so
+        naming the oldest check in the list would label a bar that may well be
+        off the left edge — and the newest one is already on the card.
+      -->
     </div>
   </div>
 </template>

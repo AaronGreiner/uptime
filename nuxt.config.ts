@@ -2,13 +2,15 @@
 import { MONITOR_GROUP_ICONS } from './shared/utils/group'
 import { MONITOR_STATUS_ICONS, MONITOR_TYPE_ICONS } from './shared/utils/monitor'
 import { NOTIFICATION_PROVIDER_ICONS } from './shared/utils/notification'
+import { WIDGET_DEFINITIONS } from './shared/utils/widget'
 
 // Names assembled at runtime are invisible to the scanner, so they are listed.
 const dynamicIconNames = [
   ...MONITOR_GROUP_ICONS,
   ...Object.values(MONITOR_TYPE_ICONS),
   ...Object.values(MONITOR_STATUS_ICONS),
-  ...Object.values(NOTIFICATION_PROVIDER_ICONS)
+  ...Object.values(NOTIFICATION_PROVIDER_ICONS),
+  ...Object.values(WIDGET_DEFINITIONS).map(definition => definition.icon)
 ].map(name => name.replace(/^i-lucide-/, 'lucide:').replace(/^i-simple-icons-/, 'simple-icons:'))
 
 export default defineNuxtConfig({
@@ -90,8 +92,18 @@ export default defineNuxtConfig({
     seed: {
       /** Creates demo monitors and dashboards on an empty database. */
       demoData: false,
-      /** Days of synthetic history generated for demo monitors. */
-      demoHistoryDays: 7
+      /** Days of synthetic heartbeats generated for demo monitors. */
+      demoHistoryDays: 7,
+      /**
+       * Days of synthetic hourly rollups written behind those heartbeats, so the
+       * calendar, the SLA table and the incident history have a past to show on
+       * a database that was created minutes ago. Raw heartbeats for the same
+       * span would be two orders of magnitude more rows.
+       *
+       * A full year, because that is both what the rollups are retained for and
+       * what the widest uptime calendar asks for.
+       */
+      demoStatsDays: 365
     },
     public: {
       appName: 'Uptime',

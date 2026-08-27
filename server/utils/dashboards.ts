@@ -1,6 +1,6 @@
 import { asc, eq, max } from 'drizzle-orm'
 import type { Dashboard, DashboardWidget, DashboardWithWidgets } from '../../shared/types/dashboard'
-import { clampWidgetSize } from '../../shared/utils/grid'
+import { clampWidgetSize } from '../../shared/utils/widget'
 import { dashboards, dashboardWidgets } from '../database/schema'
 import type { DashboardRow, DashboardWidgetRow } from '../database/schema'
 

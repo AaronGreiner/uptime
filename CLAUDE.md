@@ -126,6 +126,11 @@ push the deepest leaf past the depth cap. Deleting a group never deletes what it
 holds; `deleteMonitorGroup` lifts subgroups and monitors to the parent first.
 The tree is small, so these walks run in memory instead of as recursive CTEs.
 
+**Read endpoints.** Besides the monitor routes there is `/api/stats/uptime` for
+uptime over many monitors in one query (an SLA table would otherwise issue one
+request per row), `/api/monitors/:id/daily` for the calendar's day buckets, and
+`/api/incidents`. All three are public like the rest of the read side.
+
 **Check executors** live in `server/services/checks/`. `index.ts` maps a
 `MonitorType` to an executor. Adding a type means: add the executor, extend the
 `MonitorType` union in `shared/types/monitor.ts`, extend `monitorInputSchema`,
@@ -152,6 +157,22 @@ rolls heartbeats into `monitor_stats_hourly` (recomputing the current, still ope
 hour every time) and then prunes both tables according to the retention config.
 Queries for ranges up to 24 h read raw heartbeats, longer ranges read the hourly
 rollups — see `RAW_HEARTBEAT_RANGE_LIMIT_SECONDS`.
+
+**Incidents.** Nothing records an outage; `server/utils/incidents.ts`
+reconstructs them per request with a gaps-and-islands query over the check
+history, and `/api/incidents` returns both the list and the reliability figures
+over the same window. A run of failed checks only counts once it is longer than
+the monitor's `retries`, which is exactly when the application itself calls the
+monitor down and notifies about it.
+
+Raw heartbeats resolve an outage to the check, but they are only kept for
+`retention.heartbeatDays`, so a longer window falls back to the hourly rollups and
+reports `approximate: true`. There a bucket is not an hour of downtime but an
+hour in which some checks failed, so the duration is summed from the down/total
+ratio per bucket rather than rounded up to the hour — otherwise the mean time to
+recovery of a three minute outage would be an hour. For the same reason an outage
+reaching into the open hour is not called ongoing on its own; the monitor has to
+still be down.
 
 **Application shell.** `app/layouts/default.vue` renders `UDashboardGroup` plus a
 collapsible, resizable `UDashboardSidebar` holding the navigation and the account
@@ -211,12 +232,70 @@ pass an i18n-translated `label` to `AppMorphIcon`. Any initial icon must remain
 SSR-safe: client-only state may change it only after hydration.
 
 **Dashboards.** A dashboard owns an ordered list of widgets. Each widget stores
-its position plus width and height tokens; the allowed sizes and their literal
-responsive CSS classes live in `shared/utils/grid.ts`. A plain CSS grid in
+its position plus width and height tokens. A plain CSS grid in
 `app/components/dashboard/Grid.vue` renders the list on the server, while
 Sortable only changes its order in edit mode. Saving is debounced and skipped
 when the serialised layout has not changed, which keeps the initial mount from
 triggering a write.
+
+`shared/utils/widget.ts` is the registry every part of the feature reads:
+`WIDGET_DEFINITIONS` names, per type, the icon, the sizes it allows and the
+config fields it uses. `WIDGET_TYPES` and the zod enum derive from its keys, the
+settings dialog renders its fields from `fields`, and `widgetConfigForType`
+reduces a config to exactly those fields — run by the form, by both write
+endpoints and by the seed, so a config can never carry a setting from a type the
+widget was changed away from, nor lose one the form happens to have no field for.
+`shared/utils/grid.ts` keeps only what the grid itself needs: the size order, the
+literal responsive classes and the pixel maths the settings preview measures with.
+
+Adding a widget type means: extend the `WidgetType` union in
+`shared/types/dashboard.ts`, add the definition, add the component to the map in
+`app/components/dashboard/WidgetBody.vue`, and add the labels to both locale
+files. Every widget takes the same two props (`widget`, `monitors`), which is
+what lets the grid and the preview render any of them without a branch.
+
+**Widget scope.** Aggregate widgets carry a `scope` field: `config.groupId`
+covers a node of the monitor tree and everything below it, `config.monitorIds` is
+the hand-picked escape hatch, and neither means every monitor. `useWidgetScope`
+resolves it against the shared caches and reports `isAll`, which the fetchers use
+to send no id list at all — that keeps the request out of the id cap and its
+cache key from churning whenever a monitor is added.
+
+**Fixed geometry.** A pulse bar and an uptime calendar keep their bars and
+squares at a fixed size — `shared/utils/monitor.ts` and `shared/utils/grid.ts`
+hold the pitch and the literal classes that draw it — and let the container
+decide how many of them fit rather than how wide each one is. A week is then the
+same block and an hour the same bar wherever they are drawn: a dashboard cell,
+the monitor list, the detail page.
+
+Both rows are laid out with `flex-row-reverse` and clipped. A reversed row packs
+at its start, which is the right edge, so the newest check stays in view and the
+oldest run off to the left; `justify-end` would look equivalent but `overflow`
+makes the row a scroll container, and an overflowing scroll container flips its
+alignment back to the start — clipping the newest instead. The left fade turns
+the cut into an edge rather than half a bar.
+
+What follows from that is that neither widget takes a count as a setting, and
+that the pulse bar can only draw what the monitor list carries:
+`MONITOR_HEARTBEAT_HISTORY` is sized so a half width cell fills exactly, and
+raising it costs every monitor in a payload the polling safety net refetches. The
+calendar asks the server for the days its *width token* implies rather than for a
+measured width, so the request is the same on both sides of hydration, and the
+row then clips whatever the real cell cannot hold.
+
+**Widget preview.** The settings dialog renders the real widget with the real
+data next to the form, at the pixel size the chosen width and height produce on a
+1180 px grid, scaled down to fit. Sample data would hide what the reader opened
+the dialog to see; rendering at the dialog's own width would show the widget at a
+container size it never reaches on a dashboard, and every widget changes its
+layout by container size.
+
+**Shared stats.** `app/composables/useStats.ts` holds the fetchers for everything
+that is not in the monitor list. They key their `useAsyncData` by content —
+monitor and range, or scope and range — never by widget id, so two widgets
+showing the same thing share one request. The refetch behind the live stream is
+throttled by range: a single check moves a 30 day figure in its fifth decimal but
+costs a full aggregate scan either way.
 
 A widget is exactly as tall as its cell, so its body clips and never scrolls.
 `overflow-y-auto` turns a single rounding pixel into a permanent scrollbar on
@@ -224,7 +303,7 @@ every tile wherever the platform does not draw scrollbars as overlays, and
 centred content could not be scrolled into view anyway. Content that stops
 fitting has to be dropped at the container width where it does, not left to
 overflow: `MonitorCard` hides the target line while its header is stacked, and
-`MonitorHeartbeatBar` hides the legend below the same width. When you add a
+`MonitorHeartbeatBar` hides its hover readout below the same width. When you add a
 widget or a size, check every combination in `WIDGET_SIZE_RULES` against the
 shortest row height (`lg:auto-rows-[60px]`).
 
@@ -381,3 +460,9 @@ files.
   belong inside `#body`.
 - Notification links need `public.appUrl`; it has no sensible default, so an
   unset one drops the link rather than pointing at localhost.
+- Widget icons are assembled from the registry at runtime, so they are listed in
+  `nuxt.config.ts` like every other dynamic icon name. A new definition whose
+  icon is missing from that list renders as nothing in production.
+- A bound parameter has no type affinity in SQLite, so bucket maths needs
+  `integerLiteral` — and `signedIntegerLiteral` for a value that may be negative,
+  such as the UTC offset the uptime calendar aligns its days to.

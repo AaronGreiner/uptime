@@ -117,6 +117,11 @@ export function getMonitorWithState(id: number, heartbeatCount = DEFAULT_HEARTBE
   }
 }
 
+/** Every monitor id, for the endpoints whose scope defaults to "all of them". */
+export function listMonitorIds(): number[] {
+  return useDatabase().select({ id: monitors.id }).from(monitors).all().map(row => row.id)
+}
+
 export function getMonitorRow(id: number): MonitorRow | undefined {
   return useDatabase().select().from(monitors).where(eq(monitors.id, id)).get()
 }

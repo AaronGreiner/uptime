@@ -1,10 +1,13 @@
-import type { WidgetHeight, WidgetType, WidgetWidth } from '../types/dashboard'
+import type { WidgetHeight, WidgetWidth } from '../types/dashboard'
 
 /** Ordered from narrowest to widest; the resize controls step through this order. */
 export const WIDGET_WIDTHS = ['quarter', 'third', 'half', 'twoThirds', 'full'] as const
 
 /** Ordered from shortest to tallest; the resize controls step through this order. */
 export const WIDGET_HEIGHTS = ['slim', 'compact', 'standard', 'tall'] as const
+
+/** Columns of the grid on the widest breakpoint, which the widths divide up. */
+export const WIDGET_GRID_COLUMNS = 12
 
 /**
  * Keep every responsive class in one literal string. Tailwind cannot emit class
@@ -25,70 +28,68 @@ export const WIDGET_HEIGHT_CLASS: Record<WidgetHeight, string> = {
   tall: 'row-span-5'
 }
 
-interface WidgetSizeRule {
-  widths: readonly WidgetWidth[]
-  heights: readonly WidgetHeight[]
-  defaultWidth: WidgetWidth
-  defaultHeight: WidgetHeight
+/**
+ * The same spans once more as numbers. The class maps above cannot be read back,
+ * because their strings have to stay literal for Tailwind, and the preview needs
+ * to know how large a cell actually becomes.
+ */
+export const WIDGET_WIDTH_COLUMNS: Record<WidgetWidth, number> = {
+  quarter: 3,
+  third: 4,
+  half: 6,
+  twoThirds: 8,
+  full: 12
 }
 
-export const WIDGET_SIZE_RULES = {
-  'monitor': {
-    widths: WIDGET_WIDTHS,
-    heights: ['compact', 'standard'],
-    defaultWidth: 'third',
-    defaultHeight: 'standard'
-  },
-  'uptime-summary': {
-    widths: ['quarter', 'third', 'half'],
-    heights: ['compact', 'standard'],
-    defaultWidth: 'quarter',
-    defaultHeight: 'compact'
-  },
-  'latency-chart': {
-    widths: ['half', 'twoThirds', 'full'],
-    heights: ['standard', 'tall'],
-    defaultWidth: 'half',
-    defaultHeight: 'standard'
-  },
-  'status-overview': {
-    widths: ['half', 'twoThirds', 'full'],
-    heights: ['compact', 'standard'],
-    defaultWidth: 'full',
-    defaultHeight: 'compact'
-  },
-  'heading': {
-    widths: ['full'],
-    heights: ['slim'],
-    defaultWidth: 'full',
-    defaultHeight: 'slim'
-  }
-} as const satisfies Record<WidgetType, WidgetSizeRule>
-
-export function clampWidgetSize(
-  type: WidgetType,
-  width?: WidgetWidth | null,
-  height?: WidgetHeight | null
-): { width: WidgetWidth, height: WidgetHeight } {
-  const rule: WidgetSizeRule = WIDGET_SIZE_RULES[type]
-
-  return {
-    width: width && rule.widths.includes(width) ? width : rule.defaultWidth,
-    height: height && rule.heights.includes(height) ? height : rule.defaultHeight
-  }
+export const WIDGET_HEIGHT_ROWS: Record<WidgetHeight, number> = {
+  slim: 1,
+  compact: 2,
+  standard: 3,
+  tall: 5
 }
 
-export function stepWidgetWidth(type: WidgetType, width: WidgetWidth, direction: -1 | 1): WidgetWidth | null {
-  return stepSize(WIDGET_SIZE_RULES[type].widths, width, direction)
+/** Row height and gap of the grid on the widest breakpoint, in pixels. */
+export const WIDGET_ROW_HEIGHT_PX = 60
+export const WIDGET_GAP_PX = 16
+
+export function widgetPixelHeight(height: WidgetHeight): number {
+  const rows = WIDGET_HEIGHT_ROWS[height]
+
+  return rows * WIDGET_ROW_HEIGHT_PX + (rows - 1) * WIDGET_GAP_PX
 }
 
-export function stepWidgetHeight(type: WidgetType, height: WidgetHeight, direction: -1 | 1): WidgetHeight | null {
-  return stepSize(WIDGET_SIZE_RULES[type].heights, height, direction)
+/** Width a cell occupies inside a grid of the given total width, in pixels. */
+export function widgetPixelWidth(width: WidgetWidth, gridWidth: number): number {
+  const columns = WIDGET_WIDTH_COLUMNS[width]
+  const columnWidth = (gridWidth - (WIDGET_GRID_COLUMNS - 1) * WIDGET_GAP_PX) / WIDGET_GRID_COLUMNS
+
+  return columns * columnWidth + (columns - 1) * WIDGET_GAP_PX
 }
 
-function stepSize<T extends string>(allowed: readonly T[], value: T, direction: -1 | 1): T | null {
-  const current = allowed.indexOf(value)
-  const next = current + direction
+/**
+ * Geometry of an uptime calendar square, in pixels. Fixed like the pulse bar,
+ * so a week is the same block wherever it is drawn and the cell decides how many
+ * weeks it holds. The literal classes exist because Tailwind cannot emit sizes
+ * assembled at runtime; keep them in step with the pitch.
+ */
+export const CALENDAR_SQUARE_PITCH_PX = 14
+export const CALENDAR_SQUARE_CLASS = 'size-[11px]'
+export const CALENDAR_GRID_CLASS = 'gap-[3px]'
 
-  return current >= 0 && next >= 0 && next < allowed.length ? allowed[next]! : null
+/** Padding a widget card takes off its own width, both sides together. */
+const CARD_PADDING_PX = 40
+
+/**
+ * Days a calendar of this width can show, rounded to whole weeks.
+ *
+ * Derived from the width token rather than measured, because the request has to
+ * be the same on the server and in the browser. The grid then clips whatever
+ * does not fit the real cell, so asking for a little too much is free while
+ * asking for too little would leave a gap nothing can fill.
+ */
+export function calendarDaysForWidth(width: WidgetWidth, maxDays: number): number {
+  const inner = widgetPixelWidth(width, 1180) - CARD_PADDING_PX
+  const columns = Math.floor((inner + WIDGET_GAP_PX) / CALENDAR_SQUARE_PITCH_PX)
+
+  return Math.min(maxDays, Math.max(4, columns) * 7)
 }

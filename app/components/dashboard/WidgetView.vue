@@ -1,12 +1,8 @@
 <script setup lang="ts">
 import type { DashboardWidget, WidgetHeight, WidgetWidth } from '#shared/types/dashboard'
 import type { MonitorWithState } from '#shared/types/monitor'
-import {
-  stepWidgetHeight,
-  stepWidgetWidth,
-  WIDGET_HEIGHT_CLASS,
-  WIDGET_WIDTH_CLASS
-} from '#shared/utils/grid'
+import { WIDGET_HEIGHT_CLASS, WIDGET_WIDTH_CLASS } from '#shared/utils/grid'
+import { stepWidgetHeight, stepWidgetWidth } from '#shared/utils/widget'
 
 const props = defineProps<{
   widget: DashboardWidget
@@ -157,29 +153,9 @@ function onKeydown(event: KeyboardEvent) {
       />
     </div>
 
-    <DashboardWidgetMonitor
-      v-if="widget.type === 'monitor'"
+    <DashboardWidgetBody
       :widget="widget"
       :monitors="monitors"
-    />
-    <DashboardWidgetUptimeSummary
-      v-else-if="widget.type === 'uptime-summary'"
-      :widget="widget"
-      :monitors="monitors"
-    />
-    <DashboardWidgetLatencyChart
-      v-else-if="widget.type === 'latency-chart'"
-      :widget="widget"
-      :monitors="monitors"
-    />
-    <DashboardWidgetStatusOverview
-      v-else-if="widget.type === 'status-overview'"
-      :widget="widget"
-      :monitors="monitors"
-    />
-    <DashboardWidgetHeading
-      v-else-if="widget.type === 'heading'"
-      :widget="widget"
     />
   </div>
 </template>

@@ -19,32 +19,35 @@ export const MONITOR_STATUS_ICONS: Record<MonitorStatus, string> = {
   paused: 'i-lucide-circle-pause'
 }
 
-/** Heartbeats travelling with a monitor, and drawn in its pulse bar. */
-export const MONITOR_HEARTBEAT_HISTORY = 40
+/**
+ * Heartbeats travelling with a monitor, and the most a pulse bar can draw.
+ *
+ * A bar keeps its bars at a fixed size and lets the container decide how many
+ * of them fit, so this number is what a wide cell can fill: at the pitch below
+ * it covers a half width dashboard cell exactly. Raising it costs every monitor
+ * in the list payload, which is refetched by the polling safety net — the two
+ * are worth weighing together before changing either.
+ */
+export const MONITOR_HEARTBEAT_HISTORY = 60
 
 /**
- * A pulse bar can only draw the heartbeats that travel with the monitor, so
- * the widget setting stops where that payload does. Asking for more used to
- * pad the bar with empty slots that could never fill.
+ * Geometry of a pulse bar, in pixels. Fixed rather than stretched, so the same
+ * stretch of history reads the same width on a dashboard cell, on the monitor
+ * list and on the detail page. The literal classes exist because Tailwind
+ * cannot emit sizes assembled at runtime; keep the two in step.
  */
-export const MONITOR_HEARTBEAT_COUNT_BOUNDS = { min: 10, max: MONITOR_HEARTBEAT_HISTORY }
+export const HEARTBEAT_BAR_PITCH_PX = 9
+export const HEARTBEAT_BAR_CLASS = 'w-[6px]'
+export const HEARTBEAT_ROW_CLASS = 'gap-[3px]'
 
 /**
- * Keeps a stored count inside the bounds, so a widget saved while the setting
- * still allowed a wider bar draws a full one instead of half a row of blanks.
+ * Heartbeats loaded for the detail page. More than the table lists, because the
+ * same request feeds a pulse bar that is as wide as the page.
  */
-export function clampHeartbeatCount(count?: number | null): number {
-  const { min, max } = MONITOR_HEARTBEAT_COUNT_BOUNDS
+export const MONITOR_RECENT_CHECK_LIMIT = 120
 
-  if (!count || !Number.isFinite(count)) {
-    return max
-  }
-
-  return Math.min(Math.max(Math.round(count), min), max)
-}
-
-/** Heartbeats listed as recent checks on the monitor detail page. */
-export const MONITOR_RECENT_CHECK_LIMIT = 50
+/** Rows the recent checks table shows of them. */
+export const MONITOR_RECENT_TABLE_ROWS = 50
 
 /**
  * Appends a heartbeat to an oldest first list and trims it back to `limit`.

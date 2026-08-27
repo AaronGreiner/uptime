@@ -5,24 +5,43 @@ export type WidgetType
   = | 'monitor'
     | 'uptime-summary'
     | 'latency-chart'
+    | 'uptime-calendar'
     | 'status-overview'
+    | 'monitor-list'
+    | 'incident-feed'
+    | 'certificate-expiry'
+    | 'sla-table'
+    | 'incident-history'
+    | 'reliability-kpis'
     | 'heading'
 
 export type WidgetWidth = 'quarter' | 'third' | 'half' | 'twoThirds' | 'full'
 
 export type WidgetHeight = 'slim' | 'compact' | 'standard' | 'tall'
 
+/** Order a monitor list arranges its rows in. */
+export type WidgetSort = 'name' | 'status' | 'uptime' | 'latency'
+
 export interface WidgetConfig {
   /** Overrides the auto-generated widget title. */
   title?: string
   /** Time range used by data driven widgets. */
   range?: StatsRange
-  /** Number of heartbeats rendered by monitor widgets. */
-  heartbeatCount?: number
   /** Heading widgets only. */
   level?: 1 | 2 | 3
-  /** Monitor ids used by aggregate widgets. Empty means "all monitors". */
+  /**
+   * Monitor ids an aggregate widget is limited to. Empty means "all monitors",
+   * and `groupId` takes precedence when both are set.
+   */
   monitorIds?: number[]
+  /** Group whose subtree an aggregate widget covers, or null for no group scope. */
+  groupId?: number | null
+  /** Rows rendered by list widgets. */
+  limit?: number
+  /** Uptime an SLA table measures against, as a ratio between 0 and 1. */
+  target?: number
+  /** Order used by monitor lists. */
+  sort?: WidgetSort
 }
 
 export interface DashboardWidget {

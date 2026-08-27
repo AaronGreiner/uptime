@@ -60,3 +60,24 @@ export function readNotificationGroupId(event: H3Event): number {
 
   return id
 }
+
+/**
+ * Reads a comma separated list of monitor ids from a query string. An empty or
+ * missing value means "no restriction", which the callers read as "everything".
+ *
+ * The cap is generous because a widget scoped to a group sends the whole subtree,
+ * and silently dropping its tail would leave rows missing from a table without
+ * anything saying so. Callers covering every monitor send no list at all.
+ */
+export function parseIdList(value: unknown, max = 500): number[] {
+  if (typeof value !== 'string' || !value.trim()) {
+    return []
+  }
+
+  const ids = value
+    .split(',')
+    .map(entry => Number(entry.trim()))
+    .filter(id => Number.isInteger(id) && id > 0)
+
+  return [...new Set(ids)].slice(0, max)
+}

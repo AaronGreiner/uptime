@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { DashboardWidget } from '#shared/types/dashboard'
 import type { MonitorWithState } from '#shared/types/monitor'
-import { clampHeartbeatCount } from '#shared/utils/monitor'
 
 const props = defineProps<{
   widget: DashboardWidget
@@ -18,7 +17,6 @@ const dense = computed(() => props.widget.height === 'compact')
   <MonitorCard
     v-if="monitor"
     :monitor="monitor"
-    :heartbeat-count="clampHeartbeatCount(widget.config.heartbeatCount)"
     :dense="dense"
   />
   <DashboardWidgetMissing v-else />

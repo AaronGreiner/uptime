@@ -1,16 +1,13 @@
 <script setup lang="ts">
 import type { MonitorWithState } from '#shared/types/monitor'
-import { MONITOR_HEARTBEAT_HISTORY } from '#shared/utils/monitor'
 
 const props = withDefaults(defineProps<{
   monitor: MonitorWithState
-  heartbeatCount?: number
   /** Drops the metric row and tightens the spacing for very small grid cells. */
   dense?: boolean
   /** Breadcrumb of the owning group, shown where the card stands on its own. */
   groupPath?: string
 }>(), {
-  heartbeatCount: MONITOR_HEARTBEAT_HISTORY,
   dense: false,
   groupPath: undefined
 })
@@ -104,7 +101,6 @@ const cardUi = computed(() => ({
     <MonitorHeartbeatBar
       class="mt-auto"
       :heartbeats="monitor.recentHeartbeats"
-      :count="heartbeatCount"
       :show-legend="!dense"
     />
   </UCard>

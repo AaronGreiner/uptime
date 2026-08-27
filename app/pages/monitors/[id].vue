@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Heartbeat, MonitorStatsPoint, MonitorUptime } from '#shared/types/monitor'
 import type { StatsRange } from '#shared/types/stats'
-import { MONITOR_RECENT_CHECK_LIMIT, appendHeartbeat } from '#shared/utils/monitor'
+import { MONITOR_RECENT_CHECK_LIMIT, MONITOR_RECENT_TABLE_ROWS, appendHeartbeat } from '#shared/utils/monitor'
 import { STATS_RANGES, isStatsRange } from '#shared/utils/stats'
 
 const route = useRoute()
@@ -114,7 +114,11 @@ const certificateTone = computed(() => {
 
 const rangeItems = computed(() => STATS_RANGES.map(value => ({ label: t(`range.${value}`), value })))
 
-const recentChecks = computed(() => [...(heartbeats.value ?? [])].reverse())
+/**
+ * The request feeds both the pulse bar, which is as wide as the page, and this
+ * table, which stays at a length somebody might actually read.
+ */
+const recentChecks = computed(() => [...(heartbeats.value ?? [])].reverse().slice(0, MONITOR_RECENT_TABLE_ROWS))
 </script>
 
 <template>
@@ -334,10 +338,7 @@ const recentChecks = computed(() => [...(heartbeats.value ?? [])].reverse())
         :description="$t('monitor.detail.noHistory')"
         :ui="{ description: recentChecks.length ? 'hidden' : '' }"
       >
-        <MonitorHeartbeatBar
-          :heartbeats="heartbeats"
-          :count="50"
-        />
+        <MonitorHeartbeatBar :heartbeats="heartbeats" />
 
         <div
           v-if="recentChecks.length"

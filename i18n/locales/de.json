@@ -152,7 +152,8 @@
       "message": "Ergebnis",
       "statusCode": "Code",
       "target": "Ziel",
-      "interval": "alle {seconds}"
+      "interval": "alle {seconds}",
+      "collecting": "Sammelt noch Daten …"
     },
     "allMonitors": "Alle Monitore"
   },
@@ -253,14 +254,28 @@
       "monitor": "Monitor-Karte",
       "uptime-summary": "Verfügbarkeitswert",
       "latency-chart": "Antwortzeit-Diagramm",
+      "uptime-calendar": "Verfügbarkeitskalender",
       "status-overview": "Statusübersicht",
+      "monitor-list": "Monitorliste",
+      "incident-feed": "Aktuelle Störungen",
+      "certificate-expiry": "Zertifikatsablauf",
+      "sla-table": "SLA-Tabelle",
+      "incident-history": "Störungschronik",
+      "reliability-kpis": "Zuverlässigkeit",
       "heading": "Überschrift"
     },
     "typeDescription": {
       "monitor": "Status, Antwortzeit und der jüngste Verlauf eines Monitors.",
       "uptime-summary": "Ein einzelner großer Verfügbarkeitswert für einen Monitor.",
       "latency-chart": "Antwortzeit über einen wählbaren Zeitraum.",
+      "uptime-calendar": "Ein Feld pro Tag, eingefärbt nach der Verfügbarkeit des Tages.",
       "status-overview": "Anzahl aller Monitore nach Status.",
+      "monitor-list": "Status, Verfügbarkeit und Antwortzeit mehrerer Monitore in einer Kachel.",
+      "incident-feed": "Alles, was gerade ausfällt, das Längste zuerst.",
+      "certificate-expiry": "TLS-Zertifikate nach Ablaufdatum sortiert.",
+      "sla-table": "Verfügbarkeit gegen ein Ziel, mit verbleibendem Fehlerbudget.",
+      "incident-history": "Aus der Prüfhistorie rekonstruierte Ausfälle.",
+      "reliability-kpis": "Ausfälle, Ausfallzeit, MTTR und MTBF über einen Zeitraum.",
       "heading": "Ein Textelement, um Widgets zu gruppieren."
     },
     "fields": {
@@ -268,8 +283,14 @@
       "title": "Titel",
       "monitor": "Monitor",
       "range": "Zeitraum",
-      "heartbeatCount": "Anzahl angezeigter Prüfungen",
-      "level": "Größe"
+      "level": "Größe",
+      "monitors": "Monitore",
+      "group": "Gruppe",
+      "limit": "Angezeigte Zeilen",
+      "target": "Verfügbarkeitsziel",
+      "sort": "Sortierung",
+      "width": "Breite",
+      "height": "Höhe"
     },
     "level": {
       "1": "Groß",
@@ -278,7 +299,49 @@
     },
     "overview": {
       "total": "Monitore",
-      "avgUptime": "Ø Verfügbarkeit, 24 h"
+      "uptime": "Verfügbarkeit, 24 h"
+    },
+    "sort": {
+      "status": "Schlechteste zuerst",
+      "name": "Name",
+      "uptime": "Geringste Verfügbarkeit",
+      "latency": "Langsamste"
+    },
+    "scope": {
+      "noGroup": "Keine Gruppe",
+      "groupHint": "Eine Gruppe umfasst alles darunter und folgt dem Baum.",
+      "monitorsHint": "Leer lassen für alle Monitore."
+    },
+    "preview": {
+      "title": "Vorschau",
+      "hint": "Das Widget mit seinen echten Daten, in der gewählten Größe.",
+      "selectMonitor": "Monitor wählen, um die Vorschau zu sehen."
+    },
+    "list": {
+      "noMonitors": "Keine Monitore in dieser Auswahl."
+    },
+    "incidents": {
+      "allClear": "Alles erreichbar.",
+      "noneInRange": "Keine Ausfälle in diesem Zeitraum.",
+      "ongoing": "läuft"
+    },
+    "certificates": {
+      "none": "Noch keine Zertifikatsdaten.",
+      "days": "{days} T"
+    },
+    "calendar": {
+      "days": "{days} Tage"
+    },
+    "sla": {
+      "budgetLeft": "{duration} übrig",
+      "budgetOver": "{duration} überzogen"
+    },
+    "reliability": {
+      "incidents": "Ausfälle",
+      "downtime": "Ausfallzeit",
+      "mttr": "MTTR",
+      "mtbf": "MTBF",
+      "longest": "Längster"
     }
   },
   "notification": {

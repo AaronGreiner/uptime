@@ -8,6 +8,7 @@ const props = defineProps<{
 }>()
 
 const { formatUptime, formatNumber } = useFormatters()
+const { scoped } = useWidgetScope(() => props.widget)
 const compact = computed(() => props.widget.height === 'compact')
 
 // The cell height is fixed, so the body clips rather than growing a scrollbar
@@ -19,26 +20,35 @@ const cardUi = computed(() => ({
     : 'flex-1 flex flex-col justify-center gap-4 min-h-0 overflow-hidden'
 }))
 
-/** An empty monitor list in the widget config means "every monitor". */
-const scoped = computed(() => {
-  const ids = props.widget.config.monitorIds
-
-  return ids?.length ? props.monitors.filter(monitor => ids.includes(monitor.id)) : props.monitors
-})
-
 const counts = computed(() => scoped.value.reduce((totals, monitor) => {
   totals[monitor.state.status] += 1
 
   return totals
 }, { up: 0, down: 0, pending: 0, paused: 0 } as Record<MonitorStatus, number>))
 
-const averageUptime = computed(() => {
-  const ratios = scoped.value
-    .map(monitor => monitor.uptime24h.ratio)
-    .filter((ratio): ratio is number => ratio !== null)
+/**
+ * Checks that succeeded over checks that ran, not the mean of the per-monitor
+ * percentages: a monitor checked every 30 seconds would otherwise weigh the same
+ * as one checked every five minutes.
+ */
+const uptime = computed(() => {
+  const totals = scoped.value.reduce((sums, monitor) => ({
+    up: sums.up + monitor.uptime24h.upCount,
+    total: sums.total + monitor.uptime24h.upCount + monitor.uptime24h.downCount
+  }), { up: 0, total: 0 })
 
-  return ratios.length ? ratios.reduce((sum, ratio) => sum + ratio, 0) / ratios.length : null
+  return totals.total > 0 ? totals.up / totals.total : null
 })
+
+/** Filtering the monitor list is what the reader wants next from a count. */
+function statusLink(status: MonitorStatus | 'all'): string {
+  const group = props.widget.config.groupId
+
+  return `/monitors?${new URLSearchParams({
+    ...(status === 'all' ? {} : { status }),
+    ...(group ? { group: String(group) } : {})
+  })}`
+}
 
 const tiles = computed(() => ([
   {
@@ -46,42 +56,48 @@ const tiles = computed(() => ([
     labelKey: 'widget.overview.total',
     value: formatNumber(scoped.value.length),
     icon: 'i-lucide-list',
-    class: 'text-highlighted'
+    class: 'text-highlighted',
+    to: statusLink('all')
   },
   {
     key: 'up',
     labelKey: 'status.up',
     value: formatNumber(counts.value.up),
     icon: 'i-lucide-check',
-    class: 'text-success'
+    class: 'text-success',
+    to: statusLink('up')
   },
   {
     key: 'down',
     labelKey: 'status.down',
     value: formatNumber(counts.value.down),
     icon: 'i-lucide-x',
-    class: 'text-error'
+    class: 'text-error',
+    to: statusLink('down')
   },
   {
     key: 'pending',
     labelKey: 'status.pending',
     value: formatNumber(counts.value.pending),
     icon: 'i-lucide-triangle-alert',
-    class: 'text-warning'
+    class: 'text-warning',
+    to: statusLink('pending')
   },
   {
     key: 'paused',
     labelKey: 'status.paused',
     value: formatNumber(counts.value.paused),
     icon: 'i-lucide-pause',
-    class: 'text-dimmed'
+    class: 'text-dimmed',
+    to: statusLink('paused')
   },
   {
     key: 'uptime',
-    labelKey: 'widget.overview.avgUptime',
-    value: formatUptime(averageUptime.value),
+    labelKey: 'widget.overview.uptime',
+    value: formatUptime(uptime.value),
     icon: 'i-lucide-activity',
-    class: 'text-primary'
+    class: 'text-primary',
+    to: undefined
   }
 ]))
 </script>
@@ -104,10 +120,13 @@ const tiles = computed(() => ([
       class="grid grid-cols-2 @[22rem]:grid-cols-3 @[46rem]:grid-cols-6"
       :class="compact ? 'gap-x-3 gap-y-1 @[46rem]:gap-2' : 'gap-3 @[22rem]:gap-4'"
     >
-      <div
+      <component
+        :is="tile.to ? 'NuxtLink' : 'div'"
         v-for="tile in tiles"
         :key="tile.key"
-        class="min-w-0 @[60rem]:flex @[60rem]:items-center @[60rem]:justify-center @[60rem]:gap-2.5"
+        :to="tile.to"
+        class="min-w-0 rounded-md @[60rem]:flex @[60rem]:items-center @[60rem]:justify-center @[60rem]:gap-2.5"
+        :class="tile.to ? 'transition-opacity hover:opacity-70' : ''"
       >
         <UIcon
           :name="tile.icon"
@@ -116,8 +135,12 @@ const tiles = computed(() => ([
         />
 
         <div class="min-w-0">
+          <!--
+            The labels stay at one size while the figures grow. Letting them grow
+            too clipped the longest of them in German at the six column step.
+          -->
           <p
-            class="text-muted truncate-target @[46rem]:text-base @[46rem]:leading-5"
+            class="text-muted truncate-target"
             :class="compact ? 'text-xs leading-4' : 'text-sm leading-tight'"
             :title="$t(tile.labelKey)"
           >
@@ -130,7 +153,7 @@ const tiles = computed(() => ([
             {{ tile.value }}
           </p>
         </div>
-      </div>
+      </component>
     </div>
   </UCard>
 </template>

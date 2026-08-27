@@ -1,6 +1,6 @@
 import { and, eq } from 'drizzle-orm'
 import { dashboardWidgets } from '../../../../database/schema'
-import { clampWidgetSize } from '../../../../../shared/utils/grid'
+import { clampWidgetSize } from '../../../../../shared/utils/widget'
 import { widgetInputSchema } from '../../../../../shared/utils/validation'
 import { nowInSeconds } from '../../../../services/scheduler'
 

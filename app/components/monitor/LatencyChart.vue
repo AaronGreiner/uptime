@@ -20,7 +20,15 @@ const { formatLatency, formatTime, formatDate, formatDateTime } = useFormatters(
 
 const chartId = useId()
 
-const hasData = computed(() => props.points.some(point => point.avgLatencyMs !== null))
+/**
+ * Two measured buckets are the least a line can be drawn from. A single one used
+ * to render as a two pixel stub in an otherwise empty plot, with both axis
+ * labels showing the same timestamp — which reads as a broken chart rather than
+ * as a monitor that has only just started reporting.
+ */
+const measured = computed(() => props.points.filter(point => point.avgLatencyMs !== null).length)
+
+const hasData = computed(() => measured.value >= 2)
 
 /**
  * Bare clock labels are ambiguous once a chart spans more than a day, so the
@@ -227,7 +235,7 @@ function onPointerMove(event: PointerEvent) {
         v-if="!hasData"
         class="absolute inset-0 grid place-items-center text-sm text-dimmed"
       >
-        {{ $t('monitor.detail.noData') }}
+        {{ $t(measured ? 'monitor.detail.collecting' : 'monitor.detail.noData') }}
       </div>
 
       <div
@@ -248,7 +256,7 @@ function onPointerMove(event: PointerEvent) {
     </div>
 
     <div
-      v-if="points.length"
+      v-if="points.length > 1"
       class="flex items-center justify-between text-xs text-dimmed tabular-nums"
     >
       <span>{{ axisLabel(points[0]!.bucketStart) }}</span>

@@ -23,7 +23,23 @@ const { pending, checkNow, toggleActive, remove } = useMonitorActions(reload)
 const { pending: groupPending, move: moveGroup, remove: removeGroup } = useMonitorGroupActions(reload)
 
 const search = ref('')
-const statusFilter = ref<MonitorStatus | 'all'>('all')
+
+const MONITOR_STATUSES: MonitorStatus[] = ['up', 'down', 'pending', 'paused']
+
+/**
+ * In the URL like the group filter, so a status count on a dashboard can link
+ * straight into the monitors it stands for.
+ */
+const statusFilter = computed<MonitorStatus | 'all'>({
+  get: () => {
+    const raw = route.query.status
+
+    return MONITOR_STATUSES.find(status => status === raw) ?? 'all'
+  },
+  set: (value) => {
+    router.replace({ query: { ...route.query, status: value === 'all' ? undefined : value } })
+  }
+})
 
 /** Survives navigation to a monitor and back, unlike a plain ref. */
 const grouped = useState('monitors-grouped', () => true)
@@ -42,7 +58,7 @@ const groupToDelete = ref<MonitorTreeNode | null>(null)
 
 const statusItems = computed(() => ([
   { label: t('common.all'), value: 'all' as const },
-  ...(['up', 'down', 'pending', 'paused'] as const).map(status => ({ label: t(`status.${status}`), value: status }))
+  ...MONITOR_STATUSES.map(status => ({ label: t(`status.${status}`), value: status }))
 ]))
 
 /** `all`, `none` for the monitors outside any group, or a group id. */

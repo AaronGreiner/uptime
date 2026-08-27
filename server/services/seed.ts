@@ -1,7 +1,8 @@
 import { randomBytes } from 'node:crypto'
 import { eq, inArray } from 'drizzle-orm'
 import type { WidgetConfig, WidgetHeight, WidgetType, WidgetWidth } from '../../shared/types/dashboard'
-import { dashboards, dashboardWidgets, heartbeats, monitorGroups, monitors, monitorState, notificationChannels, notificationGroups, settings, users } from '../database/schema'
+import { dashboards, dashboardWidgets, heartbeats, monitorGroups, monitors, monitorState, monitorStatsHourly, notificationChannels, notificationGroups, settings, users } from '../database/schema'
+import { widgetConfigForType } from '../../shared/utils/widget'
 import { aggregateHourlyStats } from './maintenance'
 import { nowInSeconds } from './scheduler'
 
@@ -221,21 +222,25 @@ function createDemoData(): DemoDataSummary {
   }
 
   generateDemoHistory(created, seed.demoHistoryDays)
-  const dashboardCount = buildDemoDashboards(created, now)
+  const dashboardCount = buildDemoDashboards(created, groupIds, now)
 
   aggregateHourlyStats()
+  // Runs after the aggregation on purpose: it only writes buckets older than the
+  // oldest heartbeat, which is exactly where the aggregation stops looking.
+  generateDemoRollups(created, seed.demoStatsDays, seed.demoHistoryDays)
   setSetting(SETTING_KEYS.demoSeeded, true)
 
   console.info(
     `[seed] Created ${groupIds.size} demo groups, ${created.length} demo monitors and `
-    + `${dashboardCount} demo dashboards with ${seed.demoHistoryDays} days of generated history.`
+    + `${dashboardCount} demo dashboards with ${seed.demoHistoryDays} days of generated history `
+    + `and ${seed.demoStatsDays} days of hourly aggregates.`
   )
 
   return {
     dashboards: dashboardCount,
     groups: groupIds.size,
     monitors: created.length,
-    historyDays: seed.demoHistoryDays
+    historyDays: seed.demoStatsDays
   }
 }
 
@@ -345,8 +350,88 @@ function generateDemoHistory(created: CreatedMonitor[], days: number): void {
   })
 }
 
-/** Builds three dashboard compositions that demonstrate different grid layouts. */
-function buildDemoDashboards(created: CreatedMonitor[], now: number): number {
+/**
+ * Writes hourly aggregates for the span the raw heartbeats do not cover.
+ *
+ * The calendar, the SLA table and the incident history all reach back further
+ * than the heartbeat retention, so a demo database whose history starts a week
+ * ago would show them empty — which is the opposite of what a demo is for.
+ *
+ * Outages are modelled as rare, dated incidents rather than as a coin flip per
+ * check: a real service is up all day and then down for half an hour, and that
+ * is what makes a calendar of days worth looking at. Rolling the per check
+ * failure rate out over months instead would spread the same downtime evenly and
+ * turn every square the same shade.
+ */
+function generateDemoRollups(created: CreatedMonitor[], days: number, skipRecentDays: number): void {
+  const database = useDatabase()
+  const now = nowInSeconds()
+  const currentHour = Math.floor(now / 3600) * 3600
+  const until = currentHour - Math.round(skipRecentDays * 24) * 3600
+  const from = currentHour - Math.round(days * 24) * 3600
+
+  if (from >= until) {
+    return
+  }
+
+  database.transaction((transaction) => {
+    for (const { id, demo } of created) {
+      const checksPerHour = Math.max(1, Math.round(3600 / demo.intervalSeconds))
+      const downMinutes = plannedOutageMinutes(demo, from, until)
+
+      for (let bucketStart = from; bucketStart < until; bucketStart += 3600) {
+        const minutesDown = Math.min(60, downMinutes.get(bucketStart) ?? 0)
+        const downCount = Math.round(checksPerHour * (minutesDown / 60))
+        const upCount = Math.max(0, checksPerHour - downCount)
+        // A daily sine wave plus noise, the same shape the raw history uses.
+        const timeOfDay = (bucketStart % 86_400) / 86_400
+        const wave = Math.sin(timeOfDay * Math.PI * 2) * demo.baseLatency * 0.2
+        const average = Math.max(1, Math.round(demo.baseLatency + wave + (Math.random() - 0.5) * demo.baseLatency * 0.2))
+
+        transaction.insert(monitorStatsHourly).values({
+          monitorId: id,
+          bucketStart,
+          upCount,
+          downCount,
+          avgLatencyMs: upCount > 0 ? average : null,
+          minLatencyMs: upCount > 0 ? Math.round(average * 0.8) : null,
+          maxLatencyMs: upCount > 0 ? Math.round(average * 1.6) : null
+        }).onConflictDoNothing().run()
+      }
+    }
+  })
+}
+
+/**
+ * Minutes of downtime per hour bucket, from a handful of incidents scattered
+ * over the span. The per check failure rate is read as how troubled the monitor
+ * is, not as a probability, because one is per check and the other per day.
+ */
+function plannedOutageMinutes(demo: DemoMonitor, from: number, until: number): Map<number, number> {
+  const minutes = new Map<number, number>()
+  const chancePerDay = Math.min(0.5, demo.failureRate * 8)
+
+  for (let dayStart = from; dayStart < until; dayStart += 86_400) {
+    if (Math.random() >= chancePerDay) {
+      continue
+    }
+
+    // Short outages are the common case; the tail is what fills a whole hour.
+    const duration = Math.round(8 + Math.random() ** 3 * 160)
+    const start = dayStart + Math.floor(Math.random() * 86_400)
+
+    for (let at = start; at < start + duration * 60; at += 60) {
+      const bucket = Math.floor(at / 3600) * 3600
+
+      minutes.set(bucket, (minutes.get(bucket) ?? 0) + 1)
+    }
+  }
+
+  return minutes
+}
+
+/** Builds four dashboard compositions that demonstrate the widget catalogue. */
+function buildDemoDashboards(created: CreatedMonitor[], groupIds: Map<string, number>, now: number): number {
   const database = useDatabase()
   const overview = database.select().from(dashboards).where(eq(dashboards.slug, OVERVIEW_SLUG)).get()
 
@@ -369,6 +454,15 @@ function buildDemoDashboards(created: CreatedMonitor[], now: number): number {
     description: 'DNS and edge services at a glance.',
     isDefault: false,
     position: 2,
+    createdAt: now,
+    updatedAt: now
+  }).returning().get()
+  const reliability = database.insert(dashboards).values({
+    slug: 'reliability',
+    name: 'Reliability',
+    description: 'Outages, uptime targets and the error budget behind them.',
+    isDefault: false,
+    position: 3,
     createdAt: now,
     updatedAt: now
   }).returning().get()
@@ -398,7 +492,9 @@ function buildDemoDashboards(created: CreatedMonitor[], now: number): number {
       dashboardId,
       type,
       monitorId: linkedMonitorId,
-      config,
+      // Through the registry like every other write, so the seed cannot produce
+      // a widget the settings dialog would not.
+      config: widgetConfigForType(type, config),
       position,
       width,
       height,
@@ -410,59 +506,80 @@ function buildDemoDashboards(created: CreatedMonitor[], now: number): number {
   }
 
   const mainSite = monitorId('Nuxt')
+  const productionGroup = groupIds.get('production') ?? null
+  const infrastructureGroup = groupIds.get('infrastructure') ?? null
   const infrastructureMonitorNames = ['Cloudflare DNS', 'Google DNS', 'Quad9 DNS', 'Cloudflare Edge']
-  const productionMonitorNames = [
-    'Nuxt',
-    'Vue',
-    'Vite',
-    'GitHub API',
-    'npm Registry',
-    'Nuxt UI',
-    'MDN Web Docs'
-  ]
 
   place(overview.id, 'status-overview', 'full', 'compact', null, {})
+  place(overview.id, 'incident-feed', 'half', 'standard', null, { limit: 5 })
+  place(overview.id, 'certificate-expiry', 'half', 'standard', null, { limit: 5 })
   place(overview.id, 'heading', 'full', 'slim', null, { title: 'Production', level: 2 })
   place(overview.id, 'latency-chart', 'twoThirds', 'tall', mainSite, { range: '24h' })
-  place(overview.id, 'monitor', 'third', 'standard', mainSite, { heartbeatCount: 40 })
+  place(overview.id, 'monitor', 'third', 'standard', mainSite, {})
   place(overview.id, 'uptime-summary', 'third', 'compact', mainSite, { range: '7d' })
   place(overview.id, 'heading', 'full', 'slim', null, { title: 'Infrastructure', level: 2 })
-
-  for (const name of infrastructureMonitorNames) {
-    place(overview.id, 'monitor', 'quarter', 'compact', monitorId(name), { heartbeatCount: 40 })
-  }
-
+  place(overview.id, 'monitor-list', 'half', 'standard', null, {
+    groupId: infrastructureGroup,
+    sort: 'status',
+    limit: 6
+  })
+  place(overview.id, 'uptime-calendar', 'half', 'standard', monitorId('Cloudflare DNS'), {})
   place(overview.id, 'heading', 'full', 'slim', null, { title: 'Vendors', level: 2 })
-  place(overview.id, 'monitor', 'half', 'standard', monitorId('Example Service'), { heartbeatCount: 40 })
-  place(overview.id, 'monitor', 'half', 'standard', monitorId('Billing (legacy)'), { heartbeatCount: 40 })
+  place(overview.id, 'monitor', 'half', 'standard', monitorId('Example Service'), {})
+  place(overview.id, 'monitor', 'half', 'standard', monitorId('Billing (legacy)'), {})
 
-  place(production.id, 'status-overview', 'full', 'compact', null, {
-    monitorIds: productionMonitorNames.map(monitorId)
+  place(production.id, 'status-overview', 'full', 'compact', null, { groupId: productionGroup })
+  place(production.id, 'sla-table', 'full', 'standard', null, {
+    groupId: productionGroup,
+    range: '30d',
+    target: 0.999,
+    limit: 7
   })
   place(production.id, 'heading', 'full', 'slim', null, { title: 'Web', level: 2 })
   place(production.id, 'latency-chart', 'twoThirds', 'tall', mainSite, { range: '24h' })
-  place(production.id, 'monitor', 'third', 'standard', mainSite, { heartbeatCount: 40 })
+  place(production.id, 'monitor', 'third', 'standard', mainSite, {})
   place(production.id, 'uptime-summary', 'third', 'compact', mainSite, { range: '30d' })
-  place(production.id, 'monitor', 'half', 'standard', monitorId('Vue'), { heartbeatCount: 40 })
-  place(production.id, 'monitor', 'half', 'standard', monitorId('Vite'), { heartbeatCount: 40 })
+  place(production.id, 'uptime-calendar', 'half', 'standard', mainSite, {})
+  place(production.id, 'monitor-list', 'half', 'standard', null, {
+    groupId: productionGroup,
+    sort: 'latency',
+    limit: 6
+  })
   place(production.id, 'heading', 'full', 'slim', null, { title: 'APIs & Documentation', level: 2 })
 
   for (const name of ['GitHub API', 'npm Registry', 'Nuxt UI', 'MDN Web Docs']) {
-    place(production.id, 'monitor', 'quarter', 'compact', monitorId(name), { heartbeatCount: 40 })
+    place(production.id, 'monitor', 'quarter', 'compact', monitorId(name), {})
   }
 
-  place(infrastructure.id, 'status-overview', 'full', 'compact', null, {
-    monitorIds: infrastructureMonitorNames.map(monitorId)
-  })
+  place(infrastructure.id, 'status-overview', 'full', 'compact', null, { groupId: infrastructureGroup })
   place(infrastructure.id, 'heading', 'full', 'slim', null, { title: 'Network', level: 2 })
   place(infrastructure.id, 'latency-chart', 'half', 'standard', monitorId('Cloudflare DNS'), { range: '24h' })
   place(infrastructure.id, 'latency-chart', 'half', 'standard', monitorId('Cloudflare Edge'), { range: '24h' })
+  place(infrastructure.id, 'monitor-list', 'half', 'standard', null, {
+    groupId: infrastructureGroup,
+    sort: 'name',
+    limit: 6
+  })
+  place(infrastructure.id, 'certificate-expiry', 'half', 'standard', null, {
+    groupId: infrastructureGroup,
+    limit: 5
+  })
 
   for (const name of infrastructureMonitorNames) {
-    place(infrastructure.id, 'monitor', 'quarter', 'compact', monitorId(name), { heartbeatCount: 40 })
+    place(infrastructure.id, 'monitor', 'quarter', 'compact', monitorId(name), {})
   }
 
-  return 3
+  place(reliability.id, 'reliability-kpis', 'full', 'compact', null, { range: '30d' })
+  place(reliability.id, 'heading', 'full', 'slim', null, { title: 'Incidents', level: 2 })
+  place(reliability.id, 'incident-history', 'twoThirds', 'tall', null, { range: '30d', limit: 12 })
+  place(reliability.id, 'incident-feed', 'third', 'tall', null, { limit: 8 })
+  place(reliability.id, 'heading', 'full', 'slim', null, { title: 'Uptime targets', level: 2 })
+  place(reliability.id, 'sla-table', 'full', 'tall', null, { range: '30d', target: 0.999, limit: 14 })
+  place(reliability.id, 'heading', 'full', 'slim', null, { title: 'The two that keep failing', level: 2 })
+  place(reliability.id, 'uptime-calendar', 'half', 'standard', monitorId('Example Service'), {})
+  place(reliability.id, 'uptime-calendar', 'half', 'standard', monitorId('Billing (legacy)'), {})
+
+  return 4
 }
 
 /**

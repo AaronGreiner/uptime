@@ -152,7 +152,8 @@
       "message": "Result",
       "statusCode": "Code",
       "target": "Target",
-      "interval": "every {seconds}"
+      "interval": "every {seconds}",
+      "collecting": "Collecting data…"
     },
     "allMonitors": "All monitors"
   },
@@ -253,14 +254,28 @@
       "monitor": "Monitor card",
       "uptime-summary": "Uptime figure",
       "latency-chart": "Response time chart",
+      "uptime-calendar": "Uptime calendar",
       "status-overview": "Status overview",
+      "monitor-list": "Monitor list",
+      "incident-feed": "Current incidents",
+      "certificate-expiry": "Certificate expiry",
+      "sla-table": "SLA table",
+      "incident-history": "Incident history",
+      "reliability-kpis": "Reliability",
       "heading": "Heading"
     },
     "typeDescription": {
       "monitor": "Status, response time and the recent pulse of one monitor.",
       "uptime-summary": "A single large uptime percentage for one monitor.",
       "latency-chart": "Response time over a selectable time range.",
+      "uptime-calendar": "One square per day, coloured by that day’s uptime.",
       "status-overview": "Counts of all monitors by status.",
+      "monitor-list": "Status, uptime and response time of many monitors in one tile.",
+      "incident-feed": "Everything that is failing right now, longest running first.",
+      "certificate-expiry": "TLS certificates ordered by how soon they expire.",
+      "sla-table": "Uptime against a target, with the error budget left.",
+      "incident-history": "Outages reconstructed from the check history.",
+      "reliability-kpis": "Outage count, downtime, MTTR and MTBF over a range.",
       "heading": "A text label to group widgets."
     },
     "fields": {
@@ -268,8 +283,14 @@
       "title": "Title",
       "monitor": "Monitor",
       "range": "Time range",
-      "heartbeatCount": "Number of checks shown",
-      "level": "Size"
+      "level": "Size",
+      "monitors": "Monitors",
+      "group": "Group",
+      "limit": "Rows shown",
+      "target": "Uptime target",
+      "sort": "Order",
+      "width": "Width",
+      "height": "Height"
     },
     "level": {
       "1": "Large",
@@ -278,7 +299,49 @@
     },
     "overview": {
       "total": "Monitors",
-      "avgUptime": "Avg. uptime, 24 h"
+      "uptime": "Uptime, 24 h"
+    },
+    "sort": {
+      "status": "Worst first",
+      "name": "Name",
+      "uptime": "Lowest uptime",
+      "latency": "Slowest"
+    },
+    "scope": {
+      "noGroup": "No group",
+      "groupHint": "A group covers everything below it and follows the tree.",
+      "monitorsHint": "Leave empty for every monitor."
+    },
+    "preview": {
+      "title": "Preview",
+      "hint": "The widget with its real data, at the selected size.",
+      "selectMonitor": "Pick a monitor to see the preview."
+    },
+    "list": {
+      "noMonitors": "No monitors in this selection."
+    },
+    "incidents": {
+      "allClear": "Everything is up.",
+      "noneInRange": "No outages in this range.",
+      "ongoing": "ongoing"
+    },
+    "certificates": {
+      "none": "No certificate readings yet.",
+      "days": "{days} d"
+    },
+    "calendar": {
+      "days": "{days} days"
+    },
+    "sla": {
+      "budgetLeft": "{duration} left",
+      "budgetOver": "{duration} over"
+    },
+    "reliability": {
+      "incidents": "Outages",
+      "downtime": "Downtime",
+      "mttr": "MTTR",
+      "mtbf": "MTBF",
+      "longest": "Longest"
     }
   },
   "notification": {

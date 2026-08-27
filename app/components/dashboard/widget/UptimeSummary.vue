@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import type { DashboardWidget } from '#shared/types/dashboard'
-import type { MonitorUptime, MonitorWithState } from '#shared/types/monitor'
+import type { MonitorWithState } from '#shared/types/monitor'
 import type { StatsRange } from '#shared/types/stats'
+import { WIDGET_CONFIG_DEFAULTS } from '#shared/utils/widget'
 
 const props = defineProps<{
   widget: DashboardWidget
@@ -11,33 +12,17 @@ const props = defineProps<{
 const { formatUptime } = useFormatters()
 
 const monitor = computed(() => props.monitors.find(entry => entry.id === props.widget.monitorId) ?? null)
-const range = computed<StatsRange>(() => props.widget.config.range ?? '24h')
+const range = computed<StatsRange>(() => props.widget.config.range ?? WIDGET_CONFIG_DEFAULTS.range)
 
 /**
- * The 24 h figure travels with the monitor list and is already live. Every other
- * range is aggregated server side and needs its own request.
+ * The 24 h figure travels with the monitor list and is already live, so only the
+ * other ranges are worth a request of their own.
  */
-const { data: stats, refresh } = useAsyncData(
-  () => `uptime-${props.widget.id}-${range.value}`,
-  async (): Promise<MonitorUptime | null> => {
-    if (!props.widget.monitorId || range.value === '24h') {
-      return null
-    }
+const needsRequest = computed(() => range.value !== '24h')
 
-    const response = await $fetch<{ uptime: MonitorUptime }>(`/api/monitors/${props.widget.monitorId}/stats`, {
-      query: { range: range.value }
-    })
+const { data } = useMonitorStats(() => needsRequest.value ? props.widget.monitorId : null, range)
 
-    return response.uptime
-  },
-  { watch: [range, () => props.widget.monitorId] }
-)
-
-onMonitorChecked(() => {
-  void refresh()
-}, () => props.widget.monitorId)
-
-const uptime = computed(() => stats.value ?? monitor.value?.uptime24h ?? null)
+const uptime = computed(() => (needsRequest.value ? data.value?.uptime : null) ?? monitor.value?.uptime24h ?? null)
 
 /*
  * The figure grows with the widget's width, so the shortest cell trades padding

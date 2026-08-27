@@ -1,6 +1,7 @@
 import z from 'zod'
 import { WIDGET_HEIGHTS, WIDGET_WIDTHS } from './grid'
-import { MONITOR_HEARTBEAT_COUNT_BOUNDS, MONITOR_INTERVAL_BOUNDS, MONITOR_PACKET_BOUNDS, MONITOR_RETRY_BOUNDS, MONITOR_TIMEOUT_BOUNDS } from './monitor'
+import { WIDGET_LIMIT_BOUNDS, WIDGET_SORTS, WIDGET_TYPES, widgetConfigForType, widgetNeedsMonitor } from './widget'
+import { MONITOR_INTERVAL_BOUNDS, MONITOR_PACKET_BOUNDS, MONITOR_RETRY_BOUNDS, MONITOR_TIMEOUT_BOUNDS } from './monitor'
 import {
   NOTIFICATION_DEFAULT_TIME_ZONE,
   NOTIFICATION_LOCALES,
@@ -198,24 +199,28 @@ export type DashboardInput = z.output<typeof dashboardInputSchema>
 export const widgetConfigSchema = z.object({
   title: z.string().trim().max(120, { error: message('validation.tooLong', { max: 120 }) }).optional(),
   range: z.enum(['1h', '24h', '7d', '30d', '1y']).optional(),
-  heartbeatCount: boundedNumber(MONITOR_HEARTBEAT_COUNT_BOUNDS.min, MONITOR_HEARTBEAT_COUNT_BOUNDS.max).optional(),
   level: z.union([z.literal(1), z.literal(2), z.literal(3)]).optional(),
-  monitorIds: z.array(z.number().int().positive()).max(100).optional()
+  monitorIds: z.array(z.number().int().positive()).max(100).optional(),
+  groupId: z.number().int().positive().nullish().transform(value => value ?? null).optional(),
+  limit: boundedNumber(WIDGET_LIMIT_BOUNDS.min, WIDGET_LIMIT_BOUNDS.max).optional(),
+  target: z.number().min(0.5).max(1).optional(),
+  sort: z.enum(WIDGET_SORTS).optional()
 })
 
 export const widgetInputSchema = z.object({
-  type: z.enum(['monitor', 'uptime-summary', 'latency-chart', 'status-overview', 'heading']),
+  type: z.enum(WIDGET_TYPES),
   monitorId: z.number().int().positive().nullish().transform(value => value ?? null),
   config: widgetConfigSchema.default({}),
   width: z.enum(WIDGET_WIDTHS).optional(),
   height: z.enum(WIDGET_HEIGHTS).optional()
 }).superRefine((value, context) => {
-  const requiresMonitor = value.type === 'monitor' || value.type === 'latency-chart' || value.type === 'uptime-summary'
-
-  if (requiresMonitor && !value.monitorId) {
+  if (widgetNeedsMonitor(value.type) && !value.monitorId) {
     context.addIssue({ code: 'custom', path: ['monitorId'], message: translate('validation.monitorRequired') })
   }
 })
+  // The registry decides which settings a type keeps, so neither the form nor an
+  // API client can store a config the widget never reads back.
+  .transform(value => ({ ...value, config: widgetConfigForType(value.type, value.config) }))
 
 export type WidgetInput = z.output<typeof widgetInputSchema>
 

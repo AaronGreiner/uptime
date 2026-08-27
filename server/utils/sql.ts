@@ -16,3 +16,15 @@ export function integerLiteral(value: number): SQL {
 
   return sql.raw(String(value))
 }
+
+/**
+ * The same for a value that may be negative or zero, such as a UTC offset.
+ * Wrapped in parentheses so it can be added to a column without ambiguity.
+ */
+export function signedIntegerLiteral(value: number): SQL {
+  if (!Number.isSafeInteger(value)) {
+    throw new Error(`Expected an integer, received ${value}`)
+  }
+
+  return sql.raw(`(${value})`)
+}

@@ -92,6 +92,14 @@ export interface MonitorWithState extends Monitor {
   recentHeartbeats: Heartbeat[]
 }
 
+/** One day of an uptime calendar, aligned to the viewer's midnight. */
+export interface MonitorDailyPoint {
+  dayStart: number
+  upCount: number
+  downCount: number
+  avgLatencyMs: number | null
+}
+
 /** A single point of the latency/uptime chart, aligned to a bucket start. */
 export interface MonitorStatsPoint {
   bucketStart: number
