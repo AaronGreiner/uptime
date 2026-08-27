@@ -7,7 +7,7 @@
 </picture>
 
 [![Live demo](https://img.shields.io/badge/live_demo-online-00bc7d)](https://uptime.aarongreiner.dev)
-[![Latest release](https://img.shields.io/github/v/release/AaronGreiner/uptime?display_name=tag)](https://github.com/AaronGreiner/uptime/releases/latest)
+[![Latest version](https://img.shields.io/github/v/tag/AaronGreiner/uptime?sort=semver&label=version)](https://github.com/AaronGreiner/uptime/tags)
 [![Container image](https://img.shields.io/badge/container-ghcr.io-2496ED?logo=docker&logoColor=white)](https://github.com/AaronGreiner/uptime/pkgs/container/uptime)
 [![License](https://img.shields.io/github/license/AaronGreiner/uptime)](./LICENSE)
 
