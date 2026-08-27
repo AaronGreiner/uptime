@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { NuxtLink } from '#components'
+
 withDefaults(defineProps<{
   title: string
   /** Makes the title a link, for a widget that stands for one monitor. */
@@ -36,7 +38,7 @@ withDefaults(defineProps<{
   >
     <div class="flex items-baseline justify-between gap-3">
       <component
-        :is="to ? 'NuxtLink' : 'p'"
+        :is="to ? NuxtLink : 'p'"
         :to="to"
         class="text-sm @[24rem]:text-base font-medium text-highlighted truncate-target"
         :class="to ? 'hover:text-primary transition-colors' : ''"

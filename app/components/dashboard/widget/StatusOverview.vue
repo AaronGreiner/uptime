@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { NuxtLink } from '#components'
 import type { DashboardWidget } from '#shared/types/dashboard'
 import type { MonitorStatus, MonitorWithState } from '#shared/types/monitor'
 
@@ -121,7 +122,7 @@ const tiles = computed(() => ([
       :class="compact ? 'gap-x-3 gap-y-1 @[46rem]:gap-2' : 'gap-3 @[22rem]:gap-4'"
     >
       <component
-        :is="tile.to ? 'NuxtLink' : 'div'"
+        :is="tile.to ? NuxtLink : 'div'"
         v-for="tile in tiles"
         :key="tile.key"
         :to="tile.to"
