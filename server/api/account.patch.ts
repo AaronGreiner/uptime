@@ -5,6 +5,11 @@ import { accountUpdateSchema } from '../../shared/utils/validation'
 /** Lets the admin rotate username and password without touching the environment. */
 export default defineEventHandler(async (event) => {
   const admin = await requireAdmin(event)
+
+  if (!useRuntimeConfig(event).public.accountUpdatesEnabled) {
+    throw createError({ statusCode: 403, statusMessage: 'Account updates are disabled' })
+  }
+
   const body = await readValidatedBody(event, accountUpdateSchema.parse)
   const database = useDatabase()
   const user = database.select().from(users).where(eq(users.id, admin.id)).get()

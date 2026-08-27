@@ -143,6 +143,9 @@ This instance defaults `NUXT_PUBLIC_APP_URL` to
 variable to override that public origin when the deployment moves; it is public
 configuration, not a secret. A trailing slash is removed before the value is
 written. Notifications use it to link back to the monitor they are about.
+The workflow also fixes `NUXT_PUBLIC_ACCOUNT_UPDATES_ENABLED=false`, because it
+deploys the shared demo linked from the README and its visitors must not be able
+to replace the published login credentials.
 
 ## Notifications
 

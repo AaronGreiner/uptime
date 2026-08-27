@@ -127,6 +127,8 @@ export default defineNuxtConfig({
     },
     public: {
       appName: 'Uptime',
+      /** Lets the admin rotate the account credentials from Settings. */
+      accountUpdatesEnabled: true,
       /**
        * Public base URL of this instance, without a trailing slash. Notifications
        * link back to the monitor they are about; when this is empty they leave

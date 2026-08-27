@@ -108,6 +108,8 @@ jobs:
             echo "NUXT_ADMIN_PASSWORD=${NUXT_ADMIN_PASSWORD:-}"
             echo "NUXT_PUBLIC_APP_NAME=${APP_NAME:-Uptime}"
             echo "NUXT_PUBLIC_APP_URL=${APP_URL}"
+            # This workflow deploys the shared demo linked from the README.
+            echo "NUXT_PUBLIC_ACCOUNT_UPDATES_ENABLED=false"
             echo "NUXT_RETENTION_HEARTBEAT_DAYS=${HEARTBEAT_DAYS:-7}"
             echo "NUXT_RETENTION_HOURLY_STATS_DAYS=${HOURLY_STATS_DAYS:-365}"
             echo "NUXT_RETENTION_NOTIFICATION_DAYS=${NOTIFICATION_DAYS:-30}"

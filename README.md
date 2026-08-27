@@ -107,6 +107,7 @@ Everything is configured through environment variables. See
 | `NUXT_SESSION_COOKIE_SECURE` | `true` | Marks the session cookie `Secure`. Must be `false` on a plain HTTP origin. |
 | `NUXT_ADMIN_USERNAME` | `admin` | Username of the single admin account, seeded once. |
 | `NUXT_ADMIN_PASSWORD` | *(empty)* | Admin password. Empty means a random one is generated and logged once. |
+| `NUXT_PUBLIC_ACCOUNT_UPDATES_ENABLED` | `true` | Allow changing the admin username and password in Settings. Disable this on a shared demo. |
 | `NUXT_DATABASE_PATH` | `./data/uptime.db` | SQLite file location. |
 | `NUXT_MIGRATIONS_DIR` | `./drizzle` | Folder holding the generated migrations. |
 | `NUXT_SCHEDULER_ENABLED` | `true` | Set to `false` to run the UI without executing checks. |
@@ -121,7 +122,8 @@ Everything is configured through environment variables. See
 | `NUXT_PUBLIC_APP_NAME` | `Uptime` | Name shown in the header and page titles. |
 | `NUXT_PUBLIC_APP_URL` | *(empty)* | Public origin of this instance. Notification links need it; in Docker it also decides the cookie flag above. |
 
-Credentials can also be changed later in the UI under **Settings**.
+Credentials can also be changed later in the UI under **Settings** unless
+`NUXT_PUBLIC_ACCOUNT_UPDATES_ENABLED` is set to `false`.
 
 ### Demo data
 

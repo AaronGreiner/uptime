@@ -10,6 +10,7 @@ const toast = useToast()
 const colorMode = useColorMode()
 const { admin, refreshSession } = useAdmin()
 const { morphMotion } = useMorphMotion()
+const { accountUpdatesEnabled } = useRuntimeConfig().public
 
 useSeoMeta({ title: () => t('settings.title') })
 
@@ -137,6 +138,7 @@ async function onSubmit(event: FormSubmitEvent<z.output<typeof accountUpdateSche
     <template #body>
       <div class="w-full max-w-2xl flex flex-col gap-4 sm:gap-6">
         <UCard
+          v-if="accountUpdatesEnabled"
           :title="$t('settings.account')"
           :description="$t('settings.accountDescription')"
         >
