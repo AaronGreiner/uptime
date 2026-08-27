@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { MonitorWithState } from '#shared/types/monitor'
+import { MONITOR_HEARTBEAT_HISTORY } from '#shared/utils/monitor'
 
 const props = withDefaults(defineProps<{
   monitor: MonitorWithState
@@ -9,7 +10,7 @@ const props = withDefaults(defineProps<{
   /** Breadcrumb of the owning group, shown where the card stands on its own. */
   groupPath?: string
 }>(), {
-  heartbeatCount: 40,
+  heartbeatCount: MONITOR_HEARTBEAT_HISTORY,
   dense: false,
   groupPath: undefined
 })

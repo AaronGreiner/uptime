@@ -1,6 +1,6 @@
 import z from 'zod'
 import { WIDGET_HEIGHTS, WIDGET_WIDTHS } from './grid'
-import { MONITOR_INTERVAL_BOUNDS, MONITOR_PACKET_BOUNDS, MONITOR_RETRY_BOUNDS, MONITOR_TIMEOUT_BOUNDS } from './monitor'
+import { MONITOR_HEARTBEAT_COUNT_BOUNDS, MONITOR_INTERVAL_BOUNDS, MONITOR_PACKET_BOUNDS, MONITOR_RETRY_BOUNDS, MONITOR_TIMEOUT_BOUNDS } from './monitor'
 import {
   NOTIFICATION_DEFAULT_TIME_ZONE,
   NOTIFICATION_LOCALES,
@@ -198,7 +198,7 @@ export type DashboardInput = z.output<typeof dashboardInputSchema>
 export const widgetConfigSchema = z.object({
   title: z.string().trim().max(120, { error: message('validation.tooLong', { max: 120 }) }).optional(),
   range: z.enum(['1h', '24h', '7d', '30d', '1y']).optional(),
-  heartbeatCount: boundedNumber(10, 100).optional(),
+  heartbeatCount: boundedNumber(MONITOR_HEARTBEAT_COUNT_BOUNDS.min, MONITOR_HEARTBEAT_COUNT_BOUNDS.max).optional(),
   level: z.union([z.literal(1), z.literal(2), z.literal(3)]).optional(),
   monitorIds: z.array(z.number().int().positive()).max(100).optional()
 })

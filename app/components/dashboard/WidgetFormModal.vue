@@ -3,6 +3,7 @@ import type { FormSubmitEvent } from '@nuxt/ui'
 import type { DashboardWidget, WidgetType } from '#shared/types/dashboard'
 import type { MonitorWithState } from '#shared/types/monitor'
 import type { StatsRange } from '#shared/types/stats'
+import { MONITOR_HEARTBEAT_COUNT_BOUNDS, clampHeartbeatCount } from '#shared/utils/monitor'
 import { STATS_RANGES } from '#shared/utils/stats'
 import { widgetInputSchema } from '#shared/utils/validation'
 import type { WidgetInput } from '#shared/utils/validation'
@@ -30,7 +31,7 @@ function createState(widget?: DashboardWidget | null): WidgetInput {
     config: {
       title: widget?.config.title ?? '',
       range: widget?.config.range ?? '24h',
-      heartbeatCount: widget?.config.heartbeatCount ?? 40,
+      heartbeatCount: clampHeartbeatCount(widget?.config.heartbeatCount),
       level: widget?.config.level ?? 2
     }
   }
@@ -179,9 +180,9 @@ async function onSubmit(event: FormSubmitEvent<WidgetInput>) {
           <UInputNumber
             v-model="state.config.heartbeatCount"
             class="w-full"
-            :min="10"
-            :max="100"
-            :step="10"
+            :min="MONITOR_HEARTBEAT_COUNT_BOUNDS.min"
+            :max="MONITOR_HEARTBEAT_COUNT_BOUNDS.max"
+            :step="5"
           />
         </UFormField>
 

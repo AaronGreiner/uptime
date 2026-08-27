@@ -22,6 +22,27 @@ export const MONITOR_STATUS_ICONS: Record<MonitorStatus, string> = {
 /** Heartbeats travelling with a monitor, and drawn in its pulse bar. */
 export const MONITOR_HEARTBEAT_HISTORY = 40
 
+/**
+ * A pulse bar can only draw the heartbeats that travel with the monitor, so
+ * the widget setting stops where that payload does. Asking for more used to
+ * pad the bar with empty slots that could never fill.
+ */
+export const MONITOR_HEARTBEAT_COUNT_BOUNDS = { min: 10, max: MONITOR_HEARTBEAT_HISTORY }
+
+/**
+ * Keeps a stored count inside the bounds, so a widget saved while the setting
+ * still allowed a wider bar draws a full one instead of half a row of blanks.
+ */
+export function clampHeartbeatCount(count?: number | null): number {
+  const { min, max } = MONITOR_HEARTBEAT_COUNT_BOUNDS
+
+  if (!count || !Number.isFinite(count)) {
+    return max
+  }
+
+  return Math.min(Math.max(Math.round(count), min), max)
+}
+
 /** Heartbeats listed as recent checks on the monitor detail page. */
 export const MONITOR_RECENT_CHECK_LIMIT = 50
 
