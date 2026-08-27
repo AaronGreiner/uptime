@@ -45,15 +45,19 @@ printed to the console **once** — copy it, or set your own beforehand.
 ## Docker
 
 Published for `linux/amd64` and `linux/arm64`, so a Raspberry Pi works as well as
-a VPS. Nothing has to be configured up front:
+a VPS. The host only needs Docker Engine with the Compose plugin. Nothing has to
+be configured up front:
 
 ```bash
 docker run -d --name uptime --restart unless-stopped -p 3000:3000 -v uptime-data:/data ghcr.io/aarongreiner/uptime:latest
 ```
 
-Or with the [compose file](./docker-compose.yml) from this repository:
+For a server installation, use the [compose file](./docker-compose.yml). This
+keeps the installation in its own directory and makes upgrades predictable:
 
 ```bash
+mkdir uptime && cd uptime
+curl -O https://raw.githubusercontent.com/AaronGreiner/uptime/main/docker-compose.yml
 docker compose up -d
 ```
 
@@ -61,13 +65,21 @@ Open http://localhost:3000. The admin password is generated on the first start
 and printed to the log exactly once:
 
 ```bash
-docker logs uptime
+docker compose logs uptime
 ```
 
 Set `NUXT_ADMIN_USERNAME` and `NUXT_ADMIN_PASSWORD` beforehand to choose your
 own, or change both later in the UI under **Settings**. Every variable from
 [.env.example](./.env.example) works here; with compose, put them in a `.env`
-next to the compose file.
+next to the compose file. At minimum, a public instance should set its origin:
+
+```dotenv
+NUXT_PUBLIC_APP_URL=https://uptime.example.com
+```
+
+The compose file follows `latest`. For more controlled upgrades, change the
+image tag to `0.1` for patch releases only, or to an exact release such as
+`0.1.0`.
 
 ### Behind a reverse proxy
 
@@ -84,6 +96,20 @@ point at, and it also decides whether the session cookie is marked `Secure`:
 events carry the live updates, and the endpoint sends `X-Accel-Buffering: no`,
 so nginx and Caddy stream it without extra configuration.
 
+Do not expose port 3000 publicly when a reverse proxy runs on the same host.
+Change the compose port mapping to `127.0.0.1:3000:3000`, allow ports 80 and 443
+through the host firewall, and proxy the public hostname to that local port. A
+minimal Caddy configuration is:
+
+```caddyfile
+uptime.example.com {
+  reverse_proxy 127.0.0.1:3000
+}
+```
+
+Caddy obtains and renews the TLS certificate automatically when the hostname's
+DNS record points at the server and ports 80 and 443 reach it.
+
 ### Data and upgrades
 
 The SQLite file lives at `/data/uptime.db`, together with the generated session
@@ -98,6 +124,21 @@ Migrations are applied at boot, so an upgrade needs no further step. A named
 volume is the easy option. A bind mount works too: the container starts as root,
 hands `/data` to the unprivileged user it then drops to, and runs the server as
 that user.
+
+The volume survives container replacement, but it is not a backup. Stop the
+service briefly so SQLite flushes its WAL, copy the database, and start it
+again:
+
+```bash
+docker compose stop uptime
+mkdir uptime-backup
+docker compose cp uptime:/data/. ./uptime-backup/
+docker compose start uptime
+```
+
+Store that directory outside the server as well. It includes the database and
+the generated `.session_password`; losing the latter does not lose monitors or
+the admin account, but signs everyone out.
 
 ### Ping monitors
 
