@@ -242,6 +242,14 @@ Migrations run automatically at boot, so a fresh checkout only needs `bun run de
 Architecture notes, conventions and extension points are in
 [CLAUDE.md](./CLAUDE.md).
 
+## AI disclosure
+
+> [!NOTE]
+> This project was created by **Aaron Greiner** in collaboration with AI tools,
+> including **Claude by Anthropic** and **ChatGPT by OpenAI**. AI assisted with
+> implementation, review, documentation and problem-solving; the project is
+> directed, curated and maintained by its human author.
+
 ## License
 
 MIT
