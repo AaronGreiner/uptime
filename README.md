@@ -3,6 +3,13 @@
 A minimal, self-hosted uptime monitor with editable dashboards. Inspired by
 Uptime Kuma, built with Nuxt 4, Nuxt UI 4 and SQLite.
 
+> [**Try the public demo →**](https://uptime.aarongreiner.dev)
+>
+> This is a shared testing instance, so feel free to explore, edit dashboards
+> and try the admin features. Sign in as `admin`; finding the password is part
+> of the demo. It is not a secret, and subtlety was not one of the requirements.
+> Data may change or be reset at any time.
+
 - **Public by default** — dashboards and monitor status are visible without an
   account. A single admin account can create and change things.
 - **Dashboard shell** — collapsible, resizable sidebar whose width and folded
