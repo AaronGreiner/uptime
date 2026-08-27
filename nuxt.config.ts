@@ -2,6 +2,7 @@
 import { MONITOR_GROUP_ICONS } from './shared/utils/group'
 import { MONITOR_STATUS_ICONS, MONITOR_TYPE_ICONS } from './shared/utils/monitor'
 import { NOTIFICATION_PROVIDER_ICONS } from './shared/utils/notification'
+import { UI_PREFERENCE_MAX_AGE_SECONDS } from './shared/utils/ui'
 import { WIDGET_DEFINITIONS } from './shared/utils/widget'
 
 // Names assembled at runtime are invisible to the scanner, so they are listed.
@@ -41,7 +42,26 @@ export default defineNuxtConfig({
   colorMode: {
     preference: 'system',
     fallback: 'dark',
-    storageKey: 'uptime-color-mode'
+    storageKey: 'uptime-color-mode',
+    /*
+     * A cookie like every other interface preference, so the server knows which
+     * theme was chosen and the settings form can render its value instead of a
+     * placeholder. The blocking script the module injects reads cookies too, so
+     * the first paint is still correct. What stays client only is the *resolved*
+     * mode behind the `system` preference: only the browser can answer that.
+     */
+    storage: 'cookie',
+    /*
+     * Explicit because the module's own default spells them `max-age` and hands
+     * them to `useCookie`, which expects `maxAge` and would silently write a
+     * session cookie — the theme would then be forgotten when the browser
+     * closes, unlike every other preference.
+     */
+    cookieAttrs: {
+      maxAge: UI_PREFERENCE_MAX_AGE_SECONDS,
+      sameSite: 'lax',
+      path: '/'
+    }
   },
 
   runtimeConfig: {

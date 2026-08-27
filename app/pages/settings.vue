@@ -196,18 +196,13 @@ async function onSubmit(event: FormSubmitEvent<z.output<typeof accountUpdateSche
         >
           <div class="grid gap-4 sm:grid-cols-3">
             <UFormField :label="$t('settings.theme')">
-              <ClientOnly>
-                <USelectMenu
-                  v-model="theme"
-                  :items="themeItems"
-                  value-key="value"
-                  :search-input="false"
-                  class="w-full"
-                />
-                <template #fallback>
-                  <USkeleton class="h-8 w-full" />
-                </template>
-              </ClientOnly>
+              <USelectMenu
+                v-model="theme"
+                :items="themeItems"
+                value-key="value"
+                :search-input="false"
+                class="w-full"
+              />
             </UFormField>
 
             <UFormField :label="$t('settings.language')">

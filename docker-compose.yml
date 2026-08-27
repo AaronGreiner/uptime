@@ -1,23 +1,36 @@
+# Runs the published image. Everything has a working default, so this file alone
+# is enough — `docker compose up -d` starts an instance whose admin password is
+# printed to the log once.
+#
+# To build from a checkout instead of pulling, add `build: .` to the service and
+# run `docker compose up -d --build`.
 services:
   uptime:
-    build: .
+    # Also published as the full version, the minor and the major, so an
+    # upgrade can be pinned as narrowly as you like.
+    image: ghcr.io/aarongreiner/uptime:latest
     restart: unless-stopped
     ports:
       - "3000:3000"
+
+    # Optional, and the place for everything in .env.example. Without it the
+    # entrypoint generates a session password and keeps it in the volume.
+    # The long form needs Compose 2.24 or newer; older versions want `- .env`
+    # and then the file has to exist.
+    env_file:
+      - path: .env
+        required: false
+
     environment:
-      # Required. Generate with: openssl rand -base64 32
-      NUXT_SESSION_PASSWORD: ${NUXT_SESSION_PASSWORD:?Set NUXT_SESSION_PASSWORD in .env}
-      # Seeded on the first start only. An empty password means a random one is
-      # generated and printed to the container log exactly once.
-      NUXT_ADMIN_USERNAME: ${NUXT_ADMIN_USERNAME:-admin}
-      NUXT_ADMIN_PASSWORD: ${NUXT_ADMIN_PASSWORD:-}
-      NUXT_RETENTION_HEARTBEAT_DAYS: ${NUXT_RETENTION_HEARTBEAT_DAYS:-7}
-      NUXT_RETENTION_HOURLY_STATS_DAYS: ${NUXT_RETENTION_HOURLY_STATS_DAYS:-365}
-      NUXT_SCHEDULER_CONCURRENCY: ${NUXT_SCHEDULER_CONCURRENCY:-10}
-      NUXT_SEED_DEMO_DATA: ${NUXT_SEED_DEMO_DATA:-false}
-      NUXT_PUBLIC_APP_NAME: ${NUXT_PUBLIC_APP_NAME:-Uptime}
+      # These two describe the image's own layout and must win over anything
+      # .env carries, or a copied .env.example would put the database in the
+      # container layer instead of the volume and lose it on the next upgrade.
+      NUXT_DATABASE_PATH: /data/uptime.db
+      NUXT_MIGRATIONS_DIR: /app/drizzle
+
     volumes:
       - uptime-data:/data
+
     sysctls:
       # Allows unprivileged ICMP sockets, which ping monitors rely on.
       net.ipv4.ping_group_range: "0 2147483647"

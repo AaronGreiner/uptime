@@ -1,6 +1,3 @@
-/** Roughly a year. Long enough that a preference is never silently forgotten. */
-export const UI_PREFERENCE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365
-
 /**
  * A piece of interface state that survives a reload, stored in a cookie rather
  * than in `localStorage`: the sidebar and the navigation tree are rendered on

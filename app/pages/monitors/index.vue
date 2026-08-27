@@ -41,8 +41,16 @@ const statusFilter = computed<MonitorStatus | 'all'>({
   }
 })
 
-/** Survives navigation to a monitor and back, unlike a plain ref. */
-const grouped = useState('monitors-grouped', () => true)
+/**
+ * A display preference rather than a filter, so it lives in a cookie instead of
+ * in the URL: it survives a reload, and the server already renders the list in
+ * the shape the browser is about to show.
+ */
+const grouped = useUiPreference<boolean>(
+  'monitors-grouped',
+  () => true,
+  value => typeof value === 'boolean'
+)
 
 const formOpen = ref(false)
 const deleteOpen = ref(false)

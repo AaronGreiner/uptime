@@ -3,6 +3,7 @@
 .nuxt
 .output
 node_modules
+.pnpm-store
 data
 *.db
 *.db-shm
@@ -12,3 +13,9 @@ data
 !.env.example
 .DS_Store
 *.log
+
+# Not part of the build, only of the repository.
+.idea
+.vscode
+deploy
+docs

@@ -54,7 +54,8 @@ shared/         Types, constants and zod schemas used by both sides
 i18n/locales/   en.json and de.json, identical key sets
 drizzle/        Generated SQL migrations, shipped next to the server output
 deploy/         systemd unit and the deployment runbook
-.github/        Deploy workflow, triggered by a v* tag
+.github/        Deploy and image workflows, both triggered by a v* tag
+Dockerfile      Container image, plus docker-entrypoint.sh and docker-compose.yml
 ```
 
 ## How the pieces fit
@@ -327,6 +328,33 @@ The service runs on Bun, not node, because of `nitro.preset` and `bun:sqlite`,
 and `drizzle/` has to ship alongside the build since `migrateDatabase()` reads it
 from disk at boot. Everything else — the systemd unit, the Caddy block, the
 secrets, the recovery steps — is in `deploy/RUNBOOK.md`.
+
+The same tag also runs `.github/workflows/docker.yml`, which publishes the image
+to `ghcr.io/aarongreiner/uptime` for amd64 and arm64. The two are deliberately
+separate workflows: one ships to the world, the other to a single host, and
+neither failing should hold up the other.
+
+**The container.** `.output` is plain JavaScript and no dependency is a native
+module — `bun:sqlite` belongs to the runtime — so the build stage is pinned to
+`$BUILDPLATFORM` and only the runtime stage is assembled per architecture.
+Building per architecture would run Bun's JIT under QEMU, which is slow and
+crashes.
+
+`docker-entrypoint.sh` holds what only Docker needs, so the systemd path keeps
+reading plain environment variables. It starts as root to take ownership of a
+bind mounted `/data`, then drops to `bun` through `setpriv`. It generates a
+`NUXT_SESSION_PASSWORD` into the volume when none is set, which is early enough
+because nuxt-auth-utils reads that variable on the first request rather than at
+import time. And it derives `NUXT_SESSION_COOKIE_SECURE` from
+`NUXT_PUBLIC_APP_URL`: a browser silently drops a `Secure` cookie on an `http://`
+origin, so defaulting to `true` there would mean nobody can sign in, while
+defaulting to `false` under TLS would drop a real protection. An explicit value
+wins over the derivation.
+
+`docker-compose.yml` pins `NUXT_DATABASE_PATH` and `NUXT_MIGRATIONS_DIR` in its
+`environment` block, which outranks `env_file`. Without that a copied
+`.env.example` would point the database at `./data/uptime.db` inside the
+container layer, and the history would vanish on the next upgrade.
 
 ## Notifications
 

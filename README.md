@@ -44,15 +44,79 @@ printed to the console **once** — copy it, or set your own beforehand.
 
 ## Docker
 
+Published for `linux/amd64` and `linux/arm64`, so a Raspberry Pi works as well as
+a VPS. Nothing has to be configured up front:
+
 ```bash
-cp .env.example .env   # set NUXT_SESSION_PASSWORD
+docker run -d --name uptime --restart unless-stopped -p 3000:3000 -v uptime-data:/data ghcr.io/aarongreiner/uptime:latest
+```
+
+Or with the [compose file](./docker-compose.yml) from this repository:
+
+```bash
 docker compose up -d
 ```
 
-The SQLite file lives in the `uptime-data` volume at `/data/uptime.db`. Ping
-monitors need unprivileged ICMP sockets; the compose file sets the
-`net.ipv4.ping_group_range` sysctl for that. If your host forbids it, either drop
-ping monitors or grant the container `CAP_NET_RAW`.
+Open http://localhost:3000. The admin password is generated on the first start
+and printed to the log exactly once:
+
+```bash
+docker logs uptime
+```
+
+Set `NUXT_ADMIN_USERNAME` and `NUXT_ADMIN_PASSWORD` beforehand to choose your
+own, or change both later in the UI under **Settings**. Every variable from
+[.env.example](./.env.example) works here; with compose, put them in a `.env`
+next to the compose file.
+
+### Behind a reverse proxy
+
+Set `NUXT_PUBLIC_APP_URL` to the public origin. It is what notification links
+point at, and it also decides whether the session cookie is marked `Secure`:
+
+- `https://uptime.example.com` — the cookie is marked `Secure`, as it should be
+  behind TLS.
+- unset, or an `http://` origin — the cookie is not marked `Secure`, because a
+  browser drops such a cookie on a plain HTTP origin and **nobody could sign
+  in**. Reaching the instance directly at `http://server-ip:3000` is this case.
+
+`NUXT_SESSION_COOKIE_SECURE` overrides the decision either way. Server sent
+events carry the live updates, and the endpoint sends `X-Accel-Buffering: no`,
+so nginx and Caddy stream it without extra configuration.
+
+### Data and upgrades
+
+The SQLite file lives at `/data/uptime.db`, together with the generated session
+password. Keep that path on a volume — everything else in the container is
+disposable:
+
+```bash
+docker compose pull && docker compose up -d
+```
+
+Migrations are applied at boot, so an upgrade needs no further step. A named
+volume is the easy option. A bind mount works too: the container starts as root,
+hands `/data` to the unprivileged user it then drops to, and runs the server as
+that user.
+
+### Ping monitors
+
+Ping needs unprivileged ICMP sockets. The compose file opens
+`net.ipv4.ping_group_range` for that, and the `ping` binary in the image also
+carries `cap_net_raw`, which Docker grants by default. If your host allows
+neither, ping monitors report as down while HTTP monitors keep working.
+
+### Building it yourself
+
+```bash
+docker build -t uptime .
+```
+
+The Nuxt output is plain JavaScript, so the build stage runs on the build
+platform for every target architecture and only the small runtime stage is
+assembled per architecture. `.github/workflows/docker.yml` publishes the image
+on a `v*` tag, as `latest` plus the full version, the minor and the major — pin
+to whichever of those you want upgrades from.
 
 ## Deploying
 
@@ -77,7 +141,8 @@ annotated list.
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `NUXT_SESSION_PASSWORD` | — | **Required.** Seals the admin session cookie, 32+ characters. |
+| `NUXT_SESSION_PASSWORD` | — | **Required.** Seals the admin session cookie, 32+ characters. Generated and stored beside the database in Docker. |
+| `NUXT_SESSION_COOKIE_SECURE` | `true` | Marks the session cookie `Secure`. Must be `false` on a plain HTTP origin. |
 | `NUXT_ADMIN_USERNAME` | `admin` | Username of the single admin account, seeded once. |
 | `NUXT_ADMIN_PASSWORD` | *(empty)* | Admin password. Empty means a random one is generated and logged once. |
 | `NUXT_DATABASE_PATH` | `./data/uptime.db` | SQLite file location. |
@@ -87,9 +152,12 @@ annotated list.
 | `NUXT_SCHEDULER_TICK_INTERVAL_MS` | `1000` | How often due monitors are picked up. |
 | `NUXT_RETENTION_HEARTBEAT_DAYS` | `7` | Days of raw per-check results to keep. |
 | `NUXT_RETENTION_HOURLY_STATS_DAYS` | `365` | Days of hourly aggregates to keep. |
+| `NUXT_RETENTION_NOTIFICATION_DAYS` | `30` | Days of notification delivery history to keep. |
+| `NUXT_NOTIFICATIONS_ENABLED` | `true` | Set to `false` to queue notifications without delivering them. |
 | `NUXT_SEED_DEMO_DATA` | `false` | Seed demo monitors and showcase dashboards. See below. |
 | `NUXT_SEED_DEMO_HISTORY_DAYS` | `3` | Days of generated history for the demo monitors. |
 | `NUXT_PUBLIC_APP_NAME` | `Uptime` | Name shown in the header and page titles. |
+| `NUXT_PUBLIC_APP_URL` | *(empty)* | Public origin of this instance. Notification links need it; in Docker it also decides the cookie flag above. |
 
 Credentials can also be changed later in the UI under **Settings**, which is the
 recommended way once the instance is running.
