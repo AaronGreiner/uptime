@@ -150,6 +150,7 @@ export function recordCheckResult(monitor: MonitorRow, result: CheckResult): Not
     monitorId: monitor.id,
     checkedAt: now,
     status: result.status,
+    reportedStatus: status,
     latencyMs: result.latencyMs,
     statusCode: result.statusCode,
     message: result.message

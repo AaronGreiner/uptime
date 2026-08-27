@@ -142,11 +142,12 @@ export function listRecentHeartbeats(monitorIds: number[], limit: number): Map<n
     monitor_id: number
     checked_at: number
     status: 'up' | 'down'
+    reported_status: 'up' | 'down' | 'pending'
     latency_ms: number | null
     status_code: number | null
     message: string | null
   }>(sql`
-    select id, monitor_id, checked_at, status, latency_ms, status_code, message
+    select id, monitor_id, checked_at, status, reported_status, latency_ms, status_code, message
     from (
       select *, row_number() over (partition by monitor_id order by checked_at desc, id desc) as position
       from heartbeats
@@ -164,6 +165,7 @@ export function listRecentHeartbeats(monitorIds: number[], limit: number): Map<n
       monitorId: row.monitor_id,
       checkedAt: row.checked_at,
       status: row.status,
+      reportedStatus: row.reported_status,
       latencyMs: row.latency_ms,
       statusCode: row.status_code,
       message: row.message

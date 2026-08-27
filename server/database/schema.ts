@@ -1,7 +1,7 @@
 import { index, integer, primaryKey, sqliteTable, text, unique } from 'drizzle-orm/sqlite-core'
 import type { AnySQLiteColumn } from 'drizzle-orm/sqlite-core'
 import type { WidgetConfig, WidgetHeight, WidgetType, WidgetWidth } from '../../shared/types/dashboard'
-import type { HeartbeatStatus, MonitorStatus, MonitorType } from '../../shared/types/monitor'
+import type { HeartbeatReportedStatus, HeartbeatStatus, MonitorStatus, MonitorType } from '../../shared/types/monitor'
 import type {
   NotificationDeliveryStatus,
   NotificationEvent,
@@ -117,6 +117,7 @@ export const heartbeats = sqliteTable('heartbeats', {
   monitorId: integer('monitor_id').notNull().references(() => monitors.id, { onDelete: 'cascade' }),
   checkedAt: timestamp('checked_at').notNull(),
   status: text('status').$type<HeartbeatStatus>().notNull(),
+  reportedStatus: text('reported_status').$type<HeartbeatReportedStatus>().notNull().default('pending'),
   latencyMs: integer('latency_ms'),
   statusCode: integer('status_code'),
   message: text('message')

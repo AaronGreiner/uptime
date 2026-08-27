@@ -37,12 +37,7 @@ const caption = computed(() => t('monitor.count', scoped.value.length))
       >
         <span
           class="size-2 rounded-full shrink-0"
-          :class="{
-            'bg-success': monitor.state.status === 'up',
-            'bg-error': monitor.state.status === 'down',
-            'bg-warning': monitor.state.status === 'pending',
-            'bg-muted': monitor.state.status === 'paused'
-          }"
+          :class="monitorStatusBackgroundClass(monitor.state.status)"
           :title="$t(`status.${monitor.state.status}`)"
         />
         <NuxtLink

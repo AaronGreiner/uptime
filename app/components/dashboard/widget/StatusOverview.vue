@@ -64,7 +64,7 @@ const tiles = computed(() => ([
     labelKey: 'status.up',
     value: formatNumber(counts.value.up),
     icon: 'i-lucide-check',
-    class: 'text-success',
+    class: monitorStatusTextClass('up'),
     to: statusLink('up')
   },
   {
@@ -72,7 +72,7 @@ const tiles = computed(() => ([
     labelKey: 'status.down',
     value: formatNumber(counts.value.down),
     icon: 'i-lucide-x',
-    class: 'text-error',
+    class: monitorStatusTextClass('down'),
     to: statusLink('down')
   },
   {
@@ -80,7 +80,7 @@ const tiles = computed(() => ([
     labelKey: 'status.pending',
     value: formatNumber(counts.value.pending),
     icon: 'i-lucide-triangle-alert',
-    class: 'text-warning',
+    class: monitorStatusTextClass('pending'),
     to: statusLink('pending')
   },
   {
@@ -88,7 +88,7 @@ const tiles = computed(() => ([
     labelKey: 'status.paused',
     value: formatNumber(counts.value.paused),
     icon: 'i-lucide-pause',
-    class: 'text-dimmed',
+    class: monitorStatusTextClass('paused'),
     to: statusLink('paused')
   },
   {

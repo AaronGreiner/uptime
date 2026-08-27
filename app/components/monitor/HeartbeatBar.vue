@@ -80,7 +80,7 @@ onScopeDispose(stopResume)
         class="h-full shrink-0 rounded-[2px] transition-opacity duration-150"
         :class="[
           HEARTBEAT_BAR_CLASS,
-          heartbeat.status === 'up' ? 'bg-success' : 'bg-error',
+          monitorStatusBackgroundClass(heartbeat.reportedStatus),
           hovered && hovered.id !== heartbeat.id ? 'opacity-40' : 'opacity-100'
         ]"
         @mouseenter="hovered = heartbeat"
@@ -101,7 +101,7 @@ onScopeDispose(stopResume)
         <span class="truncate-target">{{ formatDateTime(hovered.checkedAt) }}</span>
         <span
           class="shrink-0 tabular-nums"
-          :class="hovered.status === 'up' ? 'text-success' : 'text-error'"
+          :class="monitorStatusTextClass(hovered.reportedStatus)"
         >
           {{ hovered.status === 'up' ? formatLatency(hovered.latencyMs) : hovered.message }}
         </span>

@@ -378,7 +378,7 @@ const recentChecks = computed(() => [...(heartbeats.value ?? [])].reverse().slic
                 </td>
                 <td class="py-2.5 pe-4">
                   <MonitorStatusBadge
-                    :status="heartbeat.status"
+                    :status="heartbeat.reportedStatus"
                     size="sm"
                   />
                 </td>

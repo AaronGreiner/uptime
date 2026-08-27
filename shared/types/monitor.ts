@@ -9,6 +9,9 @@ export type MonitorStatus = 'up' | 'down' | 'pending' | 'paused'
 /** Outcome of a single executed check. Never `pending` or `paused`. */
 export type HeartbeatStatus = 'up' | 'down'
 
+/** Monitor status reported after a check. A tolerated failure is `pending`. */
+export type HeartbeatReportedStatus = Exclude<MonitorStatus, 'paused'>
+
 export interface MonitorHttpOptions {
   url: string
   method: string
@@ -72,7 +75,10 @@ export interface Heartbeat {
   id: number
   monitorId: number
   checkedAt: number
+  /** Raw check outcome used by uptime and incident calculations. */
   status: HeartbeatStatus
+  /** User-facing monitor status after applying the retry threshold. */
+  reportedStatus: HeartbeatReportedStatus
   latencyMs: number | null
   statusCode: number | null
   message: string | null

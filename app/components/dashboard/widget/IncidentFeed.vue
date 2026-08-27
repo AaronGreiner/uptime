@@ -49,7 +49,7 @@ const caption = computed(() => failing.value.length ? t('monitor.downCount', fai
           <UIcon
             :name="monitor.state.status === 'down' ? 'i-lucide-circle-x' : 'i-lucide-triangle-alert'"
             class="size-3.5 shrink-0"
-            :class="monitor.state.status === 'down' ? 'text-error' : 'text-warning'"
+            :class="monitorStatusTextClass(monitor.state.status)"
           />
           <NuxtLink
             :to="`/monitors/${monitor.id}`"

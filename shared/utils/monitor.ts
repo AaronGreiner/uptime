@@ -87,6 +87,26 @@ export function monitorStatusColor(status: MonitorStatus): 'success' | 'error' |
   }
 }
 
+/** Semantic background class for status dots and bars. */
+export function monitorStatusBackgroundClass(status: MonitorStatus): string {
+  switch (status) {
+    case 'up': return 'bg-success'
+    case 'down': return 'bg-error'
+    case 'pending': return 'bg-warning'
+    case 'paused': return 'bg-muted'
+  }
+}
+
+/** Semantic text class for status figures and icons. */
+export function monitorStatusTextClass(status: MonitorStatus): string {
+  switch (status) {
+    case 'up': return 'text-success'
+    case 'down': return 'text-error'
+    case 'pending': return 'text-warning'
+    case 'paused': return 'text-dimmed'
+  }
+}
+
 /** Icon standing for the kind of check, used wherever the type is not spelled out. */
 export function monitorTypeIcon(type: MonitorType): string {
   return MONITOR_TYPE_ICONS[type]

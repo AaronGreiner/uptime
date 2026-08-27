@@ -299,7 +299,9 @@ function generateDemoHistory(created: CreatedMonitor[], days: number): void {
       const endsDownFrom = demo.endsDown ? timestamps.length - 34 : Number.POSITIVE_INFINITY
       let outageRemaining = 0
       let lastStatus: 'up' | 'down' = 'up'
+      let lastReportedStatus: 'up' | 'down' | 'pending' = 'up'
       let lastLatency: number | null = demo.baseLatency
+      let consecutiveFailures = 0
 
       for (const [index, checkedAt] of timestamps.entries()) {
         if (index >= endsDownFrom) {
@@ -318,12 +320,17 @@ function generateDemoHistory(created: CreatedMonitor[], days: number): void {
         const latency = Math.max(1, Math.round(demo.baseLatency + wave + noise))
 
         lastStatus = isDown ? 'down' : 'up'
+        consecutiveFailures = isDown ? consecutiveFailures + 1 : 0
+        lastReportedStatus = isDown
+          ? consecutiveFailures > 1 ? 'down' : 'pending'
+          : 'up'
         lastLatency = isDown ? null : latency
 
         transaction.insert(heartbeats).values({
           monitorId: id,
           checkedAt,
           status: lastStatus,
+          reportedStatus: lastReportedStatus,
           latencyMs: lastLatency,
           statusCode: demo.type === 'http' ? (isDown ? 503 : 200) : null,
           message: isDown
@@ -334,12 +341,12 @@ function generateDemoHistory(created: CreatedMonitor[], days: number): void {
 
       transaction.insert(monitorState).values({
         monitorId: id,
-        status: lastStatus,
+        status: lastReportedStatus,
         lastCheckedAt: now,
         nextCheckAt: now + Math.floor(Math.random() * 20),
         latencyMs: lastLatency,
         message: lastStatus === 'up' ? 'HTTP 200' : 'Connection refused',
-        consecutiveFailures: lastStatus === 'down' ? 3 : 0,
+        consecutiveFailures,
         consecutiveSuccesses: lastStatus === 'up' ? 1 : 0,
         certificateExpiresAt: demo.certificateDays ? now + demo.certificateDays * 86_400 : null,
         certificateCheckedAt: demo.certificateDays ? now : null,
