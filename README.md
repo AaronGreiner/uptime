@@ -1,191 +1,105 @@
 # Uptime
 
-A minimal, self-hosted uptime monitor with editable dashboards. Inspired by
-Uptime Kuma, built with Nuxt 4, Nuxt UI 4 and SQLite.
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset=".github/readme-hero-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset=".github/readme-hero-light.png">
+  <img alt="Uptime — self-hosted monitoring, beautifully simple" src=".github/readme-hero-light.png">
+</picture>
 
-> [**Try the public demo →**](https://uptime.aarongreiner.dev)
+[![Live demo](https://img.shields.io/badge/live_demo-online-00bc7d)](https://uptime.aarongreiner.dev)
+[![Latest release](https://img.shields.io/github/v/release/AaronGreiner/uptime?display_name=tag)](https://github.com/AaronGreiner/uptime/releases/latest)
+[![Container image](https://img.shields.io/badge/container-ghcr.io-2496ED?logo=docker&logoColor=white)](https://github.com/AaronGreiner/uptime/pkgs/container/uptime)
+[![License](https://img.shields.io/github/license/AaronGreiner/uptime)](./LICENSE)
+
+A minimal, self-hosted uptime monitor with public, editable dashboards. Inspired
+by Uptime Kuma, built with Nuxt 4, Nuxt UI 4, Bun and SQLite.
+
+> [!TIP]
+> **[Try the public demo →](https://uptime.aarongreiner.dev)**
 >
 > This is a shared testing instance, so feel free to explore, edit dashboards
 > and try the admin features. Sign in as `admin`; finding the password is part
 > of the demo. It is not a secret, and subtlety was not one of the requirements.
 > Data may change or be reset at any time.
 
-- **Public by default** — dashboards and monitor status are visible without an
-  account. A single admin account can create and change things.
-- **Dashboard shell** — collapsible, resizable sidebar whose width and folded
-  groups are remembered; every page gets its own navbar and toolbar.
-- **Editable dashboards** — reorder widgets and size them with constrained
-  width and height tokens that adapt across screen sizes.
+## Features
+
+- **Public by default** — dashboards, monitor status and history are visible
+  without an account; a single admin account manages the instance.
+- **Editable dashboards** — combine live status, uptime, incidents, certificate
+  expiry, response times and monitor lists into responsive layouts.
 - **HTTP(S) and ping monitors** — status code ranges, keyword matching, custom
-  headers, TLS certificate expiry, ICMP round trip times.
-- **Nested groups** — organise monitors into a tree, browse it from the sidebar,
-  and keep the full monitor list one click away.
-- **Light and dark mode**, **English and German**.
-- **Long history, small database** — raw results roll into hourly aggregates and
+  headers, TLS certificate expiry and ICMP round trip times.
+- **Nested groups** — organise monitors in a tree and scope dashboards or
+  notifications to exactly the branch that needs them.
+- **Incident and reliability history** — reconstruct outages, uptime, mean time
+  to recovery and other reliability figures from recorded checks.
+- **SMTP and Microsoft Teams notifications** — route events through reusable
+  groups with retries and persistent delivery history.
+- **Live everywhere** — server-sent events update cards, widgets, navigation and
+  status figures together without refreshing the page.
+- **Long history, small database** — raw checks roll into hourly aggregates and
   are pruned on a schedule.
+- **Light and dark mode**, **English and German**.
+
+## Preview
+
+The preview follows your GitHub theme. Open the
+[live demo](https://uptime.aarongreiner.dev) to try the interface yourself.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset=".github/screenshots/dashboard-overview-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset=".github/screenshots/dashboard-overview-light.png">
+  <img alt="Uptime dashboard overview with incidents, certificate expiry, response times and monitor status" src=".github/screenshots/dashboard-overview-light.png">
+</picture>
 
 ## Quick start
 
-Install [Bun](https://bun.sh/) 1.3.9 or newer, then:
+The container image is published for `linux/amd64` and `linux/arm64`, so a
+Raspberry Pi works as well as a VPS. The host only needs Docker Engine.
 
 ```bash
-bun install
-cp .env.example .env
+docker run -d \
+  --name uptime \
+  --restart unless-stopped \
+  -p 3000:3000 \
+  -v uptime-data:/data \
+  ghcr.io/aarongreiner/uptime:latest
 ```
 
-Set at least `NUXT_SESSION_PASSWORD` in `.env` (32+ characters):
+Open http://localhost:3000. On the first start, Uptime creates the admin account.
+If no password was configured, the generated password is printed exactly once:
 
 ```bash
-openssl rand -base64 32
+docker logs uptime
 ```
 
-Then start it:
+### Docker Compose
 
-```bash
-bun run dev
-```
-
-The app runs on http://localhost:3000. On the first start it creates the admin
-account. If `NUXT_ADMIN_PASSWORD` is empty, a random password is generated and
-printed to the console **once** — copy it, or set your own beforehand.
-
-## Docker
-
-Published for `linux/amd64` and `linux/arm64`, so a Raspberry Pi works as well as
-a VPS. The host only needs Docker Engine with the Compose plugin. Nothing has to
-be configured up front:
-
-```bash
-docker run -d --name uptime --restart unless-stopped -p 3000:3000 -v uptime-data:/data ghcr.io/aarongreiner/uptime:latest
-```
-
-For a server installation, use the [compose file](./docker-compose.yml). This
-keeps the installation in its own directory and makes upgrades predictable:
+The included Compose file keeps the installation in its own directory and makes
+upgrades predictable:
 
 ```bash
 mkdir uptime && cd uptime
 curl -O https://raw.githubusercontent.com/AaronGreiner/uptime/main/docker-compose.yml
 docker compose up -d
-```
-
-Open http://localhost:3000. The admin password is generated on the first start
-and printed to the log exactly once:
-
-```bash
 docker compose logs uptime
 ```
 
-Set `NUXT_ADMIN_USERNAME` and `NUXT_ADMIN_PASSWORD` beforehand to choose your
-own, or change both later in the UI under **Settings**. Every variable from
-[.env.example](./.env.example) works here; with compose, put them in a `.env`
-next to the compose file. At minimum, a public instance should set its origin:
+Put configuration overrides in a `.env` next to the Compose file. At minimum, a
+public instance should set its origin:
 
 ```dotenv
 NUXT_PUBLIC_APP_URL=https://uptime.example.com
 ```
 
-The compose file follows `latest`. For more controlled upgrades, change the
-image tag to `0.1` for patch releases only, or to an exact release such as
-`0.1.0`.
-
-### Behind a reverse proxy
-
-Set `NUXT_PUBLIC_APP_URL` to the public origin. It is what notification links
-point at, and it also decides whether the session cookie is marked `Secure`:
-
-- `https://uptime.example.com` — the cookie is marked `Secure`, as it should be
-  behind TLS.
-- unset, or an `http://` origin — the cookie is not marked `Secure`, because a
-  browser drops such a cookie on a plain HTTP origin and **nobody could sign
-  in**. Reaching the instance directly at `http://server-ip:3000` is this case.
-
-`NUXT_SESSION_COOKIE_SECURE` overrides the decision either way. Server sent
-events carry the live updates, and the endpoint sends `X-Accel-Buffering: no`,
-so nginx and Caddy stream it without extra configuration.
-
-Do not expose port 3000 publicly when a reverse proxy runs on the same host.
-Change the compose port mapping to `127.0.0.1:3000:3000`, allow ports 80 and 443
-through the host firewall, and proxy the public hostname to that local port. A
-minimal Caddy configuration is:
-
-```caddyfile
-uptime.example.com {
-  reverse_proxy 127.0.0.1:3000
-}
-```
-
-Caddy obtains and renews the TLS certificate automatically when the hostname's
-DNS record points at the server and ports 80 and 443 reach it.
-
-### Data and upgrades
-
-The SQLite file lives at `/data/uptime.db`, together with the generated session
-password. Keep that path on a volume — everything else in the container is
-disposable:
-
-```bash
-docker compose pull && docker compose up -d
-```
-
-Migrations are applied at boot, so an upgrade needs no further step. A named
-volume is the easy option. A bind mount works too: the container starts as root,
-hands `/data` to the unprivileged user it then drops to, and runs the server as
-that user.
-
-The volume survives container replacement, but it is not a backup. Stop the
-service briefly so SQLite flushes its WAL, copy the database, and start it
-again:
-
-```bash
-docker compose stop uptime
-mkdir uptime-backup
-docker compose cp uptime:/data/. ./uptime-backup/
-docker compose start uptime
-```
-
-Store that directory outside the server as well. It includes the database and
-the generated `.session_password`; losing the latter does not lose monitors or
-the admin account, but signs everyone out.
-
-### Ping monitors
-
-Ping needs unprivileged ICMP sockets. The compose file opens
-`net.ipv4.ping_group_range` for that, and the `ping` binary in the image also
-carries `cap_net_raw`, which Docker grants by default. If your host allows
-neither, ping monitors report as down while HTTP monitors keep working.
-
-### Building it yourself
-
-```bash
-docker build -t uptime .
-```
-
-The Nuxt output is plain JavaScript, so the build stage runs on the build
-platform for every target architecture and only the small runtime stage is
-assembled per architecture. `.github/workflows/docker.yml` publishes the image
-on a `v*` tag, as `latest` plus the full version, the minor and the major — pin
-to whichever of those you want upgrades from.
-
-## Deploying
-
-Tagged releases ship to a server through GitHub Actions:
-`.github/workflows/deploy.yml` builds with Bun, uploads `.output/` and
-`drizzle/`, backs up the SQLite file, restarts a systemd unit and rolls back if
-the new build does not answer on `/api/health`.
-
-```bash
-git tag v1.0.0 && git push origin v1.0.0
-```
-
-Because `nitro.preset` is `bun` and the driver is `bun:sqlite`, the service runs
-on Bun rather than node, and `drizzle/` must sit next to the build — migrations
-are read from disk at boot. The full setup, the secrets to configure and the
-recovery steps are in [deploy/RUNBOOK.md](./deploy/RUNBOOK.md).
+See the [Docker deployment guide](./docs/docker.md) for reverse proxies, TLS,
+upgrades, backups, ping permissions and building the image yourself.
 
 ## Configuration
 
-Everything is set through environment variables. See `.env.example` for the
-annotated list.
+Everything is configured through environment variables. See
+[`.env.example`](./.env.example) for the annotated list.
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
@@ -203,92 +117,113 @@ annotated list.
 | `NUXT_RETENTION_NOTIFICATION_DAYS` | `30` | Days of notification delivery history to keep. |
 | `NUXT_NOTIFICATIONS_ENABLED` | `true` | Set to `false` to queue notifications without delivering them. |
 | `NUXT_SEED_DEMO_DATA` | `false` | Seed demo monitors and showcase dashboards. See below. |
-| `NUXT_SEED_DEMO_HISTORY_DAYS` | `3` | Days of generated history for the demo monitors. |
+| `NUXT_SEED_DEMO_HISTORY_DAYS` | `7` | Days of generated history for the demo monitors. |
 | `NUXT_PUBLIC_APP_NAME` | `Uptime` | Name shown in the header and page titles. |
 | `NUXT_PUBLIC_APP_URL` | *(empty)* | Public origin of this instance. Notification links need it; in Docker it also decides the cookie flag above. |
 
-Credentials can also be changed later in the UI under **Settings**, which is the
-recommended way once the instance is running.
+Credentials can also be changed later in the UI under **Settings**.
 
 ### Demo data
 
 Setting `NUXT_SEED_DEMO_DATA=true` seeds fourteen monitors, three pre-built
-dashboards showing different widget compositions, and a few days of generated
-history, so the UI has something to show immediately.
+dashboards and generated history, so the interface has something to show
+immediately.
 
 - It runs **at most once**, and only on a database that has no monitors yet.
 - The demo monitors point at **real public endpoints** (`nuxt.com`,
-  `api.github.com`, `1.1.1.1`, `example.com`). Enabling this makes the scheduler
-  send actual requests to those hosts.
+  `api.github.com`, `1.1.1.1`, `example.com`). Enabling this sends actual requests
+  to those hosts.
 - Turning the flag back off does not remove anything already seeded. Use the
-  data controls in **Settings** to remove or replace the demo data, or start from
-  a fresh database file.
+  data controls in **Settings** or start from a fresh database file.
 
 Leave it at `false` for a real deployment.
 
-#### Trying the demo
+#### Local demo login
 
-Put this in `.env` to get a fully populated instance with a known login:
+Put this in `.env` to get a populated local instance with a known login:
 
-```bash
+```dotenv
 NUXT_SESSION_PASSWORD=local-development-session-password-32
 NUXT_ADMIN_USERNAME=admin
 NUXT_ADMIN_PASSWORD=devpassword123
 NUXT_SEED_DEMO_DATA=true
 ```
 
-Then run `bun run dev` and sign in at http://localhost:3000/login with:
+Then run `bun run dev` and sign in at http://localhost:3000/login with username
+`admin` and password `devpassword123`.
 
-- Username: `admin`
-- Password: `devpassword123`
+> [!WARNING]
+> These credentials are for the local demo only. Never use them on a reachable
+> instance: choose your own `NUXT_ADMIN_PASSWORD` and a random
+> `NUXT_SESSION_PASSWORD`, or use the password generated on first start.
 
-> **These credentials are for the local demo only.** They are published here, so
-> anyone can read them. Never use them on a reachable instance: pick your own
-> `NUXT_ADMIN_PASSWORD` and a random `NUXT_SESSION_PASSWORD` before deploying, or
-> leave the admin password empty and use the one generated on first start.
+## How it works
 
-Without demo data the seeded account is the same, only the monitors and
-dashboards are missing.
+### Monitor types
 
-## Monitor types
+**HTTP(S)** checks a URL and passes when the status code falls inside the
+accepted range, for example `200-299,301`. It can require or reject a keyword,
+send custom headers and a body, control redirects and track TLS certificate
+expiry.
 
-**HTTP(S)** — checks a URL and passes when the status code falls inside the
-accepted range (for example `200-299,301`). Optionally requires a keyword in the
-response body (or requires its absence), sends custom headers and a body, follows
-or ignores redirects, and reads the TLS certificate expiry off the same
-connection.
-
-**Ping** — sends ICMP echo requests through the system `ping` binary and records
+**Ping** sends ICMP echo requests through the system `ping` binary and records
 the average round trip time. A check passes when at least one reply comes back;
 packet loss is reported in the result message.
 
-Both types share the schedule settings: check interval, timeout, and how many
-consecutive failures are tolerated before the monitor is reported as down. While
-retries are left, the monitor shows as *pending* rather than *down*, which keeps
-single blips out of the incident history.
+Both types share the check interval, timeout and retry settings. While retries
+remain, a failed monitor is *pending* rather than *down*, keeping single blips
+out of the incident history.
 
-## How the data is stored
+### History and storage
 
-Every check writes one row to `heartbeats`. A maintenance job runs every five
-minutes, rolls those rows into hourly buckets, and prunes anything past its
-retention window. Charts and uptime figures for ranges up to 24 hours read the
-raw rows; longer ranges read the aggregates. That keeps a year of history in a
-database that stays small.
+Every check writes one row to `heartbeats`. A maintenance job rolls those rows
+into hourly buckets and prunes data past its retention window. Ranges up to 24
+hours read raw rows; longer ranges read the aggregates. This keeps a year of
+history in a small SQLite database.
 
 ## Development
 
+Install [Bun](https://bun.sh/) 1.3.9 or newer, then:
+
 ```bash
-bun run dev          # dev server
+bun install
+cp .env.example .env
+openssl rand -base64 32
+```
+
+Put the generated value in `.env` as `NUXT_SESSION_PASSWORD`, then start the
+development server:
+
+```bash
+bun run dev
+```
+
+The application is available at http://localhost:3000.
+
+```bash
+bun run build        # production build into .output
 bun run typecheck    # vue-tsc across app, server and shared code
 bun run lint         # eslint
-bun run db:generate  # create a migration after changing server/database/schema.ts
+bun run db:generate  # create a migration after changing the schema
 bun run db:studio    # browse the database
 ```
 
-Migrations run automatically at boot, so a fresh checkout only needs `bun run dev`.
+Migrations run automatically at boot. Architecture notes, conventions and
+extension points are in [AGENTS.md](./AGENTS.md).
 
-Architecture notes, conventions and extension points are in
-[CLAUDE.md](./CLAUDE.md).
+## Maintainer deployment
+
+A `v*` tag publishes the container image and deploys the hosted instance through
+separate GitHub Actions workflows. The server deployment builds with Bun,
+uploads `.output/` and `drizzle/`, backs up SQLite, restarts systemd and rolls
+back when the health check fails. See the [deployment runbook](./deploy/RUNBOOK.md)
+for setup, secrets and recovery steps.
+
+## Contributing
+
+Issues and pull requests are welcome. Before opening a pull request, run
+`bun run typecheck` and `bun run lint`. Keep code and documentation in English,
+and add every user-facing string to both locale files.
 
 ## AI disclosure
 
@@ -300,4 +235,4 @@ Architecture notes, conventions and extension points are in
 
 ## License
 
-MIT
+[MIT License](./LICENSE)
