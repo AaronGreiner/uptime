@@ -10,7 +10,11 @@ const uiLocale = computed(() => locales[locale.value as keyof typeof locales] ??
 useHead({
   htmlAttrs: { lang: locale },
   meta: [{ name: 'viewport', content: 'width=device-width, initial-scale=1' }],
-  link: [{ rel: 'icon', href: '/favicon.ico' }],
+  link: [
+    { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
+    { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico', sizes: '32x32' },
+    { rel: 'apple-touch-icon', href: '/apple-touch-icon.png', sizes: '180x180' }
+  ],
   titleTemplate: title => title ? `${title} · ${appConfig.appName}` : appConfig.appName
 })
 
