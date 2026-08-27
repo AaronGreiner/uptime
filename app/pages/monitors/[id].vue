@@ -338,7 +338,10 @@ const recentChecks = computed(() => [...(heartbeats.value ?? [])].reverse().slic
         :description="$t('monitor.detail.noHistory')"
         :ui="{ description: recentChecks.length ? 'hidden' : '' }"
       >
-        <MonitorHeartbeatBar :heartbeats="heartbeats" />
+        <MonitorHeartbeatBar
+          :monitor-id="monitor.id"
+          :heartbeats="heartbeats"
+        />
 
         <div
           v-if="recentChecks.length"

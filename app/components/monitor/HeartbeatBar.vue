@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import type { Heartbeat } from '#shared/types/monitor'
-import { HEARTBEAT_BAR_CLASS, HEARTBEAT_ROW_CLASS } from '#shared/utils/monitor'
+import { HEARTBEAT_BAR_CLASS, HEARTBEAT_ROW_CLASS, heartbeatCountForWidth } from '#shared/utils/monitor'
 
-withDefaults(defineProps<{
+const props = withDefaults(defineProps<{
+  monitorId: number
   heartbeats: Heartbeat[]
   showLegend?: boolean
 }>(), {
@@ -10,8 +11,47 @@ withDefaults(defineProps<{
 })
 
 const { formatDateTime, formatLatency } = useFormatters()
+const row = useTemplateRef<HTMLElement>('row')
+const requiredCount = ref(1)
+const { heartbeats, ensure } = useHeartbeatHistory(
+  () => props.monitorId,
+  () => props.heartbeats
+)
 
 const hovered = ref<Heartbeat | null>(null)
+
+function loadToWidth(width: number) {
+  requiredCount.value = heartbeatCountForWidth(width)
+
+  if (requiredCount.value > props.heartbeats.length) {
+    void ensure(requiredCount.value)
+  }
+}
+
+onMounted(() => {
+  const element = row.value
+
+  if (!element) {
+    return
+  }
+
+  loadToWidth(element.clientWidth)
+
+  const observer = new ResizeObserver(([entry]) => {
+    loadToWidth(entry?.contentRect.width ?? element.clientWidth)
+  })
+
+  observer.observe(element)
+  onScopeDispose(() => observer.disconnect())
+})
+
+const stopResume = useLive().onResumed(() => {
+  if (requiredCount.value > props.heartbeats.length) {
+    void ensure(requiredCount.value, true)
+  }
+})
+
+onScopeDispose(stopResume)
 </script>
 
 <template>
@@ -29,6 +69,7 @@ const hovered = ref<Heartbeat | null>(null)
       turns the cut into an edge rather than half a bar.
     -->
     <div
+      ref="row"
       class="flex flex-row-reverse h-8 overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_0.75rem)]"
       :class="HEARTBEAT_ROW_CLASS"
       @mouseleave="hovered = null"

@@ -20,15 +20,16 @@ export const MONITOR_STATUS_ICONS: Record<MonitorStatus, string> = {
 }
 
 /**
- * Heartbeats travelling with a monitor, and the most a pulse bar can draw.
+ * Heartbeats travelling with every monitor in the shared list payload.
  *
- * A bar keeps its bars at a fixed size and lets the container decide how many
- * of them fit, so this number is what a wide cell can fill: at the pitch below
- * it covers a half width dashboard cell exactly. Raising it costs every monitor
- * in the list payload, which is refetched by the polling safety net — the two
- * are worth weighing together before changing either.
+ * It covers a half width dashboard cell at the pitch below. Wider pulse bars
+ * extend that baseline on demand instead of making every list and polling
+ * response carry enough history for the widest possible widget.
  */
 export const MONITOR_HEARTBEAT_HISTORY = 60
+
+/** Upper bound for an on-demand pulse bar history request. */
+export const MONITOR_HEARTBEAT_HISTORY_MAX = 500
 
 /**
  * Geometry of a pulse bar, in pixels. Fixed rather than stretched, so the same
@@ -36,9 +37,18 @@ export const MONITOR_HEARTBEAT_HISTORY = 60
  * list and on the detail page. The literal classes exist because Tailwind
  * cannot emit sizes assembled at runtime; keep the two in step.
  */
-export const HEARTBEAT_BAR_PITCH_PX = 9
+export const HEARTBEAT_BAR_WIDTH_PX = 6
+export const HEARTBEAT_BAR_GAP_PX = 3
+export const HEARTBEAT_BAR_PITCH_PX = HEARTBEAT_BAR_WIDTH_PX + HEARTBEAT_BAR_GAP_PX
 export const HEARTBEAT_BAR_CLASS = 'w-[6px]'
 export const HEARTBEAT_ROW_CLASS = 'gap-[3px]'
+
+/** Number of fixed-width bars needed to cover a row without stretching them. */
+export function heartbeatCountForWidth(width: number): number {
+  const count = Math.ceil((Math.max(0, width) + HEARTBEAT_BAR_GAP_PX) / HEARTBEAT_BAR_PITCH_PX)
+
+  return Math.min(MONITOR_HEARTBEAT_HISTORY_MAX, Math.max(1, count))
+}
 
 /**
  * Heartbeats loaded for the detail page. More than the table lists, because the

@@ -276,13 +276,14 @@ makes the row a scroll container, and an overflowing scroll container flips its
 alignment back to the start — clipping the newest instead. The left fade turns
 the cut into an edge rather than half a bar.
 
-What follows from that is that neither widget takes a count as a setting, and
-that the pulse bar can only draw what the monitor list carries:
-`MONITOR_HEARTBEAT_HISTORY` is sized so a half width cell fills exactly, and
-raising it costs every monitor in a payload the polling safety net refetches. The
-calendar asks the server for the days its *width token* implies rather than for a
-measured width, so the request is the same on both sides of hydration, and the
-row then clips whatever the real cell cannot hold.
+What follows from that is that neither widget takes a count as a setting.
+`MONITOR_HEARTBEAT_HISTORY` keeps enough checks in the shared monitor list to
+fill a half width cell. A wider pulse bar measures its row after mount and uses
+the public heartbeat endpoint to extend a per-monitor client cache only as far
+as that row needs, so polling the list does not carry a full-width history for
+every monitor. The calendar asks the server for the days its *width token*
+implies rather than for a measured width, so the request is the same on both
+sides of hydration, and the row then clips whatever the real cell cannot hold.
 
 **Widget preview.** The settings dialog renders the real widget with the real
 data next to the form, at the pixel size the chosen width and height produce on a
