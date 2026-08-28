@@ -141,8 +141,30 @@ How much of the path is worth the space is the reader's call:
 from the sidebar footer and the settings page. Only monitor *labels* follow it —
 the group tree, the section headings and the pickers always name themselves in
 full, because there the path is the thing being chosen rather than a label on
-something else. Tooltips and the monitor search stay on the whole path too: the
-setting decides how much fits in a row, not what can be read or found.
+something else. Tooltips and every search stay on the whole path too — the
+setting decides how much fits in a row, not what can be read or found — which is
+why both searches below feed on `fullMonitorPath` rather than on the label they
+draw.
+
+**Searching monitors.** `shared/utils/search.ts` is the one matcher, used by the
+monitor list and by the widget picker. `fuzzyScore` answers whether a record
+matches and how well, over as many fields as the caller passes — the breadcrumb
+and the target — and `highlightSegments` says which pieces of one string to
+mark, which is what `AppHighlight` renders.
+
+A word is tried as a plain substring first, because that is what people type,
+and it scores above the scattered fallback and highlights unbroken. A scattered
+match has to *start* at a word boundary; without that anchor a three letter
+query finds a letter in the middle of every other name. Several words all have
+to match but may land in different fields, so `prod nuxt.com` finds a monitor by
+its group and its URL at once.
+
+Scoring ranks the widget picker, where the closest match belongs at the top. The
+monitor list keeps tree order instead — its sections are the group tree, and
+relevance cannot reorder that. Highlighting never vetoes: a row found through
+its URL still shows its name unmarked, and a query that only matched across
+fields (`pwnuxt` against `Production / Web / Nuxt`) marks nothing at all,
+because no single string on screen contains it.
 
 The value lives in `useState` rather than in a preference read per caller.
 `useCookie` builds a fresh ref on every call, and two of them only agree where

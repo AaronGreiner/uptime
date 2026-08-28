@@ -11,9 +11,12 @@ const props = withDefaults(defineProps<{
    * is the only place the breadcrumb would be repeating what is on screen.
    */
   showGroupPath?: boolean
+  /** The current search, where the card is a result rather than a list entry. */
+  query?: string
 }>(), {
   dense: false,
-  showGroupPath: true
+  showGroupPath: true,
+  query: ''
 })
 
 const { formatLatency, formatUptime, formatRelativeTime } = useFormatters()
@@ -52,13 +55,19 @@ const cardUi = computed(() => ({
           class="text-xs text-dimmed truncate-target"
           :title="pathTitle"
         >
-          {{ path }}
+          <AppHighlight
+            :text="path"
+            :query="query"
+          />
         </p>
         <NuxtLink
           :to="`/monitors/${monitor.id}`"
           class="font-medium text-highlighted hover:text-primary transition-colors truncate-target block"
         >
-          {{ monitor.name }}
+          <AppHighlight
+            :text="monitor.name"
+            :query="query"
+          />
         </NuxtLink>
         <!-- While the header stacks, the target costs the row the pulse bar
              needs, so it returns together with the side by side header. -->
@@ -66,7 +75,10 @@ const cardUi = computed(() => ({
           class="hidden @[14rem]:block text-sm text-dimmed truncate-target"
           :title="target"
         >
-          {{ target }}
+          <AppHighlight
+            :text="target"
+            :query="query"
+          />
         </p>
       </div>
 

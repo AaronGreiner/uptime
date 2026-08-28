@@ -3,6 +3,7 @@ import type { DropdownMenuItem } from '@nuxt/ui'
 import type { MonitorGroup, MonitorTreeNode } from '#shared/types/group'
 import type { Monitor, MonitorStatus, MonitorWithState } from '#shared/types/monitor'
 import { flattenMonitorGroupTree, joinMonitorPath, monitorGroupIcon } from '#shared/utils/group'
+import { fuzzyScore } from '#shared/utils/search'
 
 const { t } = useI18n()
 const { isAdmin } = useAdmin()
@@ -105,15 +106,18 @@ const groupFilterItems = computed(() => [
 const hasTextFilters = computed(() => search.value.trim().length > 0 || statusFilter.value !== 'all')
 
 function matches(monitor: MonitorWithState): boolean {
-  const term = search.value.trim().toLowerCase()
   const matchesStatus = statusFilter.value === 'all' || monitor.state.status === statusFilter.value
-  const matchesTerm = !term
-    // The whole breadcrumb, so a group name finds the monitors below it even
-    // where the format has shortened that group out of the row.
-    || fullMonitorPath(monitor).toLowerCase().includes(term)
-    || monitorTarget(monitor).toLowerCase().includes(term)
 
-  return matchesStatus && matchesTerm
+  /*
+   * Searched over the whole breadcrumb and the target, so a group name or a
+   * host finds what is behind it even where the format has shortened that group
+   * out of the row. Fuzzily, and word by word: `prod nuxt` and `pwnuxt` both
+   * land on the same monitor.
+   */
+  return matchesStatus && fuzzyScore(
+    [fullMonitorPath(monitor), monitorTarget(monitor)],
+    search.value
+  ) !== null
 }
 
 /** Group nodes the filter lets through, already flattened depth first. */
@@ -414,6 +418,7 @@ async function confirmGroupDelete() {
               :key="monitor.id"
               :monitor="monitor"
               :show-group-path="false"
+              :query="search"
             >
               <template
                 v-if="isAdmin"
@@ -457,6 +462,7 @@ async function confirmGroupDelete() {
           v-for="monitor in filtered"
           :key="monitor.id"
           :monitor="monitor"
+          :query="search"
         >
           <template
             v-if="isAdmin"
