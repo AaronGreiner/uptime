@@ -324,6 +324,26 @@ Adding a widget type means: extend the `WidgetType` union in
 files. Every widget takes the same two props (`widget`, `monitors`), which is
 what lets the grid and the preview render any of them without a branch.
 
+**Fullscreen.** `?fullscreen=1` on a dashboard — a bare `?fullscreen` reads the
+same — drops the sidebar, the navbar and the toolbar, and takes the panel's
+margin, border and rounding with them, so nothing but the widgets is left. The
+mode lives in the URL rather than in a cookie or a ref because the screen it is
+meant for has nobody standing in front of it: the address is bookmarked, opened
+by a kiosk browser or pushed to a wall panel, and the server then renders the
+page without its chrome instead of stripping it after hydration.
+`useFullscreen` reads and writes that parameter and is scoped to `/d/`, since
+only the dashboard page draws a way back out; `useFullscreenSync`, called once
+from the dashboard layout the way `useMonitorPathPreference` is, binds Escape
+and the browser's own fullscreen to the flag in both directions. Dropping the
+sidebar also drops what used to fill the group cache before the widgets render,
+which is why the page awaits `useMonitorGroups()` itself — see the gotcha about
+reactive `useAsyncData` keys.
+
+The browser's fullscreen cannot be the same flag: requesting it needs a user
+gesture, which an opened URL does not have, so it is asked for alongside the mode
+on a click and never awaited — an embedded browser can leave that request pending
+forever, and the layout must not hang on a permission it does not need.
+
 **Widget scope.** Aggregate widgets carry a `scope` field: `config.groupId`
 covers a node of the monitor tree and everything below it, `config.monitorIds` is
 the hand-picked escape hatch, and neither means every monitor. `useWidgetScope`
@@ -561,6 +581,12 @@ files.
 - Widget icons are assembled from the registry at runtime, so they are listed in
   `nuxt.config.ts` like every other dynamic icon name. A new definition whose
   icon is missing from that list renders as nothing in production.
+- A `useAsyncData` key assembled from reactive values has a moment with no entry
+  behind it: `data` reads `undefined` between the key changing and the request
+  for the new key being created. Anything derived from it has to tolerate that,
+  and a key that depends on a cache — the widget scopes resolve theirs against
+  the group tree — needs that cache awaited before the component renders, or the
+  server renders one key and then serialises another.
 - A bound parameter has no type affinity in SQLite, so bucket maths needs
   `integerLiteral` — and `signedIntegerLiteral` for a value that may be negative,
   such as the UTC offset the uptime calendar aligns its days to.

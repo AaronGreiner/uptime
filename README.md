@@ -28,6 +28,9 @@ by Uptime Kuma, built with Nuxt 4, Nuxt UI 4, Bun and SQLite.
   without an account; a single admin account manages the instance.
 - **Editable dashboards** — combine live status, uptime, incidents, certificate
   expiry, response times and monitor lists into responsive layouts.
+- **Fullscreen dashboards** — drop the whole interface around a dashboard for a
+  wall display, from the navbar button or straight from the URL with
+  `?fullscreen=1`.
 - **HTTP(S) and ping monitors** — status code ranges, keyword matching, custom
   headers, TLS certificate expiry and ICMP round trip times.
 - **Nested groups** — organise monitors in a tree and scope dashboards or

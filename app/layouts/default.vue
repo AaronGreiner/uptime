@@ -16,6 +16,11 @@ useLiveMonitors()
 // Binds the breadcrumb format to its cookie, once, for every label below.
 useMonitorPathPreference()
 
+// A dashboard opened in fullscreen renders without this sidebar. The listeners
+// that end the mode are global, so they are bound here rather than on the page.
+const { isFullscreen } = useFullscreen()
+useFullscreenSync()
+
 const createDashboardOpen = ref(false)
 
 const dashboardNavigation = computed<NavigationMenuItem[]>(() => [
@@ -48,6 +53,7 @@ async function onDashboardCreated(slug: string) {
     :storage-options="{ maxAge: UI_PREFERENCE_MAX_AGE_SECONDS, sameSite: 'lax', path: '/' }"
   >
     <UDashboardSidebar
+      v-if="!isFullscreen"
       id="uptime"
       collapsible
       resizable

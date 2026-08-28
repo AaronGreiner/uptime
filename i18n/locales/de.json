@@ -202,6 +202,8 @@
     "editModeHint": "Widgets ziehen; Größe mit den Pfeilen ändern. Das Layout wird automatisch gespeichert.",
     "addWidget": "Widget hinzufügen",
     "layoutSaved": "Layout gespeichert.",
+    "fullscreen": "Vollbild",
+    "fullscreenExit": "Vollbild beenden",
     "fields": {
       "name": "Name",
       "slug": "URL-Kürzel",

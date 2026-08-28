@@ -137,7 +137,13 @@ export function useScopeUptime(
     { watch: [ids, window], default: () => ({ range: toValue(range), monitors: [] }) }
   )
 
-  const byMonitor = computed(() => new Map(state.data.value.monitors.map(entry => [entry.monitorId, entry.uptime])))
+  /*
+   * A reactive key has a moment with no entry behind it: this one is derived
+   * from the widget's scope, which resolves against the group cache, so the key
+   * changes the instant that cache arrives and `data` reads undefined until the
+   * request for the new key exists.
+   */
+  const byMonitor = computed(() => new Map((state.data.value?.monitors ?? []).map(entry => [entry.monitorId, entry.uptime])))
   const scheduleRefresh = useThrottledRefresh(state.refresh, () => REFRESH_THROTTLE_MS[window.value])
 
   onMonitorChecked((event) => {

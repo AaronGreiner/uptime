@@ -202,6 +202,8 @@
     "editModeHint": "Drag widgets to reorder; use the arrows to resize. The layout saves automatically.",
     "addWidget": "Add widget",
     "layoutSaved": "Layout saved.",
+    "fullscreen": "Fullscreen",
+    "fullscreenExit": "Exit fullscreen",
     "fields": {
       "name": "Name",
       "slug": "URL slug",

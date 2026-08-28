@@ -14,6 +14,12 @@ const { data: dashboard, error, refresh: refreshDashboard } = await useDashboard
 const { data: monitors } = await useMonitors()
 const { refresh: refreshDashboards } = useDashboards()
 
+// The widgets resolve their scope and their breadcrumbs from the group cache,
+// which is usually filled by the sidebar rendering before them. Fullscreen has
+// no sidebar, so the page waits for it here instead: a cache arriving halfway
+// through the render would re-key the requests the widgets have already made.
+await useMonitorGroups()
+
 // Only a 404 means the dashboard is gone. Anything else — a restart, a dropped
 // connection — is temporary, and claiming it does not exist would send the
 // reader after the wrong problem.
@@ -28,6 +34,8 @@ if (error.value) {
 }
 
 useSeoMeta({ title: () => dashboard.value?.name ?? t('nav.dashboards') })
+
+const { isFullscreen, enter: enterFullscreen, exit: exitFullscreen } = useFullscreen()
 
 const editing = ref(false)
 const widgetModalOpen = ref(false)
@@ -45,6 +53,14 @@ watch(isAdmin, (value) => {
 
 watch(slug, () => {
   editing.value = false
+})
+
+// Fullscreen takes the toolbar and every editing control with it, so a layout
+// cannot be arranged from inside it.
+watch(isFullscreen, (active) => {
+  if (active) {
+    editing.value = false
+  }
 })
 
 function openWidgetModal(widget: DashboardWidget | null) {
@@ -111,9 +127,33 @@ const showToolbar = computed(() => Boolean(dashboard.value?.description) || edit
   <UDashboardPanel
     v-if="dashboard"
     id="dashboard"
+    :ui="isFullscreen ? { root: 'm-0 sm:m-0 rounded-none border-0' } : undefined"
   >
     <template #header>
+      <!--
+        Fullscreen leaves nothing on screen to press, so the way back is drawn
+        over the grid rather than in a bar. It stays in the layout instead of
+        appearing on hover — a wall display is usually a touch panel, and a mode
+        that cannot be left on one is a trap — but it keeps quiet until it is
+        pointed at.
+      -->
+      <UTooltip
+        v-if="isFullscreen"
+        :text="$t('dashboard.fullscreenExit')"
+        :kbds="['esc']"
+      >
+        <UButton
+          icon="i-lucide-minimize"
+          color="neutral"
+          variant="subtle"
+          :aria-label="$t('dashboard.fullscreenExit')"
+          class="absolute top-3 end-3 z-10 opacity-25 hover:opacity-100 focus-visible:opacity-100 transition-opacity"
+          @click="exitFullscreen()"
+        />
+      </UTooltip>
+
       <UDashboardNavbar
+        v-else
         :title="dashboard.name"
         icon="i-lucide-layout-dashboard"
       >
@@ -122,6 +162,16 @@ const showToolbar = computed(() => Boolean(dashboard.value?.description) || edit
         </template>
 
         <template #right>
+          <UTooltip :text="$t('dashboard.fullscreen')">
+            <UButton
+              icon="i-lucide-maximize"
+              color="neutral"
+              variant="ghost"
+              :aria-label="$t('dashboard.fullscreen')"
+              @click="enterFullscreen()"
+            />
+          </UTooltip>
+
           <template v-if="isAdmin">
             <UButton
               v-if="editing"
@@ -164,7 +214,7 @@ const showToolbar = computed(() => Boolean(dashboard.value?.description) || edit
       </UDashboardNavbar>
 
       <UDashboardToolbar
-        v-if="showToolbar"
+        v-if="showToolbar && !isFullscreen"
         :ui="{ left: 'min-w-0 flex-1' }"
       >
         <template #left>
