@@ -2,7 +2,7 @@
 import type { DropdownMenuItem } from '@nuxt/ui'
 import type { MonitorGroup, MonitorTreeNode } from '#shared/types/group'
 import type { Monitor, MonitorStatus, MonitorWithState } from '#shared/types/monitor'
-import { flattenMonitorGroupTree, monitorGroupIcon } from '#shared/utils/group'
+import { flattenMonitorGroupTree, joinMonitorPath, monitorGroupIcon } from '#shared/utils/group'
 
 const { t } = useI18n()
 const { isAdmin } = useAdmin()
@@ -19,6 +19,7 @@ async function reload() {
   await Promise.all([refresh(), refreshGroups()])
 }
 
+const { monitorPath, fullMonitorPath } = useMonitorPath()
 const { pending, checkNow, toggleActive, remove } = useMonitorActions(reload)
 const { pending: groupPending, move: moveGroup, remove: removeGroup } = useMonitorGroupActions(reload)
 
@@ -94,7 +95,7 @@ function setGroupFilter(value: GroupFilter) {
 const groupFilterItems = computed(() => [
   { label: t('group.filterAll'), value: 'all' as const, icon: 'i-lucide-list' },
   ...flatTree.value.map(node => ({
-    label: node.path.join(' / '),
+    label: joinMonitorPath(node.path),
     value: node.id as GroupFilter,
     icon: monitorGroupIcon(node)
   })),
@@ -107,7 +108,9 @@ function matches(monitor: MonitorWithState): boolean {
   const term = search.value.trim().toLowerCase()
   const matchesStatus = statusFilter.value === 'all' || monitor.state.status === statusFilter.value
   const matchesTerm = !term
-    || monitor.name.toLowerCase().includes(term)
+    // The whole breadcrumb, so a group name finds the monitors below it even
+    // where the format has shortened that group out of the row.
+    || fullMonitorPath(monitor).toLowerCase().includes(term)
     || monitorTarget(monitor).toLowerCase().includes(term)
 
   return matchesStatus && matchesTerm
@@ -165,10 +168,6 @@ const filtered = computed(() => {
 
   return scoped.filter(matches)
 })
-
-function groupPathOf(monitor: MonitorWithState): string | undefined {
-  return monitor.groupId === null ? undefined : byId.value.get(monitor.groupId)?.path.join(' / ')
-}
 
 function openForm(monitor: Monitor | null, groupId: number | null = null) {
   editedMonitor.value = monitor
@@ -364,7 +363,7 @@ async function confirmGroupDelete() {
               <span
                 v-if="section.node && section.node.depth > 0"
                 class="text-dimmed font-normal"
-              >{{ section.node.path.slice(0, -1).join(' / ') }} / </span>
+              >{{ joinMonitorPath(section.node.path.slice(0, -1)) }} / </span>
               {{ section.node ? section.node.name : $t('group.ungrouped') }}
             </h2>
 
@@ -414,6 +413,7 @@ async function confirmGroupDelete() {
               v-for="monitor in section.monitors"
               :key="monitor.id"
               :monitor="monitor"
+              :show-group-path="false"
             >
               <template
                 v-if="isAdmin"
@@ -457,7 +457,6 @@ async function confirmGroupDelete() {
           v-for="monitor in filtered"
           :key="monitor.id"
           :monitor="monitor"
-          :group-path="groupPathOf(monitor)"
         >
           <template
             v-if="isAdmin"
@@ -517,7 +516,7 @@ async function confirmGroupDelete() {
         <ConfirmModal
           v-model:open="deleteOpen"
           :title="$t('monitor.delete.title')"
-          :description="$t('monitor.delete.description', { name: monitorToDelete?.name ?? '' })"
+          :description="$t('monitor.delete.description', { name: monitorPath(monitorToDelete) })"
           :loading="pending !== null"
           @confirm="confirmDelete"
         />
@@ -525,7 +524,7 @@ async function confirmGroupDelete() {
         <ConfirmModal
           v-model:open="groupDeleteOpen"
           :title="$t('group.delete.title')"
-          :description="$t('group.delete.description', { name: groupToDelete?.name ?? '' })"
+          :description="$t('group.delete.description', { name: groupToDelete ? joinMonitorPath(groupToDelete.path) : '' })"
           :loading="groupPending !== null"
           @confirm="confirmGroupDelete"
         />

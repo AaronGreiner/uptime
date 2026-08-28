@@ -39,11 +39,24 @@ export function getMonitorGroupRow(id: number): MonitorGroupRow | undefined {
 
 /** Group names from the root down to the monitor's direct group. */
 export function monitorGroupPath(groupId: number | null): string[] {
+  return monitorGroupPathResolver()(groupId)
+}
+
+/**
+ * The same walk over one snapshot of the tree, for a list of rows that would
+ * otherwise read the whole group table once per row.
+ */
+export function monitorGroupPathResolver(): (groupId: number | null) => string[] {
+  const byId = new Map(listMonitorGroupRows().map(row => [row.id, row]))
+
+  return groupId => resolvePath(byId, groupId)
+}
+
+function resolvePath(byId: Map<number, MonitorGroupRow>, groupId: number | null): string[] {
   if (groupId === null) {
     return []
   }
 
-  const byId = new Map(listMonitorGroupRows().map(row => [row.id, row]))
   const path: string[] = []
   const seen = new Set<number>()
   let current: number | null = groupId

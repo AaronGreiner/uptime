@@ -5,14 +5,12 @@ import type { z } from 'zod'
 
 definePageMeta({ middleware: 'admin' })
 
-const { t, locale, locales, setLocale } = useI18n()
+const { t } = useI18n()
 const toast = useToast()
-const colorMode = useColorMode()
 const { admin, refreshSession } = useAdmin()
-const { morphMotion } = useMorphMotion()
 const { accountUpdatesEnabled } = useRuntimeConfig().public
 
-useSeoMeta({ title: () => t('settings.title') })
+useSeoMeta({ title: () => t('settings.admin') })
 
 const state = reactive({
   username: admin.value?.username ?? '',
@@ -21,37 +19,6 @@ const state = reactive({
 })
 
 const submitting = ref(false)
-
-type ThemePreference = 'system' | 'light' | 'dark'
-
-const themeItems = computed(() => (['system', 'light', 'dark'] as const).map(value => ({
-  label: t(`settings.themeOption.${value}`),
-  value
-})))
-
-const morphMotionItems = computed(() => (['system', 'on', 'off'] as const).map(value => ({
-  label: t(`settings.iconMotionOption.${value}`),
-  value
-})))
-
-const theme = computed<ThemePreference>({
-  get: () => colorMode.preference as ThemePreference,
-  set: (value) => {
-    colorMode.preference = value
-  }
-})
-
-const localeItems = computed(() => locales.value.map(entry => ({
-  label: entry.name ?? entry.code,
-  value: entry.code
-})))
-
-const language = computed({
-  get: () => locale.value,
-  set: (value) => {
-    void setLocale(value)
-  }
-})
 
 const clearOpen = ref(false)
 const seedOpen = ref(false)
@@ -123,20 +90,24 @@ async function onSubmit(event: FormSubmitEvent<z.output<typeof accountUpdateSche
 </script>
 
 <template>
-  <UDashboardPanel id="settings">
+  <UDashboardPanel id="settings-admin">
     <template #header>
       <UDashboardNavbar
-        :title="$t('settings.title')"
+        :title="$t('nav.settings')"
         icon="i-lucide-settings"
       >
         <template #leading>
           <AppSidebarCollapse />
         </template>
       </UDashboardNavbar>
+
+      <AppSettingsNav />
     </template>
 
+    <!-- Everything here writes to the server, which is what separates it from
+         the general page rather than the guard alone. -->
     <template #body>
-      <div class="w-full max-w-2xl flex flex-col gap-4 sm:gap-6">
+      <div class="w-full max-w-2xl mx-auto flex flex-col gap-4 sm:gap-6">
         <UCard
           v-if="accountUpdatesEnabled"
           :title="$t('settings.account')"
@@ -190,43 +161,6 @@ async function onSubmit(event: FormSubmitEvent<z.output<typeof accountUpdateSche
               :label="$t('common.save')"
             />
           </UForm>
-        </UCard>
-
-        <UCard
-          :title="$t('settings.appearance')"
-          :description="$t('settings.appearanceDescription')"
-        >
-          <div class="grid gap-4 sm:grid-cols-3">
-            <UFormField :label="$t('settings.theme')">
-              <USelectMenu
-                v-model="theme"
-                :items="themeItems"
-                value-key="value"
-                :search-input="false"
-                class="w-full"
-              />
-            </UFormField>
-
-            <UFormField :label="$t('settings.language')">
-              <USelectMenu
-                v-model="language"
-                :items="localeItems"
-                value-key="value"
-                :search-input="false"
-                class="w-full"
-              />
-            </UFormField>
-
-            <UFormField :label="$t('settings.iconMotion')">
-              <USelectMenu
-                v-model="morphMotion"
-                :items="morphMotionItems"
-                value-key="value"
-                :search-input="false"
-                class="w-full"
-              />
-            </UFormField>
-          </div>
         </UCard>
 
         <UCard

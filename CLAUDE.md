@@ -121,6 +121,35 @@ by hand beats that reveal until the current row moves on. Collapsed to icons the
 sidebar has no fold, so that mode hands `collapsedItems` to `UNavigationMenu` and
 lets it draw the popovers.
 
+**Naming a monitor.** A bare name only identifies a monitor inside the tree that
+surrounds it. Everywhere the tree is not on screen — a widget, a filtered list,
+a picker, a dialog, a toast, the delivery log, a notification — the full
+breadcrumb is shown instead. `useMonitorPath` resolves it from the group cache
+(from the groups alone, not from `useMonitorTree`, so a row is not rebuilt on
+every check result), `MonitorPathLabel` draws it with the groups dimmed ahead of
+the name, and `joinMonitorPath` in `shared/utils/group.ts` is the one place the
+separator lives. The label lets the groups shrink long before the name does:
+the name is what the reader scans for, the path only tells two of the same name
+apart. The exceptions are the sidebar and the grouped monitor list, where the
+surrounding tree or the section heading already spells the path out — that is
+what `MonitorCard`'s `showGroupPath` turns off. Notifications keep their own
+separator in `server/services/notifications/format.ts`, since a subject line is
+not a list row.
+
+How much of the path is worth the space is the reader's call:
+`shortenMonitorPath` cuts it to `full`, `parent`, `initials` or `name`, offered
+from the sidebar footer and the settings page. Only monitor *labels* follow it —
+the group tree, the section headings and the pickers always name themselves in
+full, because there the path is the thing being chosen rather than a label on
+something else. Tooltips and the monitor search stay on the whole path too: the
+setting decides how much fits in a row, not what can be read or found.
+
+The value lives in `useState` rather than in a preference read per caller.
+`useCookie` builds a fresh ref on every call, and two of them only agree where
+the browser has a `cookieStore`, so a breadcrumb drawn once per row would go
+stale the moment the setting changed. `useMonitorPathPreference()` binds that
+one state to its cookie and is called once, from the dashboard layout.
+
 `assertValidParent` in `server/utils/groups.ts` is the guard: it rejects a
 missing parent, a group nested into its own subtree, and any move that would
 push the deepest leaf past the depth cap. Deleting a group never deletes what it
@@ -184,6 +213,24 @@ navbar, filters and contextual metadata in the toolbar. Each navbar needs a
 `<UDashboardSidebarCollapse />` in its `#leading` slot; the mobile toggle is
 rendered by the navbar itself. The sign-in page uses the `auth` layout instead,
 because the sidebar is meaningless there.
+
+**Settings.** Three pages under `app/pages/settings/`, split the way the rest of
+the application is: `index.vue` holds what is stored in the reader's own browser
+and is therefore open to everyone, while `admin.vue` and `notifications.vue`
+write to the server and carry the `admin` middleware.
+
+They are reached through the gear in the sidebar footer rather than through
+navigation rows, and switched between with `AppSettingsNav` — a
+`UDashboardToolbar` each page renders under its own navbar, hiding the two
+administrative sections from a reader who cannot open them. Each page still owns
+its `UDashboardPanel`, so the notification page keeps its create buttons in its
+own navbar; only the section bar is shared. That toolbar is left to scroll
+rather than given the truncation treatment the gotcha below describes: three
+German section names do not fit a phone, and a tab bar that can be swiped reads
+better than three labels cut off mid-word.
+
+A page whose content is narrower than the panel centres it (`max-w-* mx-auto`)
+rather than leaving it against the leading edge — all three settings pages do.
 
 **Surfaces.** Three stacked levels, deliberately without hard dividing lines: the
 shell sits behind everything (the `body` rules in `main.css`), the content panel

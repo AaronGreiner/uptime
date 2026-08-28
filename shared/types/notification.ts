@@ -100,6 +100,8 @@ export interface NotificationDelivery {
   groupId: number | null
   monitorId: number
   monitorName: string
+  /** Group names from the root down to the monitor's direct group. */
+  monitorGroupPath: string[]
   eventType: NotificationEventType
   status: NotificationDeliveryStatus
   attempts: number

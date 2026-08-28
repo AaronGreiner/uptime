@@ -53,9 +53,9 @@ const caption = computed(() => failing.value.length ? t('monitor.downCount', fai
           />
           <NuxtLink
             :to="`/monitors/${monitor.id}`"
-            class="flex-1 min-w-0 text-sm text-highlighted hover:text-primary transition-colors truncate-target"
+            class="flex-1 min-w-0 text-sm text-highlighted hover:text-primary transition-colors"
           >
-            {{ monitor.name }}
+            <MonitorPathLabel :monitor="monitor" />
           </NuxtLink>
           <span class="text-xs text-muted tabular-nums shrink-0">
             {{ formatRelativeTime(monitor.state.statusChangedAt) }}

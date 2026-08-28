@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { FormSubmitEvent } from '@nuxt/ui'
 import type { MonitorGroup, MonitorGroupNode } from '#shared/types/group'
-import { MONITOR_GROUP_ICONS, MONITOR_GROUP_MAX_DEPTH, monitorGroupIcon } from '#shared/utils/group'
+import { MONITOR_GROUP_ICONS, MONITOR_GROUP_MAX_DEPTH, joinMonitorPath, monitorGroupIcon } from '#shared/utils/group'
 import { monitorGroupInputSchema } from '#shared/utils/validation'
 import type { MonitorGroupInput } from '#shared/utils/validation'
 
@@ -18,7 +18,7 @@ const open = defineModel<boolean>('open', { required: true })
 
 const { t } = useI18n()
 const toast = useToast()
-const { flatTree } = useMonitorTree()
+const { flatTree, byId } = useMonitorTree()
 
 /** USelectMenu needs a concrete value, the API expects null for a root group. */
 const ROOT_VALUE = 0
@@ -81,7 +81,7 @@ const parentItems = computed(() => [
   ...flatTree.value
     .filter(node => !forbiddenParents.value.has(node.id) && node.depth < availableDepth.value)
     // The full path avoids indentation tricks and still reads unambiguously.
-    .map(node => ({ label: node.path.join(' / '), value: node.id, icon: monitorGroupIcon(node) }))
+    .map(node => ({ label: joinMonitorPath(node.path), value: node.id, icon: monitorGroupIcon(node) }))
 ])
 
 const selectedParent = computed({
@@ -92,6 +92,16 @@ const selectedParent = computed({
 })
 
 const selectedIcon = computed(() => monitorGroupIcon(state.value))
+
+/**
+ * Where the group ends up, named in full. The parent's own path is unaffected
+ * by the save, so the tree in hand is accurate even before it is reloaded.
+ */
+function savedPath(group: MonitorGroup): string {
+  const parent = group.parentId === null ? undefined : byId.value.get(group.parentId)
+
+  return joinMonitorPath([...(parent?.path ?? []), group.name])
+}
 
 /**
  * Icon names are not worth eighteen locale keys, but `i-lucide-book-open` is not
@@ -111,7 +121,7 @@ async function onSubmit(event: FormSubmitEvent<MonitorGroupInput>) {
     )
 
     toast.add({
-      title: t(isEdit.value ? 'group.updated' : 'group.created', { name: saved.name }),
+      title: t(isEdit.value ? 'group.updated' : 'group.created', { name: savedPath(saved) }),
       color: 'success',
       icon: 'i-lucide-check'
     })

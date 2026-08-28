@@ -18,7 +18,6 @@ async function signOut() {
 
 const items = computed<DropdownMenuItem[][]>(() => [
   [{ label: admin.value?.username ?? '', type: 'label' as const, icon: 'i-lucide-shield-check' }],
-  [{ label: t('nav.settings'), icon: 'i-lucide-settings', to: '/settings' }],
   [{ label: t('auth.signOut'), icon: 'i-lucide-log-out', onSelect: signOut }]
 ])
 </script>

@@ -10,6 +10,7 @@ const { t } = useI18n()
 const toast = useToast()
 const { isAdmin } = useAdmin()
 const { formatDateTime, formatDuration, formatLatency, formatRelativeTime, formatUptime, formatDate } = useFormatters()
+const { monitorPath } = useMonitorPath()
 
 const monitorId = computed(() => Number(route.params.id))
 
@@ -27,7 +28,7 @@ if (error.value) {
   })
 }
 
-useSeoMeta({ title: () => monitor.value?.name ?? t('monitor.title') })
+useSeoMeta({ title: () => monitorPath(monitor.value) || t('monitor.title') })
 
 // The chosen range carries over to the next monitor and survives a reload.
 const range = useUiPreference<StatsRange>('stats-range', () => '24h', isStatsRange)
@@ -127,7 +128,11 @@ const recentChecks = computed(() => [...(heartbeats.value ?? [])].reverse().slic
     id="monitor-detail"
   >
     <template #header>
-      <UDashboardNavbar :title="monitor.name">
+      <UDashboardNavbar :ui="{ title: 'min-w-0' }">
+        <template #title>
+          <MonitorPathLabel :monitor="monitor" />
+        </template>
+
         <template #leading>
           <AppSidebarCollapse />
           <UButton
@@ -407,7 +412,7 @@ const recentChecks = computed(() => [...(heartbeats.value ?? [])].reverse().slic
         <ConfirmModal
           v-model:open="deleteOpen"
           :title="$t('monitor.delete.title')"
-          :description="$t('monitor.delete.description', { name: monitor.name })"
+          :description="$t('monitor.delete.description', { name: monitorPath(monitor) })"
           :loading="pending !== null"
           @confirm="confirmDelete"
         />

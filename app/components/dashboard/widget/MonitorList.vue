@@ -42,9 +42,9 @@ const caption = computed(() => t('monitor.count', scoped.value.length))
         />
         <NuxtLink
           :to="`/monitors/${monitor.id}`"
-          class="flex-1 min-w-0 text-sm text-highlighted hover:text-primary transition-colors truncate-target"
+          class="flex-1 min-w-0 text-sm text-highlighted hover:text-primary transition-colors"
         >
-          {{ monitor.name }}
+          <MonitorPathLabel :monitor="monitor" />
         </NuxtLink>
         <span class="hidden @[20rem]:inline text-xs text-muted tabular-nums shrink-0 w-16 text-right">
           {{ formatUptime(monitor.uptime24h.ratio) }}

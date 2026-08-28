@@ -67,9 +67,9 @@ const title = computed(() => props.widget.config.title || t('widget.type.certifi
         />
         <NuxtLink
           :to="`/monitors/${row.monitor.id}`"
-          class="flex-1 min-w-0 text-sm text-highlighted hover:text-primary transition-colors truncate-target"
+          class="flex-1 min-w-0 text-sm text-highlighted hover:text-primary transition-colors"
         >
-          {{ row.monitor.name }}
+          <MonitorPathLabel :monitor="row.monitor" />
         </NuxtLink>
         <span class="hidden @[22rem]:inline text-xs text-dimmed tabular-nums shrink-0">
           {{ formatDate(row.expiresAt) }}

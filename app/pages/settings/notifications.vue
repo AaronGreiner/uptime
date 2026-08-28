@@ -56,8 +56,8 @@ async function onGroupSaved() {
   <UDashboardPanel id="notifications">
     <template #header>
       <UDashboardNavbar
-        :title="$t('notification.title')"
-        icon="i-lucide-bell"
+        :title="$t('nav.settings')"
+        icon="i-lucide-settings"
       >
         <template #leading>
           <AppSidebarCollapse />
@@ -78,10 +78,12 @@ async function onGroupSaved() {
           />
         </template>
       </UDashboardNavbar>
+
+      <AppSettingsNav />
     </template>
 
     <template #body>
-      <div class="w-full max-w-3xl flex flex-col gap-4 sm:gap-6">
+      <div class="w-full max-w-3xl mx-auto flex flex-col gap-4 sm:gap-6">
         <UCard
           :title="$t('notification.groups.title')"
           :description="$t('notification.groups.description')"

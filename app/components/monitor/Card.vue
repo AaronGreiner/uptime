@@ -1,20 +1,28 @@
 <script setup lang="ts">
 import type { MonitorWithState } from '#shared/types/monitor'
+import { joinMonitorPath } from '#shared/utils/group'
 
 const props = withDefaults(defineProps<{
   monitor: MonitorWithState
   /** Drops the metric row and tightens the spacing for very small grid cells. */
   dense?: boolean
-  /** Breadcrumb of the owning group, shown where the card stands on its own. */
-  groupPath?: string
+  /**
+   * Off where the card already stands under a heading naming its group, which
+   * is the only place the breadcrumb would be repeating what is on screen.
+   */
+  showGroupPath?: boolean
 }>(), {
   dense: false,
-  groupPath: undefined
+  showGroupPath: true
 })
 
 const { formatLatency, formatUptime, formatRelativeTime } = useFormatters()
+const { groupPath, groupSegments } = useMonitorPath()
 
 const target = computed(() => monitorTarget(props.monitor))
+const path = computed(() => (props.showGroupPath ? groupPath(props.monitor) : undefined))
+/** The whole path, whatever the format shortened the line above down to. */
+const pathTitle = computed(() => joinMonitorPath(groupSegments(props.monitor)))
 
 /*
  * A dashboard cell has a fixed height, so the card clips instead of scrolling.
@@ -40,11 +48,11 @@ const cardUi = computed(() => ({
     <div class="flex flex-col items-stretch gap-2 @[14rem]:flex-row @[14rem]:items-start @[14rem]:justify-between @[14rem]:gap-3">
       <div class="min-w-0 flex-1">
         <p
-          v-if="groupPath"
+          v-if="path"
           class="text-xs text-dimmed truncate-target"
-          :title="groupPath"
+          :title="pathTitle"
         >
-          {{ groupPath }}
+          {{ path }}
         </p>
         <NuxtLink
           :to="`/monitors/${monitor.id}`"

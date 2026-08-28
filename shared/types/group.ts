@@ -26,6 +26,13 @@ export interface MonitorGroupNode extends MonitorGroup {
   children: MonitorGroupNode[]
 }
 
+/**
+ * How much of a monitor's group path the interface spells out. A deep tree
+ * makes the full breadcrumb the longest part of a list row, so the reader
+ * decides how much of it is worth the space.
+ */
+export type MonitorPathFormat = 'full' | 'parent' | 'initials' | 'name'
+
 /** Status counts rolled up over a group and everything below it. */
 export interface MonitorGroupTotals {
   total: number

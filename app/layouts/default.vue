@@ -13,6 +13,9 @@ const { data: dashboards, refresh: refreshDashboards } = useDashboards()
 // left out on purpose, they only change when the admin edits them.
 useLiveMonitors()
 
+// Binds the breadcrumb format to its cookie, once, for every label below.
+useMonitorPathPreference()
+
 const createDashboardOpen = ref(false)
 
 const dashboardNavigation = computed<NavigationMenuItem[]>(() => [
@@ -29,12 +32,6 @@ const dashboardNavigation = computed<NavigationMenuItem[]>(() => [
         onSelect: () => { createDashboardOpen.value = true }
       }]
     : [])
-])
-
-const settingsNavigation = computed<NavigationMenuItem[]>(() => [
-  { label: t('nav.settings'), type: 'label' },
-  { label: t('notification.title'), icon: 'i-lucide-bell', to: '/notifications' },
-  { label: t('settings.account'), icon: 'i-lucide-user-cog', to: '/settings' }
 ])
 
 async function onDashboardCreated(slug: string) {
@@ -102,18 +99,6 @@ async function onDashboardCreated(slug: string) {
         <div class="shrink-0 h-px bg-border" />
 
         <AppMonitorNav :collapsed="collapsed" />
-
-        <template v-if="isAdmin">
-          <div class="shrink-0 h-px bg-border" />
-
-          <UNavigationMenu
-            :items="settingsNavigation"
-            :collapsed="collapsed"
-            orientation="vertical"
-            tooltip
-            popover
-          />
-        </template>
       </template>
 
       <template #footer="{ collapsed }">
@@ -127,6 +112,17 @@ async function onDashboardCreated(slug: string) {
             class="flex items-center gap-1"
             :class="collapsed ? 'flex-col' : 'ms-auto'"
           >
+            <UTooltip :text="$t('nav.settings')">
+              <UButton
+                to="/settings"
+                color="neutral"
+                variant="ghost"
+                active-variant="soft"
+                icon="i-lucide-settings"
+                square
+                :aria-label="$t('nav.settings')"
+              />
+            </UTooltip>
             <AppLocaleSelect :collapsed="collapsed" />
             <AppColorModeButton />
           </div>

@@ -3,7 +3,7 @@ import type { FormSubmitEvent } from '@nuxt/ui'
 import type { DashboardWidget, WidgetHeight, WidgetWidth } from '#shared/types/dashboard'
 import type { MonitorWithState } from '#shared/types/monitor'
 import type { StatsRange } from '#shared/types/stats'
-import { monitorGroupIcon } from '#shared/utils/group'
+import { joinMonitorPath, monitorGroupIcon } from '#shared/utils/group'
 import { STATS_RANGES } from '#shared/utils/stats'
 import {
   WIDGET_DEFINITIONS,
@@ -36,6 +36,7 @@ const { t } = useI18n()
 const toast = useToast()
 const { formatUptime } = useFormatters()
 const { flatTree } = useMonitorTree()
+const { monitorPath } = useMonitorPath()
 
 /**
  * Every setting the registry knows, whichever type is selected. The submitted
@@ -102,7 +103,7 @@ const typeItems = computed(() => WIDGET_TYPES.map(type => ({
 })))
 
 const monitorItems = computed(() => props.monitors.map(monitor => ({
-  label: monitor.name,
+  label: monitorPath(monitor),
   value: monitor.id,
   description: monitorTarget(monitor)
 })))
@@ -130,7 +131,7 @@ const targetItems = computed(() => WIDGET_SLA_TARGETS.map(target => ({
 const groupItems = computed(() => [
   { label: t('widget.scope.noGroup'), value: null as number | null, icon: 'i-lucide-globe' },
   ...flatTree.value.map(node => ({
-    label: node.path.join(' / '),
+    label: joinMonitorPath(node.path),
     value: node.id as number | null,
     icon: monitorGroupIcon(node)
   }))

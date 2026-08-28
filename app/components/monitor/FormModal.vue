@@ -8,7 +8,7 @@ import {
   MONITOR_TIMEOUT_BOUNDS,
   MONITOR_TYPES
 } from '#shared/utils/monitor'
-import { monitorGroupIcon } from '#shared/utils/group'
+import { joinMonitorPath, monitorGroupIcon } from '#shared/utils/group'
 import { HTTP_METHODS, monitorInputSchema } from '#shared/utils/validation'
 import type { MonitorInput } from '#shared/utils/validation'
 
@@ -26,6 +26,7 @@ const open = defineModel<boolean>('open', { required: true })
 const { t } = useI18n()
 const toast = useToast()
 const { flatTree } = useMonitorTree()
+const { monitorPath } = useMonitorPath()
 
 type HeaderRow = { name: string, value: string }
 
@@ -95,7 +96,7 @@ const methodItems = HTTP_METHODS.map(method => ({ label: method, value: method }
 const groupItems = computed(() => [
   { label: t('group.none'), value: UNGROUPED_VALUE, icon: 'i-lucide-folder-tree' },
   // The full path keeps nested groups apart without indenting the menu.
-  ...flatTree.value.map(node => ({ label: node.path.join(' / '), value: node.id, icon: monitorGroupIcon(node) }))
+  ...flatTree.value.map(node => ({ label: joinMonitorPath(node.path), value: node.id, icon: monitorGroupIcon(node) }))
 ])
 
 const selectedGroup = computed({
@@ -119,7 +120,7 @@ async function onSubmit(event: FormSubmitEvent<MonitorInput>) {
     )
 
     toast.add({
-      title: t(isEdit.value ? 'monitor.updated' : 'monitor.created', { name: saved.name }),
+      title: t(isEdit.value ? 'monitor.updated' : 'monitor.created', { name: monitorPath(saved) }),
       color: 'success',
       icon: 'i-lucide-check'
     })

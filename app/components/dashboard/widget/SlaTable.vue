@@ -84,9 +84,9 @@ const caption = computed(() => `${formatUptime(target.value)} · ${t(`range.${ra
         <div class="flex items-center gap-2">
           <NuxtLink
             :to="`/monitors/${row.monitor.id}`"
-            class="flex-1 min-w-0 text-sm text-highlighted hover:text-primary transition-colors truncate-target"
+            class="flex-1 min-w-0 text-sm text-highlighted hover:text-primary transition-colors"
           >
-            {{ row.monitor.name }}
+            <MonitorPathLabel :monitor="row.monitor" />
           </NuxtLink>
           <span
             class="text-sm font-medium tabular-nums shrink-0 w-20 text-right"

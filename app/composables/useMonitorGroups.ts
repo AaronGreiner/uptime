@@ -1,6 +1,6 @@
 import type { MonitorGroup, MonitorTreeNode } from '#shared/types/group'
 import type { MonitorWithState } from '#shared/types/monitor'
-import { buildMonitorTree, flattenMonitorGroupTree, monitorTotals, ungroupedMonitors } from '#shared/utils/group'
+import { buildMonitorTree, flattenMonitorGroupTree, joinMonitorPath, monitorTotals, ungroupedMonitors } from '#shared/utils/group'
 
 /** Shared group list. Like the monitors, every caller reuses one cache entry. */
 export function useMonitorGroups() {
@@ -51,6 +51,7 @@ export function useMonitorTree() {
 export function useMonitorGroupActions(onChanged: () => unknown) {
   const { t } = useI18n()
   const toast = useToast()
+  const { byId } = useMonitorTree()
   const pending = ref<number | null>(null)
 
   async function move(group: MonitorGroup, direction: 'up' | 'down') {
@@ -69,11 +70,14 @@ export function useMonitorGroupActions(onChanged: () => unknown) {
   async function remove(group: MonitorGroup) {
     pending.value = group.id
 
+    const path = joinMonitorPath(byId.value.get(group.id)?.path ?? [group.name])
+
     try {
       await $fetch(`/api/groups/${group.id}`, { method: 'DELETE' })
       await onChanged()
 
-      toast.add({ title: t('group.deleted', { name: group.name }), color: 'success', icon: 'i-lucide-check' })
+      // Read before the reload, which is what drops the group from the tree.
+      toast.add({ title: t('group.deleted', { name: path }), color: 'success', icon: 'i-lucide-check' })
 
       return true
     } catch (error) {

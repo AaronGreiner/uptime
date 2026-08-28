@@ -529,7 +529,8 @@
     "1y": "1 Jahr"
   },
   "settings": {
-    "title": "Einstellungen",
+    "general": "Allgemein",
+    "admin": "Administration",
     "account": "Admin-Konto",
     "accountDescription": "Admin-Zugangsdaten ändern.",
     "currentPassword": "Aktuelles Passwort",
@@ -542,6 +543,8 @@
     "theme": "Erscheinungsbild",
     "language": "Sprache",
     "iconMotion": "Symbolanimationen",
+    "monitorPath": "Monitornamen",
+    "monitorPathHint": "Wie viel vom Gruppenpfad ein Monitor im Namen trägt.",
     "themeOption": {
       "light": "Hell",
       "dark": "Dunkel",
@@ -551,6 +554,12 @@
       "system": "Systemeinstellung",
       "on": "An",
       "off": "Aus"
+    },
+    "monitorPathOption": {
+      "full": "Vollständiger Pfad",
+      "parent": "Nur direkte Gruppe",
+      "initials": "Gruppen als Initialen",
+      "name": "Nur der Name"
     },
     "data": {
       "title": "Daten",

@@ -59,9 +59,15 @@ const tone = computed(() => {
   >
     <NuxtLink
       :to="`/monitors/${monitor.id}`"
-      class="text-xs @[20rem]:text-sm text-muted hover:text-primary transition-colors truncate-target"
+      class="min-w-0 text-xs @[20rem]:text-sm text-muted hover:text-primary transition-colors truncate-target"
     >
-      {{ widget.config.title || monitor.name }}
+      <template v-if="widget.config.title">
+        {{ widget.config.title }}
+      </template>
+      <MonitorPathLabel
+        v-else
+        :monitor="monitor"
+      />
     </NuxtLink>
     <p
       class="text-2xl @[18rem]:text-3xl @[24rem]:text-4xl font-semibold tabular-nums leading-tight"

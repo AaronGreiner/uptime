@@ -13,6 +13,7 @@ const MAX_DAYS = 365
 
 const { t } = useI18n()
 const { formatDate, formatLatency, formatNumber, formatUptime } = useFormatters()
+const { monitorPath } = useMonitorPath()
 
 const monitor = computed(() => props.monitors.find(entry => entry.id === props.widget.monitorId) ?? null)
 const days = computed(() => calendarDaysForWidth(props.widget.width, MAX_DAYS))
@@ -130,7 +131,7 @@ function onEnter(event: MouseEvent, day: CalendarDay) {
   }
 }
 
-const title = computed(() => props.widget.config.title || monitor.value?.name || t('widget.type.uptime-calendar'))
+const title = computed(() => props.widget.config.title || monitorPath(monitor.value) || t('widget.type.uptime-calendar'))
 
 const caption = computed(() => {
   const span = t('widget.calendar.days', { days: calendar.value.length || days.value })
@@ -147,90 +148,102 @@ const caption = computed(() => {
     :to="`/monitors/${monitor.id}`"
     :caption="caption"
   >
-    <USkeleton
-      v-if="status === 'pending' && !data"
-      class="size-full"
-    />
-    <div
-      v-else-if="!calendar.length"
-      class="size-full grid place-items-center text-sm text-dimmed"
-    >
-      {{ $t('monitor.detail.noData') }}
-    </div>
-    <!--
-      Weeks are columns of fixed size squares, so the cell decides how many weeks
-      it holds rather than how large a day is. Reversed like the pulse bar: the
-      row packs at its right edge, the oldest weeks run off to the left, and the
-      fade turns the cut into an edge rather than half a column.
-    -->
-    <!--
-      Two boxes on purpose: the inner one clips the weeks that do not fit, the
-      outer one carries the readout, which must be able to leave the row without
-      being cut off by the very clipping that makes the row work.
-    -->
-    <div
-      v-else
-      class="relative h-full"
-      @mouseleave="hovered = null"
-    >
+    <template #title>
+      <template v-if="widget.config.title">
+        {{ widget.config.title }}
+      </template>
+      <MonitorPathLabel
+        v-else
+        :monitor="monitor"
+      />
+    </template>
+
+    <template #default>
+      <USkeleton
+        v-if="status === 'pending' && !data"
+        class="size-full"
+      />
+      <div
+        v-else-if="!calendar.length"
+        class="size-full grid place-items-center text-sm text-dimmed"
+      >
+        {{ $t('monitor.detail.noData') }}
+      </div>
       <!--
-        Weeks are columns of fixed size squares, so the cell decides how many
-        weeks it holds rather than how large a day is. Reversed like the pulse
-        bar: the row packs at its right edge, the oldest weeks run off to the
-        left, and the fade turns the cut into an edge rather than half a column.
+        Weeks are columns of fixed size squares, so the cell decides how many weeks
+        it holds rather than how large a day is. Reversed like the pulse bar: the
+        row packs at its right edge, the oldest weeks run off to the left, and the
+        fade turns the cut into an edge rather than half a column.
       -->
-      <div class="flex flex-row-reverse h-full items-center overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_1rem)]">
+      <!--
+        Two boxes on purpose: the inner one clips the weeks that do not fit, the
+        outer one carries the readout, which must be able to leave the row without
+        being cut off by the very clipping that makes the row work.
+      -->
+      <div
+        v-else
+        class="relative h-full"
+        @mouseleave="hovered = null"
+      >
+        <!--
+          Weeks are columns of fixed size squares, so the cell decides how many
+          weeks it holds rather than how large a day is. Reversed like the pulse
+          bar: the row packs at its right edge, the oldest weeks run off to the
+          left, and the fade turns the cut into an edge rather than half a column.
+        -->
+        <div class="flex flex-row-reverse h-full items-center overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_1rem)]">
+          <div
+            class="grid grid-flow-col grid-rows-7 shrink-0"
+            :class="CALENDAR_GRID_CLASS"
+          >
+            <div
+              v-for="blank in leadingBlanks"
+              :key="`blank-${blank}`"
+              :class="CALENDAR_SQUARE_CLASS"
+            />
+            <div
+              v-for="day in calendar"
+              :key="day.dayStart"
+              class="rounded-[2px] transition-opacity duration-150"
+              :class="[
+                CALENDAR_SQUARE_CLASS,
+                dayClass(day),
+                hovered && hovered.day.dayStart !== day.dayStart ? 'opacity-40' : 'opacity-100'
+              ]"
+              @mouseenter="onEnter($event, day)"
+            />
+          </div>
+        </div>
+
         <div
-          class="grid grid-flow-col grid-rows-7 shrink-0"
-          :class="CALENDAR_GRID_CLASS"
+          v-if="hovered"
+          class="pointer-events-none absolute z-10 rounded-md border border-default bg-elevated px-2 py-1 text-xs shadow-lg whitespace-nowrap"
+          :class="[hovered.below ? '' : '-translate-y-full', hovered.anchorEnd ? '-translate-x-full' : '']"
+          :style="{ left: `${hovered.x}px`, top: `${hovered.below ? hovered.y + 17 : hovered.y - 6}px` }"
         >
-          <div
-            v-for="blank in leadingBlanks"
-            :key="`blank-${blank}`"
-            :class="CALENDAR_SQUARE_CLASS"
-          />
-          <div
-            v-for="day in calendar"
-            :key="day.dayStart"
-            class="rounded-[2px] transition-opacity duration-150"
-            :class="[
-              CALENDAR_SQUARE_CLASS,
-              dayClass(day),
-              hovered && hovered.day.dayStart !== day.dayStart ? 'opacity-40' : 'opacity-100'
-            ]"
-            @mouseenter="onEnter($event, day)"
-          />
+          <span class="text-dimmed">{{ formatDate(hovered.day.dayStart) }}</span>
+          <span class="mx-1.5 text-muted">·</span>
+          <template v-if="hovered.day.ratio === null">
+            <span class="text-dimmed">{{ $t('monitor.detail.noData') }}</span>
+          </template>
+          <template v-else>
+            <span class="font-medium tabular-nums">{{ formatUptime(hovered.day.ratio) }}</span>
+            <span
+              v-if="hovered.day.downCount"
+              class="ml-1.5 text-error tabular-nums"
+            >
+              {{ formatNumber(hovered.day.downCount) }} × {{ $t('status.down') }}
+            </span>
+            <span
+              v-if="hovered.day.avgLatencyMs !== null"
+              class="ml-1.5 text-muted tabular-nums"
+            >
+              {{ formatLatency(hovered.day.avgLatencyMs) }}
+            </span>
+          </template>
         </div>
       </div>
-
-      <div
-        v-if="hovered"
-        class="pointer-events-none absolute z-10 rounded-md border border-default bg-elevated px-2 py-1 text-xs shadow-lg whitespace-nowrap"
-        :class="[hovered.below ? '' : '-translate-y-full', hovered.anchorEnd ? '-translate-x-full' : '']"
-        :style="{ left: `${hovered.x}px`, top: `${hovered.below ? hovered.y + 17 : hovered.y - 6}px` }"
-      >
-        <span class="text-dimmed">{{ formatDate(hovered.day.dayStart) }}</span>
-        <span class="mx-1.5 text-muted">·</span>
-        <template v-if="hovered.day.ratio === null">
-          <span class="text-dimmed">{{ $t('monitor.detail.noData') }}</span>
-        </template>
-        <template v-else>
-          <span class="font-medium tabular-nums">{{ formatUptime(hovered.day.ratio) }}</span>
-          <span
-            v-if="hovered.day.downCount"
-            class="ml-1.5 text-error tabular-nums"
-          >
-            {{ formatNumber(hovered.day.downCount) }} × {{ $t('status.down') }}
-          </span>
-          <span
-            v-if="hovered.day.avgLatencyMs !== null"
-            class="ml-1.5 text-muted tabular-nums"
-          >
-            {{ formatLatency(hovered.day.avgLatencyMs) }}
-          </span>
-        </template>
-      </div>
-    </div>
+    </template>
   </DashboardWidgetShell>
   <DashboardWidgetMissing v-else />
 </template>

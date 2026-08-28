@@ -529,7 +529,8 @@
     "1y": "1 year"
   },
   "settings": {
-    "title": "Settings",
+    "general": "General",
+    "admin": "Administration",
     "account": "Admin account",
     "accountDescription": "Change the admin credentials.",
     "currentPassword": "Current password",
@@ -542,6 +543,8 @@
     "theme": "Theme",
     "language": "Language",
     "iconMotion": "Icon motion",
+    "monitorPath": "Monitor names",
+    "monitorPathHint": "How much of the group path a monitor is named with.",
     "themeOption": {
       "light": "Light",
       "dark": "Dark",
@@ -551,6 +554,12 @@
       "system": "Follow system",
       "on": "On",
       "off": "Off"
+    },
+    "monitorPathOption": {
+      "full": "Full path",
+      "parent": "Direct group only",
+      "initials": "Group initials",
+      "name": "Name only"
     },
     "data": {
       "title": "Data",

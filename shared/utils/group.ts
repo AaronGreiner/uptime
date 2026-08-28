@@ -1,4 +1,4 @@
-import type { MonitorGroup, MonitorGroupNode, MonitorGroupTotals, MonitorTreeNode } from '../types/group'
+import type { MonitorGroup, MonitorGroupNode, MonitorGroupTotals, MonitorPathFormat, MonitorTreeNode } from '../types/group'
 import type { MonitorStatus, MonitorWithState } from '../types/monitor'
 
 /**
@@ -159,4 +159,48 @@ export function mergeTotals(list: MonitorGroupTotals[]): MonitorGroupTotals {
 
 function worstStatus(totals: MonitorGroupTotals): MonitorStatus | null {
   return STATUS_SEVERITY.find(status => totals[status] > 0) ?? null
+}
+
+/**
+ * Separator drawn between the segments of a breadcrumb. A monitor is only
+ * identified by its name inside the tree that surrounds it; everywhere else two
+ * groups may hold the same name, so the whole path has to be spelled out.
+ */
+export const MONITOR_PATH_SEPARATOR = '/'
+
+/** Joins path segments into the breadcrumb the interface shows. */
+export function joinMonitorPath(segments: string[]): string {
+  return segments.join(` ${MONITOR_PATH_SEPARATOR} `)
+}
+
+/** Offered in the settings; the first entry is the default. */
+export const MONITOR_PATH_FORMATS = ['full', 'parent', 'initials', 'name'] as const satisfies readonly MonitorPathFormat[]
+
+export function isMonitorPathFormat(value: unknown): value is MonitorPathFormat {
+  return MONITOR_PATH_FORMATS.includes(value as MonitorPathFormat)
+}
+
+/**
+ * Cuts a group path down to the chosen format: `full` names every group above
+ * the monitor, `parent` only the one it sits in, `initials` keeps the depth
+ * visible without the wording, and `name` drops the path altogether.
+ *
+ * Only how a monitor is *named*. The group tree itself — the sidebar, the
+ * section headings, the pickers — always spells its own path out, because
+ * there the path is the thing being chosen rather than a label on something
+ * else.
+ */
+export function shortenMonitorPath(segments: string[], format: MonitorPathFormat): string[] {
+  switch (format) {
+    case 'full':
+      return segments
+    case 'parent':
+      return segments.slice(-1)
+    case 'initials':
+      // By code point, so a group named with an accent or an emoji keeps it
+      // whole instead of losing half of a surrogate pair.
+      return segments.map(segment => [...segment][0] ?? '')
+    case 'name':
+      return []
+  }
 }

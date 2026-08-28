@@ -2,6 +2,7 @@
 import { NuxtLink } from '#components'
 
 withDefaults(defineProps<{
+  /** Plain wording; the `title` slot replaces it where a breadcrumb is drawn. */
   title: string
   /** Makes the title a link, for a widget that stands for one monitor. */
   to?: string
@@ -40,10 +41,12 @@ withDefaults(defineProps<{
       <component
         :is="to ? NuxtLink : 'p'"
         :to="to"
-        class="text-sm @[24rem]:text-base font-medium text-highlighted truncate-target"
+        class="min-w-0 text-sm @[24rem]:text-base font-medium text-highlighted truncate-target"
         :class="to ? 'hover:text-primary transition-colors' : ''"
       >
-        {{ title }}
+        <slot name="title">
+          {{ title }}
+        </slot>
       </component>
       <p
         v-if="caption"

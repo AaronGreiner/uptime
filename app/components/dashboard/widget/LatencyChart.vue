@@ -9,8 +9,13 @@ const props = defineProps<{
   monitors: MonitorWithState[]
 }>()
 
+const { monitorPath } = useMonitorPath()
+
 const monitor = computed(() => props.monitors.find(entry => entry.id === props.widget.monitorId) ?? null)
 const range = computed<StatsRange>(() => props.widget.config.range ?? WIDGET_CONFIG_DEFAULTS.range)
+
+/** Only the fallback: a hand written title is the author's own wording. */
+const title = computed(() => props.widget.config.title || monitorPath(monitor.value))
 
 // The buckets are aggregated server side, so a fresh check means a refetch. The
 // shared fetcher keys by monitor and range, so two charts of the same thing make
@@ -21,20 +26,32 @@ const { data, status } = useMonitorStats(() => props.widget.monitorId, range)
 <template>
   <DashboardWidgetShell
     v-if="monitor"
-    :title="widget.config.title || monitor.name"
+    :title="title"
     :to="`/monitors/${monitor.id}`"
     plain
     :caption="$t(`range.${range}`)"
   >
-    <USkeleton
-      v-if="status === 'pending' && !data"
-      class="size-full"
-    />
-    <MonitorLatencyChart
-      v-else
-      class="h-full min-h-0"
-      :points="data?.points ?? []"
-    />
+    <template #title>
+      <template v-if="widget.config.title">
+        {{ widget.config.title }}
+      </template>
+      <MonitorPathLabel
+        v-else
+        :monitor="monitor"
+      />
+    </template>
+
+    <template #default>
+      <USkeleton
+        v-if="status === 'pending' && !data"
+        class="size-full"
+      />
+      <MonitorLatencyChart
+        v-else
+        class="h-full min-h-0"
+        :points="data?.points ?? []"
+      />
+    </template>
   </DashboardWidgetShell>
   <DashboardWidgetMissing v-else />
 </template>

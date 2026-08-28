@@ -401,11 +401,15 @@ export function setMonitorGroupNotificationGroups(monitorGroupId: number, groupI
 
 /** Most recent deliveries with the names the log shows, newest first. */
 export function listNotificationDeliveries(limit: number): NotificationDelivery[] {
+  // One snapshot of the tree for the whole page, rather than one walk per row.
+  const groupPath = monitorGroupPathResolver()
+
   return useDatabase()
     .select({
       delivery: notificationDeliveries,
       channelName: notificationChannels.name,
-      monitorName: monitors.name
+      monitorName: monitors.name,
+      monitorGroupId: monitors.groupId
     })
     .from(notificationDeliveries)
     .innerJoin(notificationChannels, eq(notificationChannels.id, notificationDeliveries.channelId))
@@ -420,6 +424,7 @@ export function listNotificationDeliveries(limit: number): NotificationDelivery[
       groupId: row.delivery.groupId,
       monitorId: row.delivery.monitorId,
       monitorName: row.monitorName,
+      monitorGroupPath: groupPath(row.monitorGroupId),
       eventType: row.delivery.eventType,
       status: row.delivery.status,
       attempts: row.delivery.attempts,

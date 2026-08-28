@@ -4,6 +4,7 @@ import type { Monitor, MonitorWithState } from '#shared/types/monitor'
 export function useMonitorActions(onChanged: () => unknown) {
   const { t } = useI18n()
   const toast = useToast()
+  const { monitorPath } = useMonitorPath()
   const pending = ref<number | null>(null)
   const succeededId = ref<number | null>(null)
   let succeededTimer: ReturnType<typeof setTimeout> | undefined
@@ -58,7 +59,7 @@ export function useMonitorActions(onChanged: () => unknown) {
       await $fetch(`/api/monitors/${monitor.id}`, { method: 'DELETE' })
       await onChanged()
 
-      toast.add({ title: t('monitor.deleted', { name: monitor.name }), color: 'success', icon: 'i-lucide-check' })
+      toast.add({ title: t('monitor.deleted', { name: monitorPath(monitor) }), color: 'success', icon: 'i-lucide-check' })
 
       return true
     } catch (error) {

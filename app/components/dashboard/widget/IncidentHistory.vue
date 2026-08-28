@@ -20,7 +20,7 @@ const limit = computed(() => props.widget.config.limit ?? WIDGET_CONFIG_DEFAULTS
 
 const { data, status } = useScopeIncidents(scopedIds, isAll, range, limit)
 
-const namesById = computed(() => new Map(props.monitors.map(monitor => [monitor.id, monitor.name])))
+const monitorsById = computed(() => new Map(props.monitors.map(monitor => [monitor.id, monitor])))
 
 function duration(incident: Incident): number {
   return Math.max(0, (incident.endedAt ?? Math.floor(now.value / 1000)) - incident.startedAt)
@@ -48,7 +48,13 @@ const title = computed(() => props.widget.config.title || t('widget.type.inciden
             :to="`/monitors/${incident.monitorId}`"
             class="flex-1 min-w-0 text-sm text-highlighted hover:text-primary transition-colors truncate-target"
           >
-            {{ namesById.get(incident.monitorId) ?? `#${incident.monitorId}` }}
+            <MonitorPathLabel
+              v-if="monitorsById.get(incident.monitorId)"
+              :monitor="monitorsById.get(incident.monitorId)"
+            />
+            <template v-else>
+              {{ `#${incident.monitorId}` }}
+            </template>
           </NuxtLink>
           <span
             v-if="incident.endedAt === null"
