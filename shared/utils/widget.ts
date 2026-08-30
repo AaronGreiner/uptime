@@ -20,6 +20,7 @@ export type WidgetField
     | 'limit'
     | 'target'
     | 'sort'
+    | 'spread'
 
 export interface WidgetDefinition {
   /** Shown next to the type in the picker. Also listed in `nuxt.config`. */
@@ -66,7 +67,7 @@ export const WIDGET_DEFINITIONS = {
   },
   'latency-chart': {
     icon: 'i-lucide-chart-line',
-    fields: ['monitor', 'range'],
+    fields: ['monitor', 'range', 'spread'],
     widths: ['half', 'twoThirds', 'full'],
     heights: ['standard', 'tall'],
     defaultWidth: 'half',
@@ -172,6 +173,7 @@ export const WIDGET_CONFIG_DEFAULTS: Omit<Required<WidgetConfig>, 'title'> = {
   limit: 5,
   target: 0.999,
   sort: 'status',
+  spread: 'inherit',
   monitorIds: [],
   groupId: null
 }
@@ -220,6 +222,9 @@ export function widgetConfigForType(type: WidgetType, config: WidgetConfig = {})
         break
       case 'sort':
         result.sort = config.sort ?? fallback.sort
+        break
+      case 'spread':
+        result.spread = config.spread ?? fallback.spread
         break
     }
   }

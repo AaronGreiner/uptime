@@ -48,12 +48,23 @@ withDefaults(defineProps<{
           {{ title }}
         </slot>
       </component>
-      <p
-        v-if="caption"
-        class="text-[0.6875rem] @[24rem]:text-xs text-dimmed shrink-0"
-      >
-        {{ caption }}
-      </p>
+      <!--
+        Controls sit ahead of the caption rather than in the corner the edit mode
+        keeps its own buttons in. A cell too narrow for both hides them: the
+        caption says what the widget shows, the control is a convenience the
+        detail page and the settings offer as well.
+      -->
+      <div class="flex items-center gap-2 shrink-0">
+        <div class="hidden @[24rem]:flex">
+          <slot name="actions" />
+        </div>
+        <p
+          v-if="caption"
+          class="text-[0.6875rem] @[24rem]:text-xs text-dimmed"
+        >
+          {{ caption }}
+        </p>
+      </div>
     </div>
 
     <div

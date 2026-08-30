@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { MONITOR_PATH_FORMATS } from '#shared/utils/group'
+import { LATENCY_SPREADS } from '#shared/utils/monitor'
 
 const { t, locale, locales, setLocale } = useI18n()
 const colorMode = useColorMode()
 const { morphMotion } = useMorphMotion()
 const monitorPathFormat = useMonitorPathFormat()
+const latencySpread = useLatencySpread()
 
 useSeoMeta({ title: () => t('settings.general') })
 
@@ -22,6 +24,11 @@ const morphMotionItems = computed(() => (['system', 'on', 'off'] as const).map(v
 
 const monitorPathItems = computed(() => MONITOR_PATH_FORMATS.map(value => ({
   label: t(`settings.monitorPathOption.${value}`),
+  value
+})))
+
+const latencySpreadItems = computed(() => LATENCY_SPREADS.map(value => ({
+  label: t(`monitor.latencySpread.${value}`),
   value
 })))
 
@@ -110,6 +117,29 @@ const language = computed({
               <USelectMenu
                 v-model="monitorPathFormat"
                 :items="monitorPathItems"
+                value-key="value"
+                :search-input="false"
+                class="w-full"
+              />
+            </UFormField>
+
+            <UFormField
+              :label="$t('settings.latencySeries')"
+              :help="$t('settings.latencySeriesHint')"
+            >
+              <MonitorLatencySeriesToggle
+                block
+                size="md"
+              />
+            </UFormField>
+
+            <UFormField
+              :label="$t('settings.latencySpread')"
+              :help="$t('settings.latencySpreadHint')"
+            >
+              <USelectMenu
+                v-model="latencySpread"
+                :items="latencySpreadItems"
                 value-key="value"
                 :search-input="false"
                 class="w-full"

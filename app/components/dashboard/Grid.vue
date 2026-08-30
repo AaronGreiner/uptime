@@ -25,6 +25,10 @@ function cloneWidgets(): DashboardWidget[] {
 
 const widgets = ref<DashboardWidget[]>(cloneWidgets())
 
+// Read by the widgets themselves rather than passed through their props: a
+// widget carrying its own control hides it while the edit buttons are in reach.
+provideWidgetEditing(() => props.editing)
+
 /** Serialised state last confirmed by the server, used to skip idle saves. */
 const persisted = ref(serializeWidgets(widgets.value))
 

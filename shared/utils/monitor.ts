@@ -1,4 +1,4 @@
-import type { Heartbeat, Monitor, MonitorStatus, MonitorType } from '../types/monitor'
+import type { Heartbeat, LatencySeries, LatencySpread, Monitor, MonitorStatus, MonitorType } from '../types/monitor'
 
 export const MONITOR_TYPES: MonitorType[] = ['http', 'ping']
 
@@ -153,4 +153,41 @@ export function matchesExpectedStatus(statusCode: number, expression: string): b
   }
 
   return ranges.some(([from, to]) => statusCode >= from && statusCode <= to)
+}
+
+/**
+ * The curves of the response time chart, in the order they are offered and
+ * stored in — a canonical order, so the same selection is always the same
+ * value whatever sequence the reader clicked it together in.
+ */
+export const LATENCY_SERIES = ['min', 'avg', 'max'] as const satisfies readonly LatencySeries[]
+
+/** What a chart shows before anybody has chosen: the average alone. */
+export const DEFAULT_LATENCY_SERIES: LatencySeries[] = ['avg']
+
+export function isLatencySeries(value: unknown): value is LatencySeries {
+  return LATENCY_SERIES.includes(value as LatencySeries)
+}
+
+/**
+ * A stored selection is only accepted while it still draws something. An empty
+ * one would leave an axis with nothing under it, which reads as a broken chart
+ * rather than as a setting.
+ */
+export function isLatencySeriesSelection(value: unknown): value is LatencySeries[] {
+  return Array.isArray(value) && value.length > 0 && value.every(isLatencySeries)
+}
+
+/** A selection reduced to the canonical order, without repeats. */
+export function normalizeLatencySeries(selection: readonly LatencySeries[]): LatencySeries[] {
+  return LATENCY_SERIES.filter(series => selection.includes(series))
+}
+
+/** The spread treatments, in the order they are offered. */
+export const LATENCY_SPREADS = ['band', 'ticks', 'neutral'] as const satisfies readonly LatencySpread[]
+
+export const DEFAULT_LATENCY_SPREAD: LatencySpread = 'band'
+
+export function isLatencySpread(value: unknown): value is LatencySpread {
+  return LATENCY_SPREADS.includes(value as LatencySpread)
 }

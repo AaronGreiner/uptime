@@ -33,6 +33,19 @@ useSeoMeta({ title: () => monitorPath(monitor.value) || t('monitor.title') })
 // The chosen range carries over to the next monitor and survives a reload.
 const range = useUiPreference<StatsRange>('stats-range', () => '24h', isStatsRange)
 
+const latencySeries = useLatencySeries()
+
+/**
+ * The heading below the chart title names what is drawn. With the average alone
+ * that is the sentence it has always been; any other selection is listed, so
+ * the line never promises an average the reader has switched off.
+ */
+const chartDescription = computed(() => latencySeries.value.length === 1 && latencySeries.value[0] === 'avg'
+  ? t('monitor.detail.avgResponseTime')
+  : t('monitor.detail.seriesShown', {
+      series: latencySeries.value.map(series => t(`monitor.latencySeries.${series}`)).join(' · ')
+    }))
+
 const { data: stats, refresh: refreshStats } = await useAsyncData(
   () => `monitor-stats-${monitorId.value}-${range.value}`,
   () => $fetch<{ points: MonitorStatsPoint[], uptime: MonitorUptime }>(`/api/monitors/${monitorId.value}/stats`, {
@@ -318,17 +331,20 @@ const recentChecks = computed(() => [...(heartbeats.value ?? [])].reverse().slic
                 {{ $t('monitor.detail.responseTime') }}
               </h2>
               <p class="mt-1 text-sm text-muted">
-                {{ $t('monitor.detail.avgResponseTime') }}
+                {{ chartDescription }}
               </p>
             </div>
-            <USelectMenu
-              v-model="range"
-              :items="rangeItems"
-              value-key="value"
-              :search-input="false"
-              size="sm"
-              class="w-36"
-            />
+            <div class="flex flex-wrap items-center gap-2">
+              <MonitorLatencySeriesToggle />
+              <USelectMenu
+                v-model="range"
+                :items="rangeItems"
+                value-key="value"
+                :search-input="false"
+                size="sm"
+                class="w-36"
+              />
+            </div>
           </div>
         </template>
 

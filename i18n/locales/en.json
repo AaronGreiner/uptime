@@ -138,6 +138,8 @@
     "detail": {
       "responseTime": "Response time",
       "avgResponseTime": "Average response time",
+      "latencySeries": "Curves shown",
+      "seriesShown": "Shown: {series}",
       "lastCheck": "Last check",
       "nextCheck": "Next check",
       "uptime": "Uptime",
@@ -154,6 +156,16 @@
       "target": "Target",
       "interval": "every {seconds}",
       "collecting": "Collecting data…"
+    },
+    "latencySeries": {
+      "min": "Min",
+      "avg": "Avg",
+      "max": "Max"
+    },
+    "latencySpread": {
+      "band": "Outlined band",
+      "ticks": "Ticks per bucket",
+      "neutral": "Neutral band"
     },
     "allMonitors": "All monitors"
   },
@@ -285,6 +297,7 @@
       "title": "Title",
       "monitor": "Monitor",
       "range": "Time range",
+      "spread": "Spread",
       "level": "Size",
       "monitors": "Monitors",
       "group": "Group",
@@ -308,6 +321,9 @@
       "name": "Name",
       "uptime": "Lowest uptime",
       "latency": "Slowest"
+    },
+    "spread": {
+      "inherit": "From settings"
     },
     "scope": {
       "noGroup": "No group",
@@ -547,6 +563,10 @@
     "iconMotion": "Icon motion",
     "monitorPath": "Monitor names",
     "monitorPathHint": "How much of the group path a monitor is named with.",
+    "latencySeries": "Response time chart",
+    "latencySeriesHint": "Which curves every response time chart draws.",
+    "latencySpread": "Min–max spread",
+    "latencySpreadHint": "How the spread is drawn while min or max are shown.",
     "themeOption": {
       "light": "Light",
       "dark": "Dark",

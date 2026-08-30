@@ -16,6 +16,10 @@ useLiveMonitors()
 // Binds the breadcrumb format to its cookie, once, for every label below.
 useMonitorPathPreference()
 
+// The same for the response time charts, whose curves and spread treatment the
+// detail page and the dashboard tiles share.
+useLatencyChartPreferences()
+
 // A dashboard opened in fullscreen renders without this sidebar. The listeners
 // that end the mode are global, so they are bound here rather than on the page.
 const { isFullscreen } = useFullscreen()

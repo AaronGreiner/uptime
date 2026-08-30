@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import type { MonitorStatsPoint } from '#shared/types/monitor'
+import type { LatencySpread, MonitorStatsPoint } from '#shared/types/monitor'
 
 const props = defineProps<{
   points: MonitorStatsPoint[]
   /** Fixed plot height in pixels. Omit to fill the available space. */
   height?: number
+  /** Overrides the reader's spread treatment, for a widget that insists on one. */
+  spread?: LatencySpread
 }>()
 
 /**
@@ -26,7 +28,38 @@ const GAP_FACTOR = 2.5
 /** Above this share of the plot height the tooltip would cover the curve it describes. */
 const TOOLTIP_FLIP_RATIO = 0.45
 
+/** Share of the readings the scale has to hold once the maxima are drawn. */
+const SCALE_QUANTILE = 0.98
+
+/** The value `share` of the readings stay below, the rest running off the top. */
+function quantileOf(values: number[], share: number): number {
+  if (!values.length) {
+    return 0
+  }
+
+  const sorted = [...values].sort((first, second) => first - second)
+
+  return sorted[Math.floor((sorted.length - 1) * share)]!
+}
+
+const { t } = useI18n()
 const { formatLatency, formatNumber, formatTime, formatDate } = useFormatters()
+
+/**
+ * The curves to draw, from the reader's own browser rather than from a prop:
+ * the setting belongs to whoever is looking, not to a widget or a page, so the
+ * detail chart and every dashboard tile answer to the same switch.
+ */
+const { shows } = useLatencySeriesToggle()
+
+/**
+ * How the spread is drawn. The reader's setting unless a widget hands one down:
+ * a dashboard is composed once and read by everybody, so its author may pin a
+ * look, while everything else follows whoever is looking.
+ */
+const readerSpread = useLatencySpread()
+
+const spread = computed<LatencySpread>(() => props.spread ?? readerSpread.value)
 
 const chartId = useId()
 
@@ -119,15 +152,25 @@ const bucketLabel = computed(() => {
 /**
  * Rounds the axis maximum up to a readable step.
  *
- * Measured against the bucket averages the curve is drawn from rather than
- * against the slowest single check in them. The two are the same reading while a
- * bucket holds one check, and drift apart over the long ranges, where one timed
- * out request would otherwise set the scale for a month and press the whole
- * series flat against the baseline. Nothing is lost by leaving it out: the
- * extreme was never drawn, and the tooltip reports it per bucket.
+ * Measured against what is actually drawn, and with the maxima on, against all
+ * but the slowest of them. Scaling to the true peak is what a chart normally
+ * does, but the maxima are per-bucket extremes: one timed out request then sets
+ * the scale for a whole month and presses the entire series flat against the
+ * baseline, which is the one thing the reader did not turn the bounds on to
+ * see. Those few readings run off the top instead — `yOf` clamps them to the
+ * edge — and the tooltip still reports every one of them exactly.
+ *
+ * With the average alone nothing is cut: a bucket average is already a
+ * reading over many checks, so it has no comparable outliers to guard against.
  */
 const yMax = computed(() => {
-  const peak = Math.max(...props.points.map(point => point.avgLatencyMs ?? 0), 1)
+  const drawn = props.points.map(point => Math.max(
+    shows('avg') ? point.avgLatencyMs ?? 0 : 0,
+    shows('min') ? point.minLatencyMs ?? 0 : 0,
+    shows('max') ? point.maxLatencyMs ?? 0 : 0
+  ))
+
+  const peak = Math.max(shows('max') ? quantileOf(drawn, SCALE_QUANTILE) : Math.max(...drawn, 0), 1)
   const magnitude = 10 ** Math.floor(Math.log10(peak))
   const step = [1, 2, 2.5, 5, 10].find(factor => factor * magnitude >= peak) ?? 10
 
@@ -141,7 +184,7 @@ function xOf(bucketStart: number): number {
 }
 
 function yOf(value: number): number {
-  return VIEW_HEIGHT - (value / yMax.value) * (VIEW_HEIGHT - TOP_PADDING)
+  return Math.max(0, VIEW_HEIGHT - (value / yMax.value) * (VIEW_HEIGHT - TOP_PADDING))
 }
 
 interface PlotPoint {
@@ -151,33 +194,38 @@ interface PlotPoint {
 
 /**
  * Consecutive runs of measured buckets, so gaps stay gaps instead of straight
- * lines. A bucket without a successful check breaks the run, and so does a jump
+ * lines. A bucket the reading is missing from breaks the run, and so does a jump
  * over several missing ones — the history simply stops there.
+ *
+ * Taken per series rather than once for the whole chart: a bucket carries its
+ * bounds exactly where it carries an average, but the runs are the input of
+ * every curve below, and a band needs the buckets holding *both* of its edges.
  */
-const segments = computed(() => {
-  const result: PlotPoint[][] = []
+function runs(valueOf: (point: MonitorStatsPoint) => number | null): MonitorStatsPoint[][] {
+  const result: MonitorStatsPoint[][] = []
   const gapLimit = bucketStep.value * GAP_FACTOR
-  let current: PlotPoint[] = []
+  let current: MonitorStatsPoint[] = []
   let previous: number | null = null
 
   for (const point of props.points) {
     const isGap = previous !== null && gapLimit > 0 && point.bucketStart - previous > gapLimit
+    const missing = valueOf(point) === null
 
     previous = point.bucketStart
 
-    if (point.avgLatencyMs === null || isGap) {
+    if (missing || isGap) {
       if (current.length) {
         result.push(current)
       }
 
       current = []
 
-      if (point.avgLatencyMs === null) {
+      if (missing) {
         continue
       }
     }
 
-    current.push({ x: xOf(point.bucketStart), y: yOf(point.avgLatencyMs) })
+    current.push(point)
   }
 
   if (current.length) {
@@ -185,6 +233,37 @@ const segments = computed(() => {
   }
 
   return result
+}
+
+/** The runs of one series, projected into the plot. */
+function segmentsOf(valueOf: (point: MonitorStatsPoint) => number | null): PlotPoint[][] {
+  return runs(valueOf).map(run => run.map(point => ({
+    x: xOf(point.bucketStart),
+    y: yOf(valueOf(point)!)
+  })))
+}
+
+const segments = computed(() => shows('avg') ? segmentsOf(point => point.avgLatencyMs) : [])
+
+/**
+ * The spread of the checks inside each bucket, as runs holding both bounds.
+ *
+ * Drawn as one filled band rather than as two curves: min and max are not
+ * series of their own, they are the two edges of what a single bucket saw, and
+ * the area between them is the reading. A single bound on its own has no band
+ * to fill and falls back to a line below.
+ */
+const bandRuns = computed(() => shows('min') && shows('max')
+  ? runs(point => point.minLatencyMs !== null && point.maxLatencyMs !== null ? point.minLatencyMs : null)
+  : [])
+
+/** A lone bound, drawn as a thin curve where the band cannot be. */
+const boundSegments = computed(() => {
+  if (shows('min') === shows('max')) {
+    return []
+  }
+
+  return segmentsOf(point => shows('min') ? point.minLatencyMs : point.maxLatencyMs)
 })
 
 /**
@@ -246,23 +325,82 @@ function curveCommands(points: PlotPoint[]): string {
   return commands.join(' ')
 }
 
-const linePaths = computed(() => segments.value.map((segment) => {
-  const first = segment[0]!
-
-  return segment.length === 1
-    ? `M ${round(first.x - 1)} ${round(first.y)} L ${round(first.x + 1)} ${round(first.y)}`
-    : `M ${round(first.x)} ${round(first.y)} ${curveCommands(segment)}`
-}))
-
-const areaPaths = computed(() => segments.value
-  .filter(segment => segment.length > 1)
-  .map((segment) => {
+function linePathsOf(source: PlotPoint[][]): string[] {
+  return source.map((segment) => {
     const first = segment[0]!
-    const last = segment.at(-1)!
 
-    return `M ${round(first.x)} ${VIEW_HEIGHT} L ${round(first.x)} ${round(first.y)}`
-      + ` ${curveCommands(segment)} L ${round(last.x)} ${VIEW_HEIGHT} Z`
-  }))
+    return segment.length === 1
+      ? `M ${round(first.x - 1)} ${round(first.y)} L ${round(first.x + 1)} ${round(first.y)}`
+      : `M ${round(first.x)} ${round(first.y)} ${curveCommands(segment)}`
+  })
+}
+
+/**
+ * `ticks`: the spread of each bucket as its own vertical stroke. Nothing is
+ * drawn between two buckets, which is the whole point of the treatment — an
+ * extreme is a single check, not a value the monitor held until the next one.
+ */
+const spreadTicks = computed(() => spread.value !== 'ticks'
+  ? []
+  : bandRuns.value.flatMap(run => run.map(point => ({
+      key: point.bucketStart,
+      x: round(xOf(point.bucketStart)),
+      y1: round(yOf(point.maxLatencyMs!)),
+      y2: round(yOf(point.minLatencyMs!))
+    }))))
+
+/** `band`: the two edges of the fill, drawn as curves of their own. */
+const bandEdgePaths = computed(() => spread.value !== 'band'
+  ? []
+  : [
+      ...linePathsOf(bandRuns.value.map(run => run.map(point => ({ x: xOf(point.bucketStart), y: yOf(point.maxLatencyMs!) })))),
+      ...linePathsOf(bandRuns.value.map(run => run.map(point => ({ x: xOf(point.bucketStart), y: yOf(point.minLatencyMs!) }))))
+    ])
+
+const linePaths = computed(() => linePathsOf(segments.value))
+
+const boundPaths = computed(() => linePathsOf(boundSegments.value))
+
+/**
+ * The fill below the average. Dropped under a filled band of the same colour:
+ * two translucent primaries over one another read as a third shade that means
+ * nothing. The other two treatments keep it — `ticks` has no fill to collide
+ * with, and `neutral` deliberately colours the two apart.
+ */
+const areaPaths = computed(() => bandRuns.value.length && spread.value === 'band'
+  ? []
+  : segments.value
+      .filter(segment => segment.length > 1)
+      .map((segment) => {
+        const first = segment[0]!
+        const last = segment.at(-1)!
+
+        return `M ${round(first.x)} ${VIEW_HEIGHT} L ${round(first.x)} ${round(first.y)}`
+          + ` ${curveCommands(segment)} L ${round(last.x)} ${VIEW_HEIGHT} Z`
+      }))
+
+/**
+ * The band, closed along the maximum and walked back along the minimum.
+ *
+ * The lower edge runs through the same interpolation backwards rather than
+ * being drawn as its own curve, so both edges of the band are the curves the
+ * two bounds would have been on their own. A run of one bucket has no curve to
+ * close and is drawn as the sliver between its two readings.
+ */
+const bandPaths = computed(() => (spread.value === 'ticks' ? [] : bandRuns.value).map((run) => {
+  const upper = run.map(point => ({ x: xOf(point.bucketStart), y: yOf(point.maxLatencyMs!) }))
+  const lower = [...run].reverse().map(point => ({ x: xOf(point.bucketStart), y: yOf(point.minLatencyMs!) }))
+  const first = upper[0]!
+  const turn = lower[0]!
+
+  if (run.length === 1) {
+    return `M ${round(first.x - 1)} ${round(first.y)} L ${round(first.x + 1)} ${round(first.y)}`
+      + ` L ${round(turn.x + 1)} ${round(turn.y)} L ${round(turn.x - 1)} ${round(turn.y)} Z`
+  }
+
+  return `M ${round(first.x)} ${round(first.y)} ${curveCommands(upper)}`
+    + ` L ${round(turn.x)} ${round(turn.y)} ${curveCommands(lower)} Z`
+}))
 
 /**
  * Buckets containing at least one failed check, drawn as vertical bands.
@@ -312,16 +450,64 @@ const showTooltip = computed(() => hasData.value && isHovering.value && hoveredP
 /** Position of the hovered bucket inside the plot, as a fraction of its box. */
 const hoveredRatio = computed(() => hoveredPoint.value ? xOf(hoveredPoint.value.bucketStart) / VIEW_WIDTH : 0)
 
-const hoveredHeight = computed(() => hoveredPoint.value?.avgLatencyMs == null
+/** Marker position, on the average — the only curve a single point stands for. */
+const hoveredHeight = computed(() => !shows('avg') || hoveredPoint.value?.avgLatencyMs == null
   ? null
   : yOf(hoveredPoint.value.avgLatencyMs) / VIEW_HEIGHT)
+
+/** The topmost reading drawn at the hovered bucket, which is what has to be cleared. */
+const hoveredPeak = computed(() => {
+  const point = hoveredPoint.value
+
+  if (!point) {
+    return null
+  }
+
+  const drawn = [
+    shows('max') ? point.maxLatencyMs : null,
+    shows('avg') ? point.avgLatencyMs : null,
+    shows('min') ? point.minLatencyMs : null
+  ].filter(value => value !== null)
+
+  return drawn.length ? yOf(Math.max(...drawn)) / VIEW_HEIGHT : null
+})
 
 /**
  * The tooltip sits at the top edge, and moves to the bottom one whenever the
  * reading it describes is high enough that it would otherwise cover its own
  * curve. The axis maximum steps aside for the same reason.
  */
-const tooltipAtTop = computed(() => hoveredHeight.value === null || hoveredHeight.value >= TOOLTIP_FLIP_RATIO)
+const tooltipAtTop = computed(() => hoveredPeak.value === null || hoveredPeak.value >= TOOLTIP_FLIP_RATIO)
+
+/**
+ * The bounds of the hovered bucket, as far as they are drawn: the span for a
+ * band, a named single reading for a lone bound, nothing where neither is
+ * shown. The tooltip reports what the chart draws — a number for a curve that
+ * is not there reads as a second series rather than as extra detail.
+ */
+const boundsLabel = computed(() => {
+  const point = hoveredPoint.value
+
+  if (!point) {
+    return null
+  }
+
+  const min = shows('min') ? point.minLatencyMs : null
+  const max = shows('max') ? point.maxLatencyMs : null
+
+  if (min !== null && max !== null) {
+    // A bucket holding a single check has no span to report next to its average.
+    return min === max
+      ? (shows('avg') ? null : formatLatency(min))
+      : `${formatNumber(min)}–${formatLatency(max)}`
+  }
+
+  if (min !== null) {
+    return `${t('monitor.latencySeries.min')} ${formatLatency(min)}`
+  }
+
+  return max === null ? null : `${t('monitor.latencySeries.max')} ${formatLatency(max)}`
+})
 
 /**
  * Kept inside the plot rather than centred on the bucket at any cost: half a
@@ -457,6 +643,47 @@ function onPointerMove(event: PointerEvent) {
         />
 
         <path
+          v-for="(path, index) in bandPaths"
+          :key="`band-${index}`"
+          :d="path"
+          :class="spread === 'neutral' ? 'fill-neutral-500/25' : 'fill-primary/10'"
+        />
+
+        <path
+          v-for="(path, index) in bandEdgePaths"
+          :key="`edge-${index}`"
+          :d="path"
+          fill="none"
+          class="stroke-primary/40"
+          stroke-width="1"
+          vector-effect="non-scaling-stroke"
+        />
+
+        <line
+          v-for="tick in spreadTicks"
+          :key="`tick-${tick.key}`"
+          :x1="tick.x"
+          :y1="tick.y1"
+          :x2="tick.x"
+          :y2="tick.y2"
+          class="stroke-primary/25"
+          stroke-width="1"
+          vector-effect="non-scaling-stroke"
+        />
+
+        <path
+          v-for="(path, index) in boundPaths"
+          :key="`bound-${index}`"
+          :d="path"
+          fill="none"
+          class="stroke-primary/50"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          vector-effect="non-scaling-stroke"
+        />
+
+        <path
           v-for="(path, index) in areaPaths"
           :key="`area-${index}`"
           :d="path"
@@ -526,11 +753,15 @@ function onPointerMove(event: PointerEvent) {
             {{ bucketLabel(hoveredPoint.bucketStart) }}
           </div>
           <div class="flex items-baseline gap-1.5">
-            <span class="font-medium tabular-nums">{{ formatLatency(hoveredPoint.avgLatencyMs) }}</span>
             <span
-              v-if="hoveredPoint.minLatencyMs !== null && hoveredPoint.maxLatencyMs !== null && hoveredPoint.minLatencyMs !== hoveredPoint.maxLatencyMs"
-              class="text-dimmed tabular-nums"
-            >{{ formatNumber(hoveredPoint.minLatencyMs) }}–{{ formatLatency(hoveredPoint.maxLatencyMs) }}</span>
+              v-if="shows('avg')"
+              class="font-medium tabular-nums"
+            >{{ formatLatency(hoveredPoint.avgLatencyMs) }}</span>
+            <span
+              v-if="boundsLabel"
+              class="tabular-nums"
+              :class="shows('avg') ? 'text-dimmed' : 'font-medium'"
+            >{{ boundsLabel }}</span>
           </div>
           <div
             v-if="hoveredPoint.downCount > 0"

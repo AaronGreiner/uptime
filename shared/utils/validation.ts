@@ -1,7 +1,7 @@
 import z from 'zod'
 import { WIDGET_HEIGHTS, WIDGET_WIDTHS } from './grid'
 import { WIDGET_LIMIT_BOUNDS, WIDGET_SORTS, WIDGET_TYPES, widgetConfigForType, widgetNeedsMonitor } from './widget'
-import { MONITOR_INTERVAL_BOUNDS, MONITOR_PACKET_BOUNDS, MONITOR_RETRY_BOUNDS, MONITOR_TIMEOUT_BOUNDS } from './monitor'
+import { LATENCY_SPREADS, MONITOR_INTERVAL_BOUNDS, MONITOR_PACKET_BOUNDS, MONITOR_RETRY_BOUNDS, MONITOR_TIMEOUT_BOUNDS } from './monitor'
 import {
   NOTIFICATION_DEFAULT_TIME_ZONE,
   NOTIFICATION_LOCALES,
@@ -204,7 +204,8 @@ export const widgetConfigSchema = z.object({
   groupId: z.number().int().positive().nullish().transform(value => value ?? null).optional(),
   limit: boundedNumber(WIDGET_LIMIT_BOUNDS.min, WIDGET_LIMIT_BOUNDS.max).optional(),
   target: z.number().min(0.5).max(1).optional(),
-  sort: z.enum(WIDGET_SORTS).optional()
+  sort: z.enum(WIDGET_SORTS).optional(),
+  spread: z.enum([...LATENCY_SPREADS, 'inherit']).optional()
 })
 
 export const widgetInputSchema = z.object({

@@ -115,3 +115,18 @@ export interface MonitorStatsPoint {
   minLatencyMs: number | null
   maxLatencyMs: number | null
 }
+
+/**
+ * A curve the response time chart can draw from those buckets. The average is
+ * the reading itself; the two bounds are the spread of the checks inside a
+ * bucket rather than series of their own, which is why they are drawn as a band.
+ */
+export type LatencySeries = 'min' | 'avg' | 'max'
+
+/**
+ * How the spread between the two bounds is drawn. `band` fills it and draws
+ * both edges, `ticks` gives every bucket its own stroke and invents nothing
+ * between two of them, `neutral` takes the fill out of the primary colour so
+ * the average keeps it to itself.
+ */
+export type LatencySpread = 'band' | 'ticks' | 'neutral'

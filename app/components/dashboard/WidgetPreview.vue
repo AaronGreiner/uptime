@@ -17,6 +17,10 @@ const props = defineProps<{
  */
 const GRID_WIDTH = 1180
 
+// The dialog around this preview is the settings themselves, so a widget's own
+// controls stay out of it: the reader is configuring here, not reading.
+provideWidgetEditing(() => true)
+
 const frame = useTemplateRef<HTMLElement>('frame')
 const available = ref(GRID_WIDTH)
 
