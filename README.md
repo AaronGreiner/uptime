@@ -216,13 +216,15 @@ bun run db:studio    # browse the database
 Migrations run automatically at boot. Architecture notes, conventions and
 extension points are in [AGENTS.md](./AGENTS.md).
 
-## Maintainer deployment
+## Deploying without Docker
 
-A `v*` tag publishes the container image and deploys the hosted instance through
-separate GitHub Actions workflows. The server deployment builds with Bun,
-uploads `.output/` and `drizzle/`, backs up SQLite, restarts systemd and rolls
-back when the health check fails. See the [deployment runbook](./deploy/RUNBOOK.md)
-for setup, secrets and recovery steps.
+A `v*` tag runs two independent GitHub Actions workflows: one publishes the
+container image, the other ships the build to a server over SSH. The second one
+is reusable — point the `DEPLOY_*` secrets at your own host and a tag in your
+fork deploys there. It builds with Bun, uploads `.output/` and `drizzle/`, backs
+up SQLite, restarts a systemd unit behind Caddy and rolls back when the health
+check fails. The [deployment runbook](./deploy/RUNBOOK.md) covers the server
+setup, the secrets and the recovery steps.
 
 ## Contributing
 

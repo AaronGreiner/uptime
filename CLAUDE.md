@@ -458,6 +458,12 @@ swap both folders, restart `uptime.service` and poll `/api/health` — a build t
 never answers is rolled back to the previous one. `data/` and the `.env` rendered
 from the repository secrets stay put across releases.
 
+Nothing about a particular instance is written into the workflow: the origin
+comes from the `NUXT_PUBLIC_APP_URL` repository variable and is required, so a
+deploy without it fails before the release is swapped in rather than pointing
+the notification links at somebody else's host. Keep it that way — a default here
+would be one deployment's address baked into everyone's.
+
 The service runs on Bun, not node, because of `nitro.preset` and `bun:sqlite`,
 and `drizzle/` has to ship alongside the build since `migrateDatabase()` reads it
 from disk at boot. Everything else — the systemd unit, the Caddy block, the
