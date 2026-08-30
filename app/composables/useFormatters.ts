@@ -28,6 +28,7 @@ export function useFormatters() {
   const dateTimeFormat = computed(() => new Intl.DateTimeFormat(locale.value, { dateStyle: 'medium', timeStyle: 'medium' }))
   const dateFormat = computed(() => new Intl.DateTimeFormat(locale.value, { dateStyle: 'medium' }))
   const timeFormat = computed(() => new Intl.DateTimeFormat(locale.value, { hour: '2-digit', minute: '2-digit' }))
+  const preciseTimeFormat = computed(() => new Intl.DateTimeFormat(locale.value, { hour: '2-digit', minute: '2-digit', second: '2-digit' }))
   const numberFormat = computed(() => new Intl.NumberFormat(locale.value))
 
   function formatRelativeTime(unixSeconds: number | null | undefined): string {
@@ -55,8 +56,13 @@ export function useFormatters() {
     return unixSeconds ? dateFormat.value.format(unixSeconds * 1000) : t('common.never')
   }
 
-  function formatTime(unixSeconds: number): string {
-    return timeFormat.value.format(unixSeconds * 1000)
+  /**
+   * Seconds are opt in: they are noise on a clock the reader only wants to place
+   * a value in the day by, and the whole label wherever two of them are less
+   * than a minute apart.
+   */
+  function formatTime(unixSeconds: number, withSeconds = false): string {
+    return (withSeconds ? preciseTimeFormat : timeFormat).value.format(unixSeconds * 1000)
   }
 
   /** Compact duration such as `30 s`, `5 min` or `2 h`. */

@@ -590,3 +590,8 @@ files.
 - A bound parameter has no type affinity in SQLite, so bucket maths needs
   `integerLiteral` — and `signedIntegerLiteral` for a value that may be negative,
   such as the UTC offset the uptime calendar aligns its days to.
+- SQLite resolves a name in `group by` against the source columns before the
+  output aliases, so a bucket selected `as bucket_start` from a table that has a
+  `bucket_start` column groups by the stored value rather than by the bucket, and
+  the query silently returns one row per source row. Group and order by the
+  expression itself wherever the alias could collide.

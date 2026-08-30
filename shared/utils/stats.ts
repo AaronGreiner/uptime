@@ -21,13 +21,24 @@ export function isStatsRange(value: unknown): value is StatsRange {
   return typeof value === 'string' && STATS_RANGES.includes(value as StatsRange)
 }
 
-/** Bucket width used when charting a range, in seconds. */
+/**
+ * Bucket width used when charting a range, in seconds.
+ *
+ * Every range aims for a few hundred buckets, which is finer than the pixels of
+ * any cell the chart is drawn in and therefore as much shape as the data can
+ * carry. Two ceilings cut that aim short, and both are the source rather than a
+ * choice: below 24 h the buckets are grouped from raw heartbeats, so a bucket
+ * shorter than the check interval is empty rather than finer — 30 s is half the
+ * default interval and covers the fastest monitors the bounds allow. Above 24 h
+ * the source is the hourly rollup, which no bucket can undercut, and a year is
+ * already past the aim at one bucket a day.
+ */
 export function statsBucketSeconds(range: StatsRange): number {
   switch (range) {
-    case '1h': return 60
-    case '24h': return 10 * 60
+    case '1h': return 30
+    case '24h': return 5 * 60
     case '7d': return 60 * 60
-    case '30d': return 6 * 60 * 60
+    case '30d': return 2 * 60 * 60
     case '1y': return 24 * 60 * 60
   }
 }

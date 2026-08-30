@@ -233,10 +233,22 @@ export function getMonitorStatsSeries(monitorId: number, range: StatsRange): Mon
   const since = nowInSeconds() - rangeSeconds
   const useRaw = rangeSeconds <= RAW_HEARTBEAT_RANGE_LIMIT_SECONDS
 
+  /*
+   * Grouped and ordered by the expression itself rather than by the name it is
+   * selected under. SQLite resolves a bare `bucket_start` in `group by` against
+   * the source column first, and the rollup table has one of exactly that name:
+   * the query would then return one row per stored hour, each labelled with the
+   * truncated timestamp of the bucket it belongs to, so several rows share a
+   * timestamp and no bucketing happens at all.
+   */
+  const bucket = useRaw
+    ? sql`(checked_at / ${integerLiteral(bucketSeconds)}) * ${integerLiteral(bucketSeconds)}`
+    : sql`(bucket_start / ${integerLiteral(bucketSeconds)}) * ${integerLiteral(bucketSeconds)}`
+
   const rows = useRaw
     ? useDatabase().all<StatsAggregateRow>(sql`
         select
-          (checked_at / ${integerLiteral(bucketSeconds)}) * ${integerLiteral(bucketSeconds)} as bucket_start,
+          ${bucket} as bucket_start,
           sum(case when status = 'up' then 1 else 0 end) as up_count,
           sum(case when status = 'down' then 1 else 0 end) as down_count,
           avg(case when status = 'up' then latency_ms end) as avg_latency_ms,
@@ -244,12 +256,12 @@ export function getMonitorStatsSeries(monitorId: number, range: StatsRange): Mon
           max(case when status = 'up' then latency_ms end) as max_latency_ms
         from heartbeats
         where monitor_id = ${monitorId} and checked_at >= ${since}
-        group by bucket_start
-        order by bucket_start asc
+        group by ${bucket}
+        order by ${bucket} asc
       `)
     : useDatabase().all<StatsAggregateRow>(sql`
         select
-          (bucket_start / ${integerLiteral(bucketSeconds)}) * ${integerLiteral(bucketSeconds)} as bucket_start,
+          ${bucket} as bucket_start,
           sum(up_count) as up_count,
           sum(down_count) as down_count,
           case when sum(up_count) > 0
@@ -259,8 +271,8 @@ export function getMonitorStatsSeries(monitorId: number, range: StatsRange): Mon
           max(max_latency_ms) as max_latency_ms
         from monitor_stats_hourly
         where monitor_id = ${monitorId} and bucket_start >= ${since}
-        group by bucket_start
-        order by bucket_start asc
+        group by ${bucket}
+        order by ${bucket} asc
       `)
 
   return rows.map(row => ({

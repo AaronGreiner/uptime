@@ -10,15 +10,30 @@ const props = defineProps<{
 /**
  * The chart is drawn in a fixed coordinate system and stretched to the container
  * with `preserveAspectRatio="none"`. `vector-effect` keeps the stroke crisp;
- * all text lives outside the SVG so it is never distorted.
+ * all text lives outside the SVG so it is never distorted, and so does the
+ * hover marker, because a circle would be stretched into an ellipse.
  */
 const VIEW_WIDTH = 1000
 const VIEW_HEIGHT = 300
 const TOP_PADDING = 24
 
-const { formatLatency, formatTime, formatDate, formatDateTime } = useFormatters()
+/**
+ * A step this many times the usual distance between two buckets is a hole in the
+ * history rather than a long wait between two checks.
+ */
+const GAP_FACTOR = 2.5
+
+/** Above this share of the plot height the tooltip would cover the curve it describes. */
+const TOOLTIP_FLIP_RATIO = 0.45
+
+const { formatLatency, formatNumber, formatTime, formatDate } = useFormatters()
 
 const chartId = useId()
+
+/** One decimal is a tenth of a viewport unit; the rest only lengthens the path. */
+function round(value: number): number {
+  return Math.round(value * 10) / 10
+}
 
 /**
  * Two measured buckets are the least a line can be drawn from. A single one used
@@ -31,18 +46,50 @@ const measured = computed(() => props.points.filter(point => point.avgLatencyMs 
 const hasData = computed(() => measured.value >= 2)
 
 /**
+ * The time the plot spans. Buckets are placed on it by their timestamp rather
+ * than by their position in the list, because the server only returns buckets it
+ * has data for: spacing them evenly would compress a paused hour into the width
+ * of a single check and put every hover reading at the wrong time.
+ */
+const domain = computed(() => {
+  const start = props.points.at(0)?.bucketStart ?? 0
+  const end = props.points.at(-1)?.bucketStart ?? 0
+
+  return { start, span: Math.max(1, end - start) }
+})
+
+/**
+ * Distance between two neighbouring buckets, taken as the median of the actual
+ * distances rather than as the configured bucket width, which the chart is not
+ * told. The median rather than the smallest: two checks landing in one bucket
+ * leave the next one empty, and that pair alone would halve the estimate.
+ */
+const bucketStep = computed(() => {
+  const deltas: number[] = []
+
+  for (let index = 1; index < props.points.length; index++) {
+    deltas.push(props.points[index]!.bucketStart - props.points[index - 1]!.bucketStart)
+  }
+
+  if (!deltas.length) {
+    return 0
+  }
+
+  deltas.sort((first, second) => first - second)
+
+  return deltas[Math.floor(deltas.length / 2)]!
+})
+
+/**
  * Bare clock labels are ambiguous once a chart spans more than a day, so the
  * axis switches to dates as the covered span grows.
  */
 const axisLabel = computed(() => {
-  const first = props.points.at(0)?.bucketStart
-  const last = props.points.at(-1)?.bucketStart
-
-  if (first === undefined || last === undefined) {
+  if (props.points.length < 2) {
     return () => ''
   }
 
-  const span = last - first
+  const span = domain.value.span
 
   if (span > 7 * 86_400) {
     return formatDate
@@ -51,40 +98,87 @@ const axisLabel = computed(() => {
   return span > 6 * 3600 ? (value: number) => `${formatDate(value)}, ${formatTime(value)}` : formatTime
 })
 
-/** Rounds the axis maximum up to a readable step. */
+/**
+ * The tooltip names a single bucket, so it needs more precision than the two
+ * ends of the axis: the date as soon as the chart spans more than a day, and
+ * seconds wherever two buckets are less than a minute apart. Once a bucket is a
+ * whole day the clock says nothing and is dropped again.
+ */
+const bucketLabel = computed(() => {
+  const step = bucketStep.value
+
+  if (step >= 86_400) {
+    return formatDate
+  }
+
+  const clock = (value: number) => formatTime(value, step > 0 && step < 60)
+
+  return domain.value.span > 86_400 ? (value: number) => `${formatDate(value)}, ${clock(value)}` : clock
+})
+
+/**
+ * Rounds the axis maximum up to a readable step.
+ *
+ * Measured against the bucket averages the curve is drawn from rather than
+ * against the slowest single check in them. The two are the same reading while a
+ * bucket holds one check, and drift apart over the long ranges, where one timed
+ * out request would otherwise set the scale for a month and press the whole
+ * series flat against the baseline. Nothing is lost by leaving it out: the
+ * extreme was never drawn, and the tooltip reports it per bucket.
+ */
 const yMax = computed(() => {
-  const peak = Math.max(...props.points.map(point => point.maxLatencyMs ?? point.avgLatencyMs ?? 0), 1)
+  const peak = Math.max(...props.points.map(point => point.avgLatencyMs ?? 0), 1)
   const magnitude = 10 ** Math.floor(Math.log10(peak))
   const step = [1, 2, 2.5, 5, 10].find(factor => factor * magnitude >= peak) ?? 10
 
   return step * magnitude
 })
 
-function xOf(index: number): number {
-  return props.points.length > 1 ? (index / (props.points.length - 1)) * VIEW_WIDTH : VIEW_WIDTH / 2
+function xOf(bucketStart: number): number {
+  return props.points.length > 1
+    ? ((bucketStart - domain.value.start) / domain.value.span) * VIEW_WIDTH
+    : VIEW_WIDTH / 2
 }
 
 function yOf(value: number): number {
   return VIEW_HEIGHT - (value / yMax.value) * (VIEW_HEIGHT - TOP_PADDING)
 }
 
-/** Consecutive runs of measured buckets, so gaps stay gaps instead of straight lines. */
-const segments = computed(() => {
-  const result: Array<Array<{ x: number, y: number }>> = []
-  let current: Array<{ x: number, y: number }> = []
+interface PlotPoint {
+  x: number
+  y: number
+}
 
-  props.points.forEach((point, index) => {
-    if (point.avgLatencyMs === null) {
+/**
+ * Consecutive runs of measured buckets, so gaps stay gaps instead of straight
+ * lines. A bucket without a successful check breaks the run, and so does a jump
+ * over several missing ones — the history simply stops there.
+ */
+const segments = computed(() => {
+  const result: PlotPoint[][] = []
+  const gapLimit = bucketStep.value * GAP_FACTOR
+  let current: PlotPoint[] = []
+  let previous: number | null = null
+
+  for (const point of props.points) {
+    const isGap = previous !== null && gapLimit > 0 && point.bucketStart - previous > gapLimit
+
+    previous = point.bucketStart
+
+    if (point.avgLatencyMs === null || isGap) {
       if (current.length) {
         result.push(current)
       }
 
       current = []
-      return
+
+      if (point.avgLatencyMs === null) {
+        continue
+      }
     }
 
-    current.push({ x: xOf(index), y: yOf(point.avgLatencyMs) })
-  })
+    current.push({ x: xOf(point.bucketStart), y: yOf(point.avgLatencyMs) })
+  }
 
   if (current.length) {
     result.push(current)
@@ -93,37 +187,198 @@ const segments = computed(() => {
   return result
 })
 
-const linePaths = computed(() => segments.value.map(segment => (
-  segment.length === 1
-    ? `M ${segment[0]!.x - 1} ${segment[0]!.y} L ${segment[0]!.x + 1} ${segment[0]!.y}`
-    : segment.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`).join(' ')
-)))
+/**
+ * Monotone cubic interpolation (Fritsch–Carlson), emitted as one Bézier per
+ * span and without the leading move, so the line and the area below it are drawn
+ * from the same curve.
+ *
+ * Monotone rather than a plain spline: an overshooting curve invents latencies
+ * that were never measured and dips the fill below the baseline on either side
+ * of a spike. On a response time chart that reads as data rather than as
+ * rounding. The tangents are the weighted harmonic mean of the two neighbouring
+ * slopes, which is zero at every local extreme and therefore cannot overshoot.
+ */
+function curveCommands(points: PlotPoint[]): string {
+  const count = points.length
+  const widths: number[] = []
+  const slopes: number[] = []
+
+  for (let index = 0; index < count - 1; index++) {
+    const width = points[index + 1]!.x - points[index]!.x
+
+    widths.push(width)
+    slopes.push((points[index + 1]!.y - points[index]!.y) / width)
+  }
+
+  const tangents = slopes.map((slope, index) => {
+    const previous = slopes[index - 1]
+
+    if (previous === undefined) {
+      return slope
+    }
+
+    if (previous * slope <= 0) {
+      return 0
+    }
+
+    const left = 2 * widths[index]! + widths[index - 1]!
+    const right = widths[index]! + 2 * widths[index - 1]!
+
+    return (left + right) / (left / previous + right / slope)
+  })
+
+  tangents.push(slopes[count - 2]!)
+
+  const commands: string[] = []
+
+  for (let index = 0; index < count - 1; index++) {
+    const from = points[index]!
+    const to = points[index + 1]!
+    const third = widths[index]! / 3
+
+    commands.push(
+      `C ${round(from.x + third)} ${round(from.y + tangents[index]! * third)}`
+      + ` ${round(to.x - third)} ${round(to.y - tangents[index + 1]! * third)}`
+      + ` ${round(to.x)} ${round(to.y)}`
+    )
+  }
+
+  return commands.join(' ')
+}
+
+const linePaths = computed(() => segments.value.map((segment) => {
+  const first = segment[0]!
+
+  return segment.length === 1
+    ? `M ${round(first.x - 1)} ${round(first.y)} L ${round(first.x + 1)} ${round(first.y)}`
+    : `M ${round(first.x)} ${round(first.y)} ${curveCommands(segment)}`
+}))
 
 const areaPaths = computed(() => segments.value
   .filter(segment => segment.length > 1)
   .map((segment) => {
-    const body = segment.map(point => `L ${point.x} ${point.y}`).join(' ')
+    const first = segment[0]!
+    const last = segment.at(-1)!
 
-    return `M ${segment[0]!.x} ${VIEW_HEIGHT} ${body} L ${segment.at(-1)!.x} ${VIEW_HEIGHT} Z`
+    return `M ${round(first.x)} ${VIEW_HEIGHT} L ${round(first.x)} ${round(first.y)}`
+      + ` ${curveCommands(segment)} L ${round(last.x)} ${VIEW_HEIGHT} Z`
   }))
 
-/** Buckets containing at least one failed check, drawn as vertical bands. */
+/**
+ * Buckets containing at least one failed check, drawn as vertical bands.
+ * Neighbouring ones are merged into a single rectangle: at these bucket widths
+ * an outage covers dozens of them, and a row of touching rectangles seams
+ * wherever two edges land inside the same pixel.
+ */
 const outages = computed(() => {
-  const width = props.points.length > 1 ? VIEW_WIDTH / (props.points.length - 1) : VIEW_WIDTH
+  if (props.points.length < 2) {
+    return []
+  }
 
-  return props.points
-    .map((point, index) => ({ point, index }))
-    .filter(entry => entry.point.downCount > 0)
-    .map(entry => ({
-      key: entry.point.bucketStart,
-      x: Math.max(0, xOf(entry.index) - width / 2),
-      width: Math.max(2, width)
-    }))
+  const width = (bucketStep.value / domain.value.span) * VIEW_WIDTH
+  const bands: Array<{ key: number, from: number, to: number }> = []
+
+  for (const point of props.points) {
+    if (point.downCount === 0) {
+      continue
+    }
+
+    const from = xOf(point.bucketStart) - width / 2
+    const previous = bands.at(-1)
+
+    if (previous && from <= previous.to + 0.5) {
+      previous.to = from + width
+      continue
+    }
+
+    bands.push({ key: point.bucketStart, from, to: from + width })
+  }
+
+  return bands.map((band) => {
+    const from = Math.max(0, band.from)
+
+    return { key: band.key, x: from, width: Math.max(2, Math.min(VIEW_WIDTH, band.to) - from) }
+  })
 })
 
 const hoverIndex = ref<number | null>(null)
+const isHovering = ref(false)
+const plotWidth = ref(0)
 
 const hoveredPoint = computed(() => hoverIndex.value === null ? null : props.points[hoverIndex.value] ?? null)
+
+const showTooltip = computed(() => hasData.value && isHovering.value && hoveredPoint.value !== null)
+
+/** Position of the hovered bucket inside the plot, as a fraction of its box. */
+const hoveredRatio = computed(() => hoveredPoint.value ? xOf(hoveredPoint.value.bucketStart) / VIEW_WIDTH : 0)
+
+const hoveredHeight = computed(() => hoveredPoint.value?.avgLatencyMs == null
+  ? null
+  : yOf(hoveredPoint.value.avgLatencyMs) / VIEW_HEIGHT)
+
+/**
+ * The tooltip sits at the top edge, and moves to the bottom one whenever the
+ * reading it describes is high enough that it would otherwise cover its own
+ * curve. The axis maximum steps aside for the same reason.
+ */
+const tooltipAtTop = computed(() => hoveredHeight.value === null || hoveredHeight.value >= TOOLTIP_FLIP_RATIO)
+
+/**
+ * Kept inside the plot rather than centred on the bucket at any cost: half a
+ * tooltip hanging over the edge of a widget is exactly where the first and the
+ * last check of a range are read.
+ */
+const tooltip = useTemplateRef<HTMLElement>('tooltip')
+const tooltipWidth = ref(0)
+
+const tooltipStyle = computed(() => {
+  const half = tooltipWidth.value / 2
+  const offset = hoveredRatio.value * plotWidth.value
+
+  return {
+    left: `${plotWidth.value > tooltipWidth.value ? Math.min(Math.max(offset, half), plotWidth.value - half) : half}px`
+  }
+})
+
+onMounted(() => {
+  const element = tooltip.value
+
+  if (!element) {
+    return
+  }
+
+  // The border box, which `contentRect` is not: the tooltip is clamped by what
+  // it occupies, padding and border included.
+  const observer = new ResizeObserver(() => {
+    tooltipWidth.value = element.offsetWidth
+  })
+
+  observer.observe(element)
+  onScopeDispose(() => observer.disconnect())
+})
+
+/**
+ * The bucket closest to a moment in time, not the one closest in index order.
+ * The list is ordered, so the distance falls until the nearest bucket is passed
+ * and the scan can stop there.
+ */
+function nearestIndex(at: number): number {
+  let best = 0
+  let bestDistance = Number.POSITIVE_INFINITY
+
+  for (const [index, point] of props.points.entries()) {
+    const distance = Math.abs(point.bucketStart - at)
+
+    if (distance > bestDistance) {
+      break
+    }
+
+    best = index
+    bestDistance = distance
+  }
+
+  return best
+}
 
 function onPointerMove(event: PointerEvent) {
   const bounds = (event.currentTarget as HTMLElement).getBoundingClientRect()
@@ -132,9 +387,12 @@ function onPointerMove(event: PointerEvent) {
     return
   }
 
-  const ratio = (event.clientX - bounds.left) / bounds.width
+  plotWidth.value = bounds.width
 
-  hoverIndex.value = Math.min(props.points.length - 1, Math.max(0, Math.round(ratio * (props.points.length - 1))))
+  const ratio = Math.min(1, Math.max(0, (event.clientX - bounds.left) / bounds.width))
+
+  hoverIndex.value = nearestIndex(domain.value.start + ratio * domain.value.span)
+  isHovering.value = true
 }
 </script>
 
@@ -144,7 +402,7 @@ function onPointerMove(event: PointerEvent) {
       class="relative w-full flex-1 min-h-0"
       :style="height ? { height: `${height}px`, flex: 'none' } : undefined"
       @pointermove="onPointerMove"
-      @pointerleave="hoverIndex = null"
+      @pointerleave="isHovering = false"
     >
       <svg
         class="absolute inset-0 size-full overflow-visible"
@@ -218,10 +476,10 @@ function onPointerMove(event: PointerEvent) {
         />
 
         <line
-          v-if="hoverIndex !== null"
-          :x1="xOf(hoverIndex)"
+          v-if="showTooltip"
+          :x1="xOf(hoveredPoint!.bucketStart)"
           y1="0"
-          :x2="xOf(hoverIndex)"
+          :x2="xOf(hoveredPoint!.bucketStart)"
           :y2="VIEW_HEIGHT"
           class="stroke-toned"
           stroke-width="1"
@@ -229,7 +487,21 @@ function onPointerMove(event: PointerEvent) {
         />
       </svg>
 
-      <span class="absolute left-0 top-0 text-xs text-dimmed tabular-nums">{{ formatLatency(yMax) }}</span>
+      <span
+        class="absolute left-0 top-0 text-xs text-dimmed tabular-nums transition-opacity"
+        :class="showTooltip && tooltipAtTop ? 'opacity-0' : 'opacity-100'"
+      >{{ formatLatency(yMax) }}</span>
+
+      <!--
+        Drawn as an element rather than as an SVG circle: the plot is stretched
+        to the container with `preserveAspectRatio="none"`, which would turn a
+        circle into an ellipse of whatever shape the cell happens to have.
+      -->
+      <span
+        v-if="showTooltip && hoveredHeight !== null"
+        class="pointer-events-none absolute size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary ring-2 ring-default"
+        :style="{ left: `${hoveredRatio * 100}%`, top: `${hoveredHeight * 100}%` }"
+      />
 
       <div
         v-if="!hasData"
@@ -238,20 +510,35 @@ function onPointerMove(event: PointerEvent) {
         {{ $t(measured ? 'monitor.detail.collecting' : 'monitor.detail.noData') }}
       </div>
 
+      <!--
+        Always mounted, and hidden rather than unmounted or taken out of the
+        layout: the box has to keep being measured while it is invisible, or the
+        clamp above would run against a width of zero the first time it is shown.
+      -->
       <div
-        v-else-if="hoveredPoint"
-        class="pointer-events-none absolute top-0 z-10 -translate-x-1/2 rounded-md border border-default bg-elevated px-2 py-1 text-xs shadow-lg whitespace-nowrap"
-        :style="{ left: `${points.length > 1 ? (hoverIndex! / (points.length - 1)) * 100 : 50}%` }"
+        ref="tooltip"
+        class="pointer-events-none absolute z-10 w-max -translate-x-1/2 rounded-md border border-default bg-elevated px-2 py-1 text-xs shadow-lg"
+        :class="[tooltipAtTop ? 'top-0' : 'bottom-0', showTooltip ? 'opacity-100' : 'invisible opacity-0']"
+        :style="tooltipStyle"
       >
-        <span class="text-dimmed">{{ formatDateTime(hoveredPoint.bucketStart) }}</span>
-        <span class="mx-1.5 text-muted">·</span>
-        <span class="font-medium tabular-nums">{{ formatLatency(hoveredPoint.avgLatencyMs) }}</span>
-        <span
-          v-if="hoveredPoint.downCount > 0"
-          class="ml-1.5 text-error"
-        >
-          {{ hoveredPoint.downCount }} × {{ $t('status.down') }}
-        </span>
+        <template v-if="hoveredPoint">
+          <div class="text-[11px]/4 text-dimmed tabular-nums">
+            {{ bucketLabel(hoveredPoint.bucketStart) }}
+          </div>
+          <div class="flex items-baseline gap-1.5">
+            <span class="font-medium tabular-nums">{{ formatLatency(hoveredPoint.avgLatencyMs) }}</span>
+            <span
+              v-if="hoveredPoint.minLatencyMs !== null && hoveredPoint.maxLatencyMs !== null && hoveredPoint.minLatencyMs !== hoveredPoint.maxLatencyMs"
+              class="text-dimmed tabular-nums"
+            >{{ formatNumber(hoveredPoint.minLatencyMs) }}–{{ formatLatency(hoveredPoint.maxLatencyMs) }}</span>
+          </div>
+          <div
+            v-if="hoveredPoint.downCount > 0"
+            class="text-error tabular-nums"
+          >
+            {{ hoveredPoint.downCount }} × {{ $t('status.down') }}
+          </div>
+        </template>
       </div>
     </div>
 
