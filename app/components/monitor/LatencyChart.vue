@@ -403,12 +403,12 @@ const bandPaths = computed(() => (spread.value === 'ticks' ? [] : bandRuns.value
 }))
 
 /**
- * Buckets containing at least one failed check, drawn as vertical bands.
- * Neighbouring ones are merged into a single rectangle: at these bucket widths
- * an outage covers dozens of them, and a row of touching rectangles seams
- * wherever two edges land inside the same pixel.
+ * Buckets the predicate marks, drawn as vertical bands. Neighbouring ones are
+ * merged into a single rectangle: at these bucket widths a run covers dozens of
+ * them, and a row of touching rectangles seams wherever two edges land inside
+ * the same pixel.
  */
-const outages = computed(() => {
+function bandsWhere(marks: (point: MonitorStatsPoint) => boolean) {
   if (props.points.length < 2) {
     return []
   }
@@ -417,7 +417,7 @@ const outages = computed(() => {
   const bands: Array<{ key: number, from: number, to: number }> = []
 
   for (const point of props.points) {
-    if (point.downCount === 0) {
+    if (!marks(point)) {
       continue
     }
 
@@ -437,7 +437,20 @@ const outages = computed(() => {
 
     return { key: band.key, x: from, width: Math.max(2, Math.min(VIEW_WIDTH, band.to) - from) }
   })
-})
+}
+
+/** Buckets containing at least one failed check that was actually judged. */
+const outages = computed(() => bandsWhere(point => point.downCount > 0))
+
+/**
+ * Buckets that ran under maintenance. Drawn behind the outage bands and in the
+ * colour of the status rather than of a fault, because it answers the question
+ * the gap in the curve raises: nothing is missing here, nothing was measured.
+ *
+ * A bucket holding both is marked twice, which is right — a window that only
+ * covered part of the hour leaves real failures on either side of it.
+ */
+const maintenanceBands = computed(() => bandsWhere(point => point.maintenanceCount > 0))
 
 const hoverIndex = ref<number | null>(null)
 const isHovering = ref(false)
@@ -633,6 +646,16 @@ function onPointerMove(event: PointerEvent) {
         />
 
         <rect
+          v-for="band in maintenanceBands"
+          :key="`maintenance-${band.key}`"
+          :x="band.x"
+          y="0"
+          :width="band.width"
+          :height="VIEW_HEIGHT"
+          class="fill-info/15"
+        />
+
+        <rect
           v-for="outage in outages"
           :key="outage.key"
           :x="outage.x"
@@ -768,6 +791,12 @@ function onPointerMove(event: PointerEvent) {
             class="text-error tabular-nums"
           >
             {{ hoveredPoint.downCount }} × {{ $t('status.down') }}
+          </div>
+          <div
+            v-if="hoveredPoint.maintenanceCount > 0"
+            class="text-info tabular-nums"
+          >
+            {{ $t('maintenance.checksInWindow', { count: hoveredPoint.maintenanceCount }) }}
           </div>
         </template>
       </div>

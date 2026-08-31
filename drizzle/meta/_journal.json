@@ -43,6 +43,13 @@
       "when": 1787844991717,
       "tag": "0005_warm_rhodey",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1788184418551,
+      "tag": "0006_chemical_titania",
+      "breakpoints": true
     }
   ]
 }

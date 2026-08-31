@@ -204,11 +204,94 @@ only reported as `down` once `consecutive_failures > monitor.retries`. Until the
 its state is `pending`. Uptime percentages are computed from raw heartbeats, so
 they are not affected by that debouncing.
 
+**Maintenance.** A monitor can be taken out of the judging without being turned
+off. Two things put it there, and they are edited in two different places
+because they are two different kinds of thing.
+
+A **recurring window** is configuration: a row in `maintenance_windows` naming
+exactly one target — `monitor_id` or `monitor_group_id`, never both — plus the
+weekdays, the start minute and the length. Windows are managed centrally, from
+`app/pages/settings/maintenance.vue`, not from inside the record they point at:
+a schedule that covers a branch is a statement about the instance, and a list of
+them all in one place is the only view that answers "what is planned". The
+monitor and group forms know nothing about them.
+
+A **manual switch** is an action, so it stays on the thing it acts on:
+`maintenance_started_at` plus `maintenance_until` on `monitors` and on
+`monitor_groups`, flipped from the row's own menu, with a null `until` meaning
+"until somebody turns it off".
+
+Unlike the notification assignment, all of it **adds up**: a window on a root
+group and one on a single monitor are both in force, because suppressing an
+alarm is not a decision that competes with another. There is no `inherit` mode
+here for that reason. A window carries a `note` rather than a name — it is
+recognised by its rhythm, its time and its target, all three of which the list
+shows, so a name would be a second identity to keep in step with the first.
+
+The start is edited with `UInputTime`, which follows the interface language
+through the `locale` `app.vue` already hands `UApp`: German renders `03:00`,
+English `3:00 AM`. A window is stored as a minute of the day, so the field is
+bridged to a `Time` in the form and back. `formatTimeOfDay` in `useFormatters`
+is what labels it and what the list draws; it pads on a 24 hour clock and does
+not on a 12 hour one, which is the convention the field's own segments use —
+the two sit next to each other and have to agree character for character.
+
+What a window does is *freeze the state machine* rather than feed it a different
+answer. `recordCheckResult` still runs the check and still writes the heartbeat
+with its raw `status`; it only sets `reported_status` to `maintenance` and leaves
+`status`, `consecutive_failures`, `consecutive_successes` and `status_changed_at`
+holding what they held when the window opened. Three things follow from that one
+rule, and none of them needs a branch of its own:
+
+- no transition happens, so `buildNotificationEvent` finds nothing to report —
+  the notification side knows nothing about maintenance;
+- a monitor that was up enters the window with a failure count of zero, so once
+  the window closes the retries are counted from the start and a server that is
+  still booting gets its full tolerance;
+- a monitor that was already down and announced stays down underneath, so its
+  recovery is still delivered when it finally answers again.
+
+Certificate warnings are deliberately not suppressed. The event fires on the one
+check where the expiry first crosses into the warning window; swallowing it there
+would lose it for good.
+
+`monitor_state.status` therefore only ever holds `up`, `down` or `pending` —
+that is the `EvaluatedMonitorStatus` type. `paused` and `maintenance` are added
+when the row is *read*, by `serializeMonitorState`, from `monitors.active` and
+from the resolved windows. Maintenance is resolved rather than stored so the
+answer follows the clock instead of the last check: a monitor on an hourly
+interval would otherwise enter and leave its window up to an hour late. The
+browser does not recompute it — `useLive`'s reconcile refetches the list every
+minute, which is the resolution a schedule written in whole minutes has anyway.
+
+`shared/utils/maintenance.ts` is the rule. `maintenanceChain` walks the monitor
+and its ancestors, `resolveMaintenance` answers for one instant, and
+`nextWindowStart` finds the next opening. A window is a statement about the wall
+clock, so `zonedClock` reads the local weekday and minute through `Intl` and the
+comparison happens there — no offset arithmetic, and a DST change needs no
+special case. The zone is one instance-wide setting
+(`SETTING_KEYS.maintenanceTimeZone`, default `Europe/Berlin`), served publicly by
+`/api/maintenance/settings` because the forms need it to draw a window.
+`server/utils/maintenance.ts` supplies the walk with rows;
+`app/composables/useMaintenance.ts` supplies it with the group cache, which is
+what lets the maintenance widget say when the next window opens using the very
+rule the scheduler will apply.
+
+The figures exclude it. `reported_status <> 'maintenance'` is the filter in the
+raw branches of `calculateUptimeBulk`, `getMonitorStatsSeries` and
+`listIncidentsFromHeartbeats`; for every longer range the exclusion is already
+baked into `monitor_stats_hourly`, whose `maintenance_count` the aggregation job
+fills instead of `up_count`/`down_count`. That one `case` carries it into the
+uptime, the latency chart, the calendar and the incident reconstruction at once.
+
 **Data retention.** `server/services/maintenance.ts` runs every five minutes. It
 rolls heartbeats into `monitor_stats_hourly` (recomputing the current, still open
 hour every time) and then prunes both tables according to the retention config.
 Queries for ranges up to 24 h read raw heartbeats, longer ranges read the hourly
-rollups — see `RAW_HEARTBEAT_RANGE_LIMIT_SECONDS`.
+rollups — see `RAW_HEARTBEAT_RANGE_LIMIT_SECONDS`. It also clears manual
+maintenance switches that have run out; nothing depends on that, since
+`isOverrideActive` compares against the clock, but it keeps the rows from
+reporting a maintenance that ended last week.
 
 **Incidents.** Nothing records an outage; `server/utils/incidents.ts`
 reconstructs them per request with a gaps-and-islands query over the check
@@ -588,9 +671,11 @@ files.
 - Widget width classes in `shared/utils/grid.ts` must stay complete literal class
   strings. Tailwind does not emit class names assembled from fragments at
   runtime.
-- `UCard` sets `overflow-hidden`, which disables the automatic minimum size of a
-  flex item. Cards are given `shrink-0` in `app.config.ts` so they are not
-  squashed inside the panel's flex column; do not remove it.
+- `UCard` and `UAlert` both set `overflow-hidden`, which disables the automatic
+  minimum size of a flex item. Both are given `shrink-0` in `app.config.ts` so
+  they are not squashed inside the panel's flex column — an alert without it
+  renders as a single line with its description and actions clipped away. Do not
+  remove either.
 - `UDashboardToolbar` scrolls horizontally by default. Long text in it needs
   `:ui="{ left: 'min-w-0 flex-1' }"` plus truncation, otherwise it scrolls on
   phones instead of shortening.

@@ -7,6 +7,7 @@ import Heading from './widget/Heading.vue'
 import IncidentFeed from './widget/IncidentFeed.vue'
 import IncidentHistory from './widget/IncidentHistory.vue'
 import LatencyChart from './widget/LatencyChart.vue'
+import MaintenanceSchedule from './widget/MaintenanceSchedule.vue'
 import Monitor from './widget/Monitor.vue'
 import MonitorList from './widget/MonitorList.vue'
 import ReliabilityKpis from './widget/ReliabilityKpis.vue'
@@ -35,6 +36,7 @@ const WIDGET_COMPONENTS: Record<WidgetType, Component> = {
   'sla-table': SlaTable,
   'incident-history': IncidentHistory,
   'reliability-kpis': ReliabilityKpis,
+  'maintenance-schedule': MaintenanceSchedule,
   'heading': Heading
 }
 

@@ -46,6 +46,7 @@
     "down": "Ausfall",
     "pending": "Unklar",
     "paused": "Pausiert",
+    "maintenance": "Wartung",
     "unknown": "Keine Daten"
   },
   "auth": {
@@ -202,6 +203,79 @@
       "description": "„{name}“ wird entfernt. Untergruppen und Monitore bleiben erhalten und rücken in die übergeordnete Gruppe."
     }
   },
+  "maintenance": {
+    "label": "Wartung",
+    "short": "Wartung",
+    "windows": "Wartungsfenster",
+    "description": "Im Fenster laufen die Checks weiter, ein Fehlschlag gilt aber nicht als Ausfall und zählt nicht gegen die Verfügbarkeit.",
+    "addWindow": "Fenster hinzufügen",
+    "noWindows": "Noch keine Wartungsfenster. Checks werden rund um die Uhr gewertet.",
+    "start": "Beginnt um",
+    "duration": "Dauer",
+    "durationMinutes": "{count} Min",
+    "weekdays": "Tage",
+    "everyDay": "Täglich",
+    "workdays": "Mo–Fr",
+    "weekend": "Sa + So",
+    "spans": "{start} bis {end}",
+    "spansNextDay": "{start} bis {end} am Folgetag",
+    "timeZoneHint": "Die Zeiten gelten in {zone}.",
+    "openNow": "Läuft gerade",
+    "activeUntil": "In Wartung bis {time}",
+    "activeOpenEnded": "In Wartung, ohne Ende",
+    "activeSince": "In Wartung seit {duration}",
+    "staleTitle": "Wartung läuft seit {duration}",
+    "bySchedule": "Geplantes Fenster",
+    "byHand": "Von Hand eingeschaltet",
+    "weekday": {
+      "mon": "Mo",
+      "tue": "Di",
+      "wed": "Mi",
+      "thu": "Do",
+      "fri": "Fr",
+      "sat": "Sa",
+      "sun": "So"
+    },
+    "weekdayLong": {
+      "mon": "Montag",
+      "tue": "Dienstag",
+      "wed": "Mittwoch",
+      "thu": "Donnerstag",
+      "fri": "Freitag",
+      "sat": "Samstag",
+      "sun": "Sonntag"
+    },
+    "manual": {
+      "label": "Wartung",
+      "start": "Wartung starten",
+      "end": "Wartung beenden",
+      "forDuration": "Für {duration}",
+      "openEnded": "Bis ich sie beende",
+      "started": "{name} ist jetzt in Wartung",
+      "ended": "Wartung für {name} beendet"
+    },
+    "timeZone": "Zeitzone",
+    "timeZoneDescription": "Jedes Wartungsfenster gilt in dieser Zeitzone, damit ein Fenster um 03:00 auch über die Zeitumstellung hinweg um 03:00 bleibt.",
+    "checksInWindow": "{count} Checks in Wartung",
+    "nextWindow": "Nächstes Fenster {time}",
+    "noneScheduled": "Keine Wartung geplant",
+    "editWindow": "Fenster bearbeiten",
+    "deleteWindow": "Dieses Fenster löschen?",
+    "deleteWindowHint": "Die Monitore darunter werden ab sofort wieder rund um die Uhr gewertet.",
+    "windowCreated": "Wartungsfenster angelegt.",
+    "windowUpdated": "Wartungsfenster gespeichert.",
+    "windowDeleted": "Wartungsfenster gelöscht.",
+    "target": "Gilt für",
+    "targetHint": "Eine Gruppe deckt jeden Monitor darunter ab. Fenster addieren sich, ein Monitor kann also unter mehreren liegen.",
+    "targetPlaceholder": "Monitor oder Gruppe wählen",
+    "covers": "deckt keinen Monitor ab | deckt 1 Monitor ab | deckt {count} Monitore ab",
+    "unknownTarget": "Unbekanntes Ziel",
+    "note": "Bemerkung",
+    "noteHint": "Optional. Ein Fenster erkennt man am Rhythmus, an der Zeit und daran, was es abdeckt.",
+    "notePlaceholder": "z. B. Neustart nach dem nächtlichen Backup",
+    "enabled": "Aktiv",
+    "enabledHint": "Ausschalten, um das Fenster zu behalten, ohne dass es greift."
+  },
   "dashboard": {
     "title": "Dashboards",
     "create": "Neues Dashboard",
@@ -276,6 +350,7 @@
       "sla-table": "SLA-Tabelle",
       "incident-history": "Störungschronik",
       "reliability-kpis": "Zuverlässigkeit",
+      "maintenance-schedule": "Wartung",
       "heading": "Überschrift"
     },
     "typeDescription": {
@@ -290,6 +365,7 @@
       "sla-table": "Verfügbarkeit gegen ein Ziel, mit verbleibendem Fehlerbudget.",
       "incident-history": "Aus der Prüfhistorie rekonstruierte Ausfälle.",
       "reliability-kpis": "Ausfälle, Ausfallzeit, MTTR und MTBF über einen Zeitraum.",
+      "maintenance-schedule": "Was gerade in Wartung ist und welches Fenster als Nächstes öffnet.",
       "heading": "Ein Textelement, um Widgets zu gruppieren."
     },
     "fields": {
@@ -360,6 +436,9 @@
       "mttr": "MTTR",
       "mtbf": "MTBF",
       "longest": "Längster"
+    },
+    "maintenance": {
+      "activeCount": "nichts in Wartung | 1 in Wartung | {count} in Wartung"
     }
   },
   "notification": {
@@ -629,6 +708,8 @@
     "slug": "Nur Kleinbuchstaben, Ziffern und Bindestriche verwenden",
     "statusCodes": "Einzelne Codes oder Bereiche verwenden, zum Beispiel 200-299,301",
     "timeoutTooLong": "Das Zeitlimit darf das Prüfintervall nicht überschreiten",
-    "monitorRequired": "Monitor für dieses Widget auswählen"
+    "monitorRequired": "Monitor für dieses Widget auswählen",
+    "weekdayRequired": "Wähle mindestens einen Wochentag",
+    "maintenanceTarget": "Wähle einen Monitor oder eine Gruppe für dieses Fenster"
   }
 }

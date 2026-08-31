@@ -52,6 +52,53 @@ export function useMonitorActions(onChanged: () => unknown) {
     }
   }
 
+  /**
+   * Flips the manual maintenance switch. `durationSeconds` of null is the open
+   * ended case; the endpoint answers with the monitor, so the caller's reload
+   * is what puts the new state on screen rather than an optimistic guess.
+   */
+  async function setMaintenance(monitor: Monitor, durationSeconds: number | null) {
+    pending.value = monitor.id
+
+    try {
+      await $fetch(`/api/monitors/${monitor.id}/maintenance`, {
+        method: 'POST',
+        body: { durationSeconds }
+      })
+
+      await onChanged()
+
+      toast.add({
+        title: t('maintenance.manual.started', { name: monitorPath(monitor) }),
+        color: 'info',
+        icon: 'i-lucide-wrench'
+      })
+    } catch (error) {
+      toast.add({ title: t('common.error'), description: resolveErrorMessage(error), color: 'error' })
+    } finally {
+      pending.value = null
+    }
+  }
+
+  async function endMaintenance(monitor: Monitor) {
+    pending.value = monitor.id
+
+    try {
+      await $fetch(`/api/monitors/${monitor.id}/maintenance`, { method: 'DELETE' })
+      await onChanged()
+
+      toast.add({
+        title: t('maintenance.manual.ended', { name: monitorPath(monitor) }),
+        color: 'success',
+        icon: 'i-lucide-check'
+      })
+    } catch (error) {
+      toast.add({ title: t('common.error'), description: resolveErrorMessage(error), color: 'error' })
+    } finally {
+      pending.value = null
+    }
+  }
+
   async function remove(monitor: Monitor) {
     pending.value = monitor.id
 
@@ -71,5 +118,5 @@ export function useMonitorActions(onChanged: () => unknown) {
     }
   }
 
-  return { pending, succeededId, checkNow, toggleActive, remove }
+  return { pending, succeededId, checkNow, toggleActive, setMaintenance, endMaintenance, remove }
 }

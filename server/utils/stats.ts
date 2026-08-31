@@ -26,6 +26,7 @@ export function listDailyStats(monitorId: number, days: number, offsetSeconds = 
     day_start: number
     up_count: number
     down_count: number
+    maintenance_count: number
     avg_latency_ms: number | null
   }>(sql`
     select
@@ -33,6 +34,7 @@ export function listDailyStats(monitorId: number, days: number, offsetSeconds = 
         - ${offset} as day_start,
       sum(up_count) as up_count,
       sum(down_count) as down_count,
+      sum(maintenance_count) as maintenance_count,
       case when sum(up_count) > 0
         then sum(coalesce(avg_latency_ms, 0) * up_count) / sum(up_count)
         else null end as avg_latency_ms
@@ -46,6 +48,7 @@ export function listDailyStats(monitorId: number, days: number, offsetSeconds = 
     dayStart: row.day_start,
     upCount: row.up_count,
     downCount: row.down_count,
+    maintenanceCount: row.maintenance_count,
     avgLatencyMs: row.avg_latency_ms === null ? null : Math.round(row.avg_latency_ms)
   }))
 }

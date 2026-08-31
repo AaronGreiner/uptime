@@ -33,8 +33,15 @@ export const MONITOR_GROUP_FALLBACK_ICON = MONITOR_GROUP_ICONS[0]
 
 const MONITOR_GROUP_ICON_SET = new Set<string>(MONITOR_GROUP_ICONS)
 
-/** Worst status first. A group reports the most severe state below it. */
-const STATUS_SEVERITY: MonitorStatus[] = ['down', 'pending', 'up', 'paused']
+/**
+ * Worst status first. A group reports the most severe state below it.
+ *
+ * Maintenance sits behind `up` on purpose: a node holding one monitor in a
+ * window and a dozen healthy ones is a healthy node, and colouring it otherwise
+ * would make a nightly reboot repaint half the sidebar. It only surfaces once
+ * nothing below is being judged at all.
+ */
+const STATUS_SEVERITY: MonitorStatus[] = ['down', 'pending', 'up', 'maintenance', 'paused']
 
 export function monitorGroupIcon(group: Pick<MonitorGroup, 'icon'> | null | undefined): string {
   return group?.icon && MONITOR_GROUP_ICON_SET.has(group.icon)
@@ -134,7 +141,9 @@ export function ungroupedMonitors(monitors: MonitorWithState[]): MonitorWithStat
 }
 
 export function monitorTotals(monitors: MonitorWithState[]): MonitorGroupTotals {
-  const totals: MonitorGroupTotals = { total: 0, up: 0, down: 0, pending: 0, paused: 0, status: null }
+  const totals: MonitorGroupTotals = {
+    total: 0, up: 0, down: 0, pending: 0, paused: 0, maintenance: 0, status: null
+  }
 
   for (const monitor of monitors) {
     totals.total += 1
@@ -151,8 +160,9 @@ export function mergeTotals(list: MonitorGroupTotals[]): MonitorGroupTotals {
     down: sum.down + entry.down,
     pending: sum.pending + entry.pending,
     paused: sum.paused + entry.paused,
+    maintenance: sum.maintenance + entry.maintenance,
     status: null
-  }), { total: 0, up: 0, down: 0, pending: 0, paused: 0, status: null })
+  }), { total: 0, up: 0, down: 0, pending: 0, paused: 0, maintenance: 0, status: null })
 
   return { ...totals, status: worstStatus(totals) }
 }

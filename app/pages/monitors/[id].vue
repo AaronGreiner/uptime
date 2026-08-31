@@ -77,7 +77,30 @@ onMonitorChecked((event) => {
   void refreshStats()
 }, monitorId)
 
-const { pending, succeededId, checkNow, toggleActive, remove } = useMonitorActions(reload)
+const {
+  pending,
+  succeededId,
+  checkNow,
+  toggleActive,
+  setMaintenance,
+  endMaintenance,
+  remove
+} = useMonitorActions(reload)
+
+const { menuItem: maintenanceMenuItem } = useMaintenanceMenu()
+
+/**
+ * The manual switch, offered as a menu because it is five choices rather than a
+ * toggle. It sits next to pause: both take a monitor out of the judging, one
+ * for a while and one until somebody says otherwise.
+ */
+const maintenanceItems = computed(() => (monitor.value
+  ? [maintenanceMenuItem(
+      monitor.value,
+      duration => setMaintenance(monitor.value!, duration),
+      () => endMaintenance(monitor.value!)
+    )]
+  : []))
 
 const formOpen = ref(false)
 const deleteOpen = ref(false)
@@ -160,6 +183,7 @@ const recentChecks = computed(() => [...(heartbeats.value ?? [])].reverse().slic
         <template #trailing>
           <MonitorStatusBadge
             :status="monitor.state.status"
+            :maintenance="monitor.state.maintenance"
             mobile-icon-only
           />
         </template>
@@ -195,6 +219,14 @@ const recentChecks = computed(() => [...(heartbeats.value ?? [])].reverse().slic
                 />
               </template>
             </UButton>
+            <UDropdownMenu :items="maintenanceItems">
+              <UButton
+                icon="i-lucide-wrench"
+                color="neutral"
+                variant="ghost"
+                :aria-label="$t('maintenance.manual.label')"
+              />
+            </UDropdownMenu>
             <UButton
               icon="i-lucide-pencil"
               color="neutral"
@@ -265,6 +297,16 @@ const recentChecks = computed(() => [...(heartbeats.value ?? [])].reverse().slic
     </template>
 
     <template #body>
+      <!-- Above the figures, because it is the reason they read the way they
+           do: everything below excludes what ran inside the window. -->
+      <MaintenanceNotice
+        v-if="monitor.state.maintenance.active"
+        :status="monitor.state.maintenance"
+        :can-end="isAdmin"
+        :ending="pending === monitor.id"
+        @end="endMaintenance(monitor)"
+      />
+
       <div class="grid gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-4">
         <UCard>
           <p class="text-sm text-muted">

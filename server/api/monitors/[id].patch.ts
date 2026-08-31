@@ -26,8 +26,10 @@ export default defineEventHandler(async (event) => {
   setMonitorNotificationGroups(id, notificationGroupIds)
 
   // A changed interval or a resumed monitor should take effect immediately.
+  // Pausing leaves the stored status alone: it keeps saying what the checks
+  // last established, and `paused` is added when the row is read.
   database.update(monitorState).set({
-    status: input.active ? (existing.active ? undefined : 'pending') : 'paused',
+    status: input.active && !existing.active ? 'pending' : undefined,
     nextCheckAt: now,
     updatedAt: now
   }).where(eq(monitorState.monitorId, id)).run()

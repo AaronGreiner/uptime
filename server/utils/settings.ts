@@ -22,5 +22,7 @@ export const SETTING_KEYS = {
   /** Start of the last hour bucket covered by the aggregation job. */
   aggregatedThrough: 'stats.aggregatedThrough',
   /** Marks a database that already received the demo seed. */
-  demoSeeded: 'seed.demoSeeded'
+  demoSeeded: 'seed.demoSeeded',
+  /** IANA zone the maintenance windows are read in, instance wide. */
+  maintenanceTimeZone: 'maintenance.timeZone'
 } as const

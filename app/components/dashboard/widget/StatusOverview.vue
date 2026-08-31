@@ -25,7 +25,7 @@ const counts = computed(() => scoped.value.reduce((totals, monitor) => {
   totals[monitor.state.status] += 1
 
   return totals
-}, { up: 0, down: 0, pending: 0, paused: 0 } as Record<MonitorStatus, number>))
+}, { up: 0, down: 0, pending: 0, paused: 0, maintenance: 0 } as Record<MonitorStatus, number>))
 
 /**
  * Checks that succeeded over checks that ran, not the mean of the per-monitor
@@ -50,6 +50,26 @@ function statusLink(status: MonitorStatus | 'all'): string {
     ...(group ? { group: String(group) } : {})
   })}`
 }
+
+/*
+ * The maintenance tile appears only while something is in maintenance, and then
+ * the column steps change with it. Two reasons, in that order: the counts have
+ * to add up to the total, which they stop doing the moment a monitor is in a
+ * window; and an instance that never uses the feature keeps the six tile layout
+ * it had, rather than paying a narrower column for a figure that is always zero.
+ *
+ * Every step gains a column with the tile, so the two layouts have the same
+ * number of rows at every width: three, two and one. The extra tile therefore
+ * costs a little width and no height at all — which matters, because the body
+ * clips and the shortest cell this widget offers has no room for a fourth row.
+ * Both strings stay literal; Tailwind cannot emit a column count assembled at
+ * runtime.
+ */
+const showMaintenance = computed(() => counts.value.maintenance > 0)
+
+const gridColumnsClass = computed(() => (showMaintenance.value
+  ? 'grid-cols-3 @[22rem]:grid-cols-4 @[46rem]:grid-cols-7'
+  : 'grid-cols-2 @[22rem]:grid-cols-3 @[46rem]:grid-cols-6'))
 
 const tiles = computed(() => ([
   {
@@ -84,6 +104,16 @@ const tiles = computed(() => ([
     class: monitorStatusTextClass('pending'),
     to: statusLink('pending')
   },
+  ...(showMaintenance.value
+    ? [{
+        key: 'maintenance',
+        labelKey: 'status.maintenance',
+        value: formatNumber(counts.value.maintenance),
+        icon: 'i-lucide-wrench',
+        class: monitorStatusTextClass('maintenance'),
+        to: statusLink('maintenance')
+      }]
+    : []),
   {
     key: 'paused',
     labelKey: 'status.paused',
@@ -118,8 +148,8 @@ const tiles = computed(() => ([
     </p>
 
     <div
-      class="grid grid-cols-2 @[22rem]:grid-cols-3 @[46rem]:grid-cols-6"
-      :class="compact ? 'gap-x-3 gap-y-1 @[46rem]:gap-2' : 'gap-3 @[22rem]:gap-4'"
+      class="grid"
+      :class="[gridColumnsClass, compact ? 'gap-x-3 gap-y-1 @[46rem]:gap-2' : 'gap-3 @[22rem]:gap-4']"
     >
       <component
         :is="tile.to ? NuxtLink : 'div'"

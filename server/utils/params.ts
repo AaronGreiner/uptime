@@ -51,6 +51,16 @@ export function readNotificationChannelId(event: H3Event): number {
   return id
 }
 
+export function readMaintenanceWindowId(event: H3Event): number {
+  const id = Number(getRouterParam(event, 'id'))
+
+  if (!Number.isInteger(id) || id <= 0) {
+    throw createError({ statusCode: 400, statusMessage: 'Invalid maintenance window id' })
+  }
+
+  return id
+}
+
 export function readNotificationGroupId(event: H3Event): number {
   const id = Number(getRouterParam(event, 'id'))
 

@@ -33,5 +33,5 @@ export default defineEventHandler(async (event) => {
 
   setMonitorGroupNotificationGroups(id, notificationGroupIds)
 
-  return serializeMonitorGroup(updated, notificationGroupIds)
+  return serializeMonitorGroup(updated, notificationGroupIds, groupMaintenanceWindows(id))
 })

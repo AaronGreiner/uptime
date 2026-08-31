@@ -1,7 +1,9 @@
 import { randomBytes } from 'node:crypto'
 import { eq, inArray } from 'drizzle-orm'
 import type { WidgetConfig, WidgetHeight, WidgetType, WidgetWidth } from '../../shared/types/dashboard'
-import { dashboards, dashboardWidgets, heartbeats, monitorGroups, monitors, monitorState, monitorStatsHourly, notificationChannels, notificationGroups, settings, users } from '../database/schema'
+import type { HeartbeatReportedStatus } from '../../shared/types/monitor'
+import { dashboards, dashboardWidgets, heartbeats, maintenanceWindows, monitorGroups, monitors, monitorState, monitorStatsHourly, notificationChannels, notificationGroups, settings, users } from '../database/schema'
+import { WEEKDAY_MASK_ALL, windowRemainingMinutes, zonedClock } from '../../shared/utils/maintenance'
 import { widgetConfigForType } from '../../shared/utils/widget'
 import { aggregateHourlyStats } from './maintenance'
 import { nowInSeconds } from './scheduler'
@@ -77,6 +79,13 @@ interface DemoGroup {
   icon: string
   description?: string
   parent?: string
+  /** A recurring window on this node, inherited by everything below it. */
+  maintenance?: {
+    note: string
+    weekdays: number
+    startMinute: number
+    durationMinutes: number
+  }
 }
 
 /**
@@ -88,7 +97,15 @@ const DEMO_GROUPS: DemoGroup[] = [
   { key: 'production/web', name: 'Web', icon: 'i-lucide-globe', parent: 'production' },
   { key: 'production/api', name: 'APIs', icon: 'i-lucide-webhook', parent: 'production' },
   { key: 'production/docs', name: 'Documentation', icon: 'i-lucide-book-open', parent: 'production' },
-  { key: 'infrastructure', name: 'Infrastructure', icon: 'i-lucide-server', description: 'Network and edge' },
+  {
+    key: 'infrastructure',
+    name: 'Infrastructure',
+    icon: 'i-lucide-server',
+    description: 'Network and edge',
+    // The schedule the whole feature exists for: the boxes below this node are
+    // rebooted nightly, and the failing checks that produces are not an outage.
+    maintenance: { note: 'Boxes reboot after the backup', weekdays: WEEKDAY_MASK_ALL, startMinute: 3 * 60, durationMinutes: 30 }
+  },
   { key: 'infrastructure/dns', name: 'DNS', icon: 'i-lucide-network', parent: 'infrastructure' },
   { key: 'infrastructure/edge', name: 'Edge', icon: 'i-lucide-shield', parent: 'infrastructure' },
   { key: 'staging', name: 'Staging', icon: 'i-lucide-flask-conical', description: 'Preview environment, checks are paused' },
@@ -262,6 +279,19 @@ function createDemoGroups(now: number): Map<string, number> {
       updatedAt: now
     }).returning({ id: monitorGroups.id }).get()
 
+    if (group.maintenance) {
+      database.insert(maintenanceWindows).values({
+        monitorGroupId: row.id,
+        note: group.maintenance.note,
+        weekdays: group.maintenance.weekdays,
+        startMinute: group.maintenance.startMinute,
+        durationMinutes: group.maintenance.durationMinutes,
+        enabled: true,
+        createdAt: now,
+        updatedAt: now
+      }).run()
+    }
+
     ids.set(group.key, row.id)
   })
 
@@ -275,12 +305,35 @@ function createDemoGroups(now: number): Map<string, number> {
  * minutes: the one hour chart buckets per minute, so a uniformly coarse history
  * would leave it almost empty.
  */
+/**
+ * Whether a generated check falls inside a demo window.
+ *
+ * Resolved with the very function the scheduler uses, so the synthetic history
+ * agrees with what a live check would have recorded — the demo is meant to show
+ * the feature, not an approximation of it.
+ */
+function demoMaintenanceMatcher(): (demo: DemoMonitor, at: number) => boolean {
+  const timeZone = maintenanceTimeZone()
+  const owners = DEMO_GROUPS.filter(group => group.maintenance)
+
+  return (demo, at) => {
+    const clock = zonedClock(at, timeZone)
+
+    return owners.some(owner => (demo.group === owner.key || demo.group.startsWith(`${owner.key}/`))
+      && windowRemainingMinutes(
+        { id: 0, monitorId: null, monitorGroupId: null, enabled: true, ...owner.maintenance! },
+        clock
+      ) !== null)
+  }
+}
+
 function generateDemoHistory(created: CreatedMonitor[], days: number): void {
   const database = useDatabase()
   const now = nowInSeconds()
   const fineWindow = 3600
   const coarseStep = 300
   const fineStep = 60
+  const underMaintenance = demoMaintenanceMatcher()
 
   const timestamps: number[] = []
 
@@ -299,20 +352,25 @@ function generateDemoHistory(created: CreatedMonitor[], days: number): void {
       const endsDownFrom = demo.endsDown ? timestamps.length - 34 : Number.POSITIVE_INFINITY
       let outageRemaining = 0
       let lastStatus: 'up' | 'down' = 'up'
-      let lastReportedStatus: 'up' | 'down' | 'pending' = 'up'
+      let lastReportedStatus: HeartbeatReportedStatus = 'up'
       let lastLatency: number | null = demo.baseLatency
       let consecutiveFailures = 0
 
       for (const [index, checkedAt] of timestamps.entries()) {
+        // A rebooting box does fail its checks; that is the whole reason the
+        // window exists. The heartbeat records the failure and marks it as not
+        // judged, exactly as `recordCheckResult` would.
+        const maintaining = underMaintenance(demo, checkedAt)
+
         if (index >= endsDownFrom) {
           outageRemaining = 1
         } else if (outageRemaining > 0) {
           outageRemaining--
-        } else if (Math.random() < demo.failureRate) {
+        } else if (!maintaining && Math.random() < demo.failureRate) {
           outageRemaining = 1 + Math.floor(Math.random() * 4)
         }
 
-        const isDown = outageRemaining > 0
+        const isDown = maintaining || outageRemaining > 0
         // A daily sine wave plus noise makes the latency chart look plausible.
         const timeOfDay = (checkedAt % 86_400) / 86_400
         const wave = Math.sin(timeOfDay * Math.PI * 2) * demo.baseLatency * 0.2
@@ -320,10 +378,13 @@ function generateDemoHistory(created: CreatedMonitor[], days: number): void {
         const latency = Math.max(1, Math.round(demo.baseLatency + wave + noise))
 
         lastStatus = isDown ? 'down' : 'up'
-        consecutiveFailures = isDown ? consecutiveFailures + 1 : 0
-        lastReportedStatus = isDown
-          ? consecutiveFailures > 1 ? 'down' : 'pending'
-          : 'up'
+        // Frozen inside a window, like the state machine itself.
+        consecutiveFailures = maintaining ? consecutiveFailures : isDown ? consecutiveFailures + 1 : 0
+        lastReportedStatus = maintaining
+          ? 'maintenance'
+          : isDown
+            ? consecutiveFailures > 1 ? 'down' : 'pending'
+            : 'up'
         lastLatency = isDown ? null : latency
 
         transaction.insert(heartbeats).values({
@@ -341,7 +402,9 @@ function generateDemoHistory(created: CreatedMonitor[], days: number): void {
 
       transaction.insert(monitorState).values({
         monitorId: id,
-        status: lastReportedStatus,
+        // `maintenance` is never stored: the state row keeps what the checks
+        // last established underneath a window.
+        status: lastReportedStatus === 'maintenance' ? 'pending' : lastReportedStatus,
         lastCheckedAt: now,
         nextCheckAt: now + Math.floor(Math.random() * 20),
         latencyMs: lastLatency,
@@ -381,6 +444,8 @@ function generateDemoRollups(created: CreatedMonitor[], days: number, skipRecent
     return
   }
 
+  const underMaintenance = demoMaintenanceMatcher()
+
   database.transaction((transaction) => {
     for (const { id, demo } of created) {
       const checksPerHour = Math.max(1, Math.round(3600 / demo.intervalSeconds))
@@ -388,8 +453,14 @@ function generateDemoRollups(created: CreatedMonitor[], days: number, skipRecent
 
       for (let bucketStart = from; bucketStart < until; bucketStart += 3600) {
         const minutesDown = Math.min(60, downMinutes.get(bucketStart) ?? 0)
+        // Sampled at the half hour, which is inside the demo window rather than
+        // on either of its edges. A bucket is an hour and the window half of one,
+        // so counting the checks that fall in it is a proportion, not a flag.
+        const maintenanceCount = underMaintenance(demo, bucketStart + 1800)
+          ? Math.round(checksPerHour / 2)
+          : 0
         const downCount = Math.round(checksPerHour * (minutesDown / 60))
-        const upCount = Math.max(0, checksPerHour - downCount)
+        const upCount = Math.max(0, checksPerHour - downCount - maintenanceCount)
         // A daily sine wave plus noise, the same shape the raw history uses.
         const timeOfDay = (bucketStart % 86_400) / 86_400
         const wave = Math.sin(timeOfDay * Math.PI * 2) * demo.baseLatency * 0.2
@@ -400,6 +471,7 @@ function generateDemoRollups(created: CreatedMonitor[], days: number, skipRecent
           bucketStart,
           upCount,
           downCount,
+          maintenanceCount,
           avgLatencyMs: upCount > 0 ? average : null,
           minLatencyMs: upCount > 0 ? Math.round(average * 0.8) : null,
           maxLatencyMs: upCount > 0 ? Math.round(average * 1.6) : null
@@ -571,6 +643,10 @@ function buildDemoDashboards(created: CreatedMonitor[], groupIds: Map<string, nu
     groupId: infrastructureGroup,
     limit: 5
   })
+  place(infrastructure.id, 'maintenance-schedule', 'half', 'standard', null, {
+    groupId: infrastructureGroup,
+    limit: 6
+  })
 
   for (const name of infrastructureMonitorNames) {
     place(infrastructure.id, 'monitor', 'quarter', 'compact', monitorId(name), {})
@@ -599,8 +675,9 @@ export function clearAllData(): void {
   const database = useDatabase()
 
   database.transaction((transaction) => {
-    // Heartbeats, hourly stats, monitor state and the widgets pointing at a
-    // monitor go with the monitors; the widgets of a dashboard go with it.
+    // Heartbeats, hourly stats, monitor state, the maintenance windows and the
+    // widgets pointing at a monitor go with the monitors; the widgets of a
+    // dashboard go with it.
     transaction.delete(monitors).run()
     transaction.delete(monitorGroups).run()
     transaction.delete(dashboards).run()

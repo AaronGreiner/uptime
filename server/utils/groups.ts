@@ -1,10 +1,15 @@
 import { asc, eq, sql } from 'drizzle-orm'
 import type { MonitorGroup } from '../../shared/types/group'
+import type { MaintenanceWindow } from '../../shared/types/maintenance'
 import { MONITOR_GROUP_MAX_DEPTH } from '../../shared/utils/group'
 import { monitorGroups, monitors } from '../database/schema'
 import type { MonitorGroupRow } from '../database/schema'
 
-export function serializeMonitorGroup(row: MonitorGroupRow, notificationGroupIds: number[] = []): MonitorGroup {
+export function serializeMonitorGroup(
+  row: MonitorGroupRow,
+  notificationGroupIds: number[] = [],
+  windows: MaintenanceWindow[] = []
+): MonitorGroup {
   return {
     id: row.id,
     name: row.name,
@@ -14,6 +19,9 @@ export function serializeMonitorGroup(row: MonitorGroupRow, notificationGroupIds
     position: row.position,
     notificationMode: row.notificationMode,
     notificationGroupIds,
+    maintenanceStartedAt: row.maintenanceStartedAt,
+    maintenanceUntil: row.maintenanceUntil,
+    maintenanceWindows: windows,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt
   }
@@ -29,8 +37,10 @@ export function listMonitorGroupRows(): MonitorGroupRow[] {
 
 export function listMonitorGroups(): MonitorGroup[] {
   const assignments = loadMonitorGroupNotificationGroupIds()
+  const windows = loadMaintenanceWindows().byGroup
 
-  return listMonitorGroupRows().map(row => serializeMonitorGroup(row, assignments.get(row.id) ?? []))
+  return listMonitorGroupRows()
+    .map(row => serializeMonitorGroup(row, assignments.get(row.id) ?? [], windows.get(row.id) ?? []))
 }
 
 export function getMonitorGroupRow(id: number): MonitorGroupRow | undefined {

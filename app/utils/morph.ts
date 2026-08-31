@@ -19,7 +19,8 @@ import {
   Play,
   RefreshCw,
   Send,
-  Sun
+  Sun,
+  Wrench
 } from 'lucide'
 import type { IconNode } from 'morphicons/vue'
 import type { MonitorStatus } from '#shared/types/monitor'
@@ -49,7 +50,8 @@ export const MORPH_ICONS = {
   play: Play,
   refreshCw: RefreshCw,
   send: Send,
-  sun: Sun
+  sun: Sun,
+  wrench: Wrench
 } satisfies Record<string, IconNode>
 
 export type MorphIconName = keyof typeof MORPH_ICONS
@@ -65,5 +67,6 @@ export function monitorStatusMorphIcon(status: MonitorStatus): MorphIconName {
     case 'down': return 'circleX'
     case 'pending': return 'loaderCircle'
     case 'paused': return 'circlePause'
+    case 'maintenance': return 'wrench'
   }
 }

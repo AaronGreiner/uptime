@@ -23,9 +23,11 @@ export default defineEventHandler(async (event) => {
   setMonitorNotificationGroups(created.id, notificationGroupIds)
 
   // Schedule the first check right away so the card is not empty for a minute.
+  // The stored status stays in the evaluated vocabulary; a monitor created
+  // inactive reads as paused because of its `active` flag, not because of this.
   database.insert(monitorState).values({
     monitorId: created.id,
-    status: input.active ? 'pending' : 'paused',
+    status: 'pending',
     nextCheckAt: now,
     updatedAt: now
   }).run()

@@ -14,6 +14,7 @@ export type WidgetType
     | 'sla-table'
     | 'incident-history'
     | 'reliability-kpis'
+    | 'maintenance-schedule'
     | 'heading'
 
 export type WidgetWidth = 'quarter' | 'third' | 'half' | 'twoThirds' | 'full'

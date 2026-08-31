@@ -46,6 +46,7 @@
     "down": "Down",
     "pending": "Pending",
     "paused": "Paused",
+    "maintenance": "Maintenance",
     "unknown": "No data"
   },
   "auth": {
@@ -202,6 +203,79 @@
       "description": "\"{name}\" will be removed. Its subgroups and monitors are kept and move up to the parent group."
     }
   },
+  "maintenance": {
+    "label": "Maintenance",
+    "short": "Maintenance",
+    "windows": "Maintenance windows",
+    "description": "Checks keep running inside a window, but a failure is not reported as an outage and does not count against the uptime.",
+    "addWindow": "Add window",
+    "noWindows": "No maintenance windows yet. Checks are judged around the clock.",
+    "start": "Starts at",
+    "duration": "Duration",
+    "durationMinutes": "{count} min",
+    "weekdays": "Days",
+    "everyDay": "Every day",
+    "workdays": "Mon–Fri",
+    "weekend": "Sat + Sun",
+    "spans": "{start} to {end}",
+    "spansNextDay": "{start} to {end} the next day",
+    "timeZoneHint": "Times are read in {zone}.",
+    "openNow": "Open now",
+    "activeUntil": "In maintenance until {time}",
+    "activeOpenEnded": "In maintenance, no end set",
+    "activeSince": "In maintenance for {duration}",
+    "staleTitle": "Maintenance has been running for {duration}",
+    "bySchedule": "Scheduled window",
+    "byHand": "Switched on by hand",
+    "weekday": {
+      "mon": "Mon",
+      "tue": "Tue",
+      "wed": "Wed",
+      "thu": "Thu",
+      "fri": "Fri",
+      "sat": "Sat",
+      "sun": "Sun"
+    },
+    "weekdayLong": {
+      "mon": "Monday",
+      "tue": "Tuesday",
+      "wed": "Wednesday",
+      "thu": "Thursday",
+      "fri": "Friday",
+      "sat": "Saturday",
+      "sun": "Sunday"
+    },
+    "manual": {
+      "label": "Maintenance",
+      "start": "Start maintenance",
+      "end": "End maintenance",
+      "forDuration": "For {duration}",
+      "openEnded": "Until I end it",
+      "started": "{name} is now in maintenance",
+      "ended": "Maintenance for {name} ended"
+    },
+    "timeZone": "Time zone",
+    "timeZoneDescription": "Every maintenance window is read against this clock, so a window at 03:00 stays at 03:00 across a daylight saving change.",
+    "checksInWindow": "{count} checks under maintenance",
+    "nextWindow": "Next window {time}",
+    "noneScheduled": "No maintenance scheduled",
+    "editWindow": "Edit window",
+    "deleteWindow": "Delete this window?",
+    "deleteWindowHint": "The monitors it covers are judged around the clock again from now on.",
+    "windowCreated": "Maintenance window created.",
+    "windowUpdated": "Maintenance window saved.",
+    "windowDeleted": "Maintenance window deleted.",
+    "target": "Applies to",
+    "targetHint": "A group covers every monitor below it. Windows add up, so a monitor can be covered by more than one.",
+    "targetPlaceholder": "Choose a monitor or a group",
+    "covers": "covers no monitors | covers 1 monitor | covers {count} monitors",
+    "unknownTarget": "Unknown target",
+    "note": "Remark",
+    "noteHint": "Optional. A window is recognised by its rhythm, its time and what it covers.",
+    "notePlaceholder": "e.g. Reboots after the nightly backup",
+    "enabled": "Active",
+    "enabledHint": "Switch off to keep the window without it taking effect."
+  },
   "dashboard": {
     "title": "Dashboards",
     "create": "New dashboard",
@@ -276,6 +350,7 @@
       "sla-table": "SLA table",
       "incident-history": "Incident history",
       "reliability-kpis": "Reliability",
+      "maintenance-schedule": "Maintenance",
       "heading": "Heading"
     },
     "typeDescription": {
@@ -290,6 +365,7 @@
       "sla-table": "Uptime against a target, with the error budget left.",
       "incident-history": "Outages reconstructed from the check history.",
       "reliability-kpis": "Outage count, downtime, MTTR and MTBF over a range.",
+      "maintenance-schedule": "What is in maintenance now, and which window opens next.",
       "heading": "A text label to group widgets."
     },
     "fields": {
@@ -360,6 +436,9 @@
       "mttr": "MTTR",
       "mtbf": "MTBF",
       "longest": "Longest"
+    },
+    "maintenance": {
+      "activeCount": "nothing in maintenance | 1 in maintenance | {count} in maintenance"
     }
   },
   "notification": {
@@ -629,6 +708,8 @@
     "slug": "Use lowercase letters, digits and dashes only",
     "statusCodes": "Use single codes or ranges, for example 200-299,301",
     "timeoutTooLong": "The timeout must not exceed the check interval",
-    "monitorRequired": "Select a monitor for this widget"
+    "monitorRequired": "Select a monitor for this widget",
+    "weekdayRequired": "Select at least one weekday",
+    "maintenanceTarget": "Choose a monitor or a group for this window"
   }
 }

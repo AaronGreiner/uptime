@@ -16,7 +16,8 @@ export const MONITOR_STATUS_ICONS: Record<MonitorStatus, string> = {
   up: 'i-lucide-circle-check',
   down: 'i-lucide-circle-x',
   pending: 'i-lucide-loader-circle',
-  paused: 'i-lucide-circle-pause'
+  paused: 'i-lucide-circle-pause',
+  maintenance: 'i-lucide-wrench'
 }
 
 /**
@@ -78,12 +79,16 @@ export function monitorTarget(monitor: Pick<Monitor, 'type' | 'url' | 'hostname'
 }
 
 /** Maps a status onto a Nuxt UI colour token. */
-export function monitorStatusColor(status: MonitorStatus): 'success' | 'error' | 'warning' | 'neutral' {
+export function monitorStatusColor(status: MonitorStatus): 'success' | 'error' | 'warning' | 'neutral' | 'info' {
   switch (status) {
     case 'up': return 'success'
     case 'down': return 'error'
     case 'pending': return 'warning'
     case 'paused': return 'neutral'
+    // Its own colour rather than a shade of neutral: a monitor in maintenance is
+    // deliberately not being judged, which is a different thing from one nobody
+    // switched back on.
+    case 'maintenance': return 'info'
   }
 }
 
@@ -94,6 +99,7 @@ export function monitorStatusBackgroundClass(status: MonitorStatus): string {
     case 'down': return 'bg-error'
     case 'pending': return 'bg-warning'
     case 'paused': return 'bg-muted'
+    case 'maintenance': return 'bg-info'
   }
 }
 
@@ -104,6 +110,7 @@ export function monitorStatusTextClass(status: MonitorStatus): string {
     case 'down': return 'text-error'
     case 'pending': return 'text-warning'
     case 'paused': return 'text-dimmed'
+    case 'maintenance': return 'text-info'
   }
 }
 

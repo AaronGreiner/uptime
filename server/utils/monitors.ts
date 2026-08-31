@@ -1,4 +1,5 @@
 import { desc, eq, sql } from 'drizzle-orm'
+import type { MaintenanceStatus, MaintenanceWindow } from '../../shared/types/maintenance'
 import type { Heartbeat, Monitor, MonitorState, MonitorStatsPoint, MonitorUptime, MonitorWithState } from '../../shared/types/monitor'
 import type { StatsRange } from '../../shared/types/stats'
 import { MONITOR_HEARTBEAT_HISTORY } from '../../shared/utils/monitor'
@@ -10,6 +11,14 @@ import { nowInSeconds } from '../services/scheduler'
 /** Heartbeats rendered in the pulse bar of a monitor card. */
 export const DEFAULT_HEARTBEAT_COUNT = MONITOR_HEARTBEAT_HISTORY
 
+const INACTIVE_MAINTENANCE: MaintenanceStatus = {
+  active: false,
+  until: null,
+  since: null,
+  manual: false,
+  scheduled: false
+}
+
 const EMPTY_STATE: MonitorState = {
   status: 'pending',
   lastCheckedAt: null,
@@ -19,10 +28,15 @@ const EMPTY_STATE: MonitorState = {
   consecutiveFailures: 0,
   consecutiveSuccesses: 0,
   certificateExpiresAt: null,
-  statusChangedAt: null
+  statusChangedAt: null,
+  maintenance: INACTIVE_MAINTENANCE
 }
 
-export function serializeMonitor(row: MonitorRow, notificationGroupIds: number[] = []): Monitor {
+export function serializeMonitor(
+  row: MonitorRow,
+  notificationGroupIds: number[] = [],
+  windows: MaintenanceWindow[] = []
+): Monitor {
   return {
     id: row.id,
     name: row.name,
@@ -48,20 +62,38 @@ export function serializeMonitor(row: MonitorRow, notificationGroupIds: number[]
     packetCount: row.packetCount,
     notificationMode: row.notificationMode,
     notificationGroupIds,
+    maintenanceStartedAt: row.maintenanceStartedAt,
+    maintenanceUntil: row.maintenanceUntil,
+    maintenanceWindows: windows,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt
   }
 }
 
-export function serializeMonitorState(monitor: MonitorRow, row: MonitorStateRow | null | undefined): MonitorState {
+/**
+ * `status` is the one field the stored row does not decide on its own: a paused
+ * or a maintained monitor keeps its last result underneath, and reporting that
+ * result as up or down would claim something nobody is currently judging.
+ *
+ * Maintenance is resolved here rather than stored so the answer follows the
+ * clock instead of the last check — a monitor on an hourly interval would
+ * otherwise enter and leave its window up to an hour late. The browser
+ * recomputes the very same function against the shared clock, which is what
+ * makes a window open on screen without a request.
+ */
+export function serializeMonitorState(
+  monitor: MonitorRow,
+  row: MonitorStateRow | null | undefined,
+  maintenance: MaintenanceStatus = resolveMonitorMaintenance(monitor)
+): MonitorState {
+  const idleStatus = monitor.active ? (maintenance.active ? 'maintenance' : null) : 'paused'
+
   if (!row) {
-    return { ...EMPTY_STATE, status: monitor.active ? 'pending' : 'paused' }
+    return { ...EMPTY_STATE, status: idleStatus ?? 'pending', maintenance }
   }
 
   return {
-    // A paused monitor keeps its last result in the database but must not be
-    // reported as up or down while it is not being checked.
-    status: monitor.active ? row.status : 'paused',
+    status: idleStatus ?? row.status,
     lastCheckedAt: row.lastCheckedAt,
     nextCheckAt: row.nextCheckAt,
     latencyMs: row.latencyMs,
@@ -69,7 +101,8 @@ export function serializeMonitorState(monitor: MonitorRow, row: MonitorStateRow 
     consecutiveFailures: row.consecutiveFailures,
     consecutiveSuccesses: row.consecutiveSuccesses,
     certificateExpiresAt: row.certificateExpiresAt,
-    statusChangedAt: row.statusChangedAt
+    statusChangedAt: row.statusChangedAt,
+    maintenance
   }
 }
 
@@ -87,10 +120,14 @@ export function listMonitorsWithState(heartbeatCount = DEFAULT_HEARTBEAT_COUNT):
   const heartbeatsByMonitor = listRecentHeartbeats(ids, heartbeatCount)
   const uptimeByMonitor = calculateUptimeBulk(ids, STATS_RANGE_SECONDS['24h'])
   const assignments = loadMonitorNotificationGroupIds()
+  // One snapshot of the windows and the group tree for the whole list, rather
+  // than one walk per row.
+  const windows = loadMaintenanceWindows().byMonitor
+  const resolveMaintenanceFor = maintenanceResolver()
 
   return rows.map(({ monitor, state }) => ({
-    ...serializeMonitor(monitor, assignments.get(monitor.id) ?? []),
-    state: serializeMonitorState(monitor, state),
+    ...serializeMonitor(monitor, assignments.get(monitor.id) ?? [], windows.get(monitor.id) ?? []),
+    state: serializeMonitorState(monitor, state, resolveMaintenanceFor(monitor)),
     uptime24h: uptimeByMonitor.get(monitor.id) ?? emptyUptime(),
     recentHeartbeats: heartbeatsByMonitor.get(monitor.id) ?? []
   }))
@@ -110,7 +147,7 @@ export function getMonitorWithState(id: number, heartbeatCount = DEFAULT_HEARTBE
   }
 
   return {
-    ...serializeMonitor(row.monitor, assignedToMonitor(id)),
+    ...serializeMonitor(row.monitor, assignedToMonitor(id), monitorMaintenanceWindows(id)),
     state: serializeMonitorState(row.monitor, row.state),
     uptime24h: calculateUptimeBulk([id], STATS_RANGE_SECONDS['24h']).get(id) ?? emptyUptime(),
     recentHeartbeats: listRecentHeartbeats([id], heartbeatCount).get(id) ?? []
@@ -196,7 +233,9 @@ export function calculateUptimeBulk(monitorIds: number[], rangeSeconds: number):
           sum(case when status = 'down' then 1 else 0 end) as down_count,
           avg(case when status = 'up' then latency_ms end) as avg_latency_ms
         from heartbeats
-        where monitor_id in ${monitorIds} and checked_at >= ${since}
+        where monitor_id in ${monitorIds}
+          and checked_at >= ${since}
+          and reported_status <> 'maintenance'
         group by monitor_id
       `)
     : useDatabase().all<UptimeAggregateRow>(sql`
@@ -249,11 +288,12 @@ export function getMonitorStatsSeries(monitorId: number, range: StatsRange): Mon
     ? useDatabase().all<StatsAggregateRow>(sql`
         select
           ${bucket} as bucket_start,
-          sum(case when status = 'up' then 1 else 0 end) as up_count,
-          sum(case when status = 'down' then 1 else 0 end) as down_count,
-          avg(case when status = 'up' then latency_ms end) as avg_latency_ms,
-          min(case when status = 'up' then latency_ms end) as min_latency_ms,
-          max(case when status = 'up' then latency_ms end) as max_latency_ms
+          sum(case when reported_status <> 'maintenance' and status = 'up' then 1 else 0 end) as up_count,
+          sum(case when reported_status <> 'maintenance' and status = 'down' then 1 else 0 end) as down_count,
+          sum(case when reported_status = 'maintenance' then 1 else 0 end) as maintenance_count,
+          avg(case when reported_status <> 'maintenance' and status = 'up' then latency_ms end) as avg_latency_ms,
+          min(case when reported_status <> 'maintenance' and status = 'up' then latency_ms end) as min_latency_ms,
+          max(case when reported_status <> 'maintenance' and status = 'up' then latency_ms end) as max_latency_ms
         from heartbeats
         where monitor_id = ${monitorId} and checked_at >= ${since}
         group by ${bucket}
@@ -264,6 +304,7 @@ export function getMonitorStatsSeries(monitorId: number, range: StatsRange): Mon
           ${bucket} as bucket_start,
           sum(up_count) as up_count,
           sum(down_count) as down_count,
+          sum(maintenance_count) as maintenance_count,
           case when sum(up_count) > 0
             then sum(coalesce(avg_latency_ms, 0) * up_count) / sum(up_count)
             else null end as avg_latency_ms,
@@ -279,6 +320,7 @@ export function getMonitorStatsSeries(monitorId: number, range: StatsRange): Mon
     bucketStart: row.bucket_start,
     upCount: row.up_count,
     downCount: row.down_count,
+    maintenanceCount: row.maintenance_count,
     avgLatencyMs: row.avg_latency_ms === null ? null : Math.round(row.avg_latency_ms),
     minLatencyMs: row.min_latency_ms,
     maxLatencyMs: row.max_latency_ms
@@ -311,6 +353,7 @@ interface StatsAggregateRow {
   bucket_start: number
   up_count: number
   down_count: number
+  maintenance_count: number
   avg_latency_ms: number | null
   min_latency_ms: number | null
   max_latency_ms: number | null

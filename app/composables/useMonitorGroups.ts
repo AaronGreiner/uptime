@@ -67,6 +67,45 @@ export function useMonitorGroupActions(onChanged: () => unknown) {
     }
   }
 
+  /** The same switch on a node of the tree, inherited by everything below it. */
+  async function setMaintenance(group: MonitorGroup, durationSeconds: number | null) {
+    pending.value = group.id
+
+    try {
+      await $fetch(`/api/groups/${group.id}/maintenance`, { method: 'POST', body: { durationSeconds } })
+      await onChanged()
+
+      toast.add({
+        title: t('maintenance.manual.started', { name: group.name }),
+        color: 'info',
+        icon: 'i-lucide-wrench'
+      })
+    } catch (error) {
+      toast.add({ title: t('common.error'), description: resolveErrorMessage(error), color: 'error' })
+    } finally {
+      pending.value = null
+    }
+  }
+
+  async function endMaintenance(group: MonitorGroup) {
+    pending.value = group.id
+
+    try {
+      await $fetch(`/api/groups/${group.id}/maintenance`, { method: 'DELETE' })
+      await onChanged()
+
+      toast.add({
+        title: t('maintenance.manual.ended', { name: group.name }),
+        color: 'success',
+        icon: 'i-lucide-check'
+      })
+    } catch (error) {
+      toast.add({ title: t('common.error'), description: resolveErrorMessage(error), color: 'error' })
+    } finally {
+      pending.value = null
+    }
+  }
+
   async function remove(group: MonitorGroup) {
     pending.value = group.id
 
@@ -89,5 +128,5 @@ export function useMonitorGroupActions(onChanged: () => unknown) {
     }
   }
 
-  return { pending, move, remove }
+  return { pending, move, setMaintenance, endMaintenance, remove }
 }

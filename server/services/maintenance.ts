@@ -33,6 +33,7 @@ export function runMaintenance(): void {
   try {
     aggregateHourlyStats()
     pruneExpiredData()
+    pruneExpiredMaintenanceOverrides()
   } catch (error) {
     console.error('[maintenance] run failed:', error)
   }
@@ -58,23 +59,37 @@ export function aggregateHourlyStats(): void {
   const storedFrom = getSetting<number | null>(SETTING_KEYS.aggregatedThrough, null)
   const from = Math.max(oldestHeartbeat, storedFrom ?? oldestHeartbeat)
 
+  /*
+   * A check that ran under maintenance is counted apart rather than into the two
+   * columns the uptime is computed from. That single `case` is what carries the
+   * exclusion into every long range figure at once: the rollup branches of the
+   * uptime, of the latency chart, of the calendar and of the incident
+   * reconstruction all read these columns and need no clause of their own.
+   *
+   * Latency is left out of the maintenance readings too. A server that is
+   * rebooting answers slowly when it answers at all, and letting that into the
+   * average would move the very curve the window exists to protect.
+   */
   database.run(sql`
     insert into monitor_stats_hourly
-      (monitor_id, bucket_start, up_count, down_count, avg_latency_ms, min_latency_ms, max_latency_ms)
+      (monitor_id, bucket_start, up_count, down_count, maintenance_count,
+       avg_latency_ms, min_latency_ms, max_latency_ms)
     select
       monitor_id,
       (checked_at / ${integerLiteral(HOUR_SECONDS)}) * ${integerLiteral(HOUR_SECONDS)} as bucket_start,
-      sum(case when status = 'up' then 1 else 0 end),
-      sum(case when status = 'down' then 1 else 0 end),
-      cast(avg(case when status = 'up' then latency_ms end) as integer),
-      min(case when status = 'up' then latency_ms end),
-      max(case when status = 'up' then latency_ms end)
+      sum(case when reported_status <> 'maintenance' and status = 'up' then 1 else 0 end),
+      sum(case when reported_status <> 'maintenance' and status = 'down' then 1 else 0 end),
+      sum(case when reported_status = 'maintenance' then 1 else 0 end),
+      cast(avg(case when reported_status <> 'maintenance' and status = 'up' then latency_ms end) as integer),
+      min(case when reported_status <> 'maintenance' and status = 'up' then latency_ms end),
+      max(case when reported_status <> 'maintenance' and status = 'up' then latency_ms end)
     from heartbeats
     where checked_at >= ${from}
     group by monitor_id, bucket_start
     on conflict(monitor_id, bucket_start) do update set
       up_count = excluded.up_count,
       down_count = excluded.down_count,
+      maintenance_count = excluded.maintenance_count,
       avg_latency_ms = excluded.avg_latency_ms,
       min_latency_ms = excluded.min_latency_ms,
       max_latency_ms = excluded.max_latency_ms

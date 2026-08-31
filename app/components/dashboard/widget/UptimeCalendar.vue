@@ -25,6 +25,7 @@ interface CalendarDay {
   ratio: number | null
   upCount: number
   downCount: number
+  maintenanceCount: number
   avgLatencyMs: number | null
 }
 
@@ -52,6 +53,9 @@ const calendar = computed<CalendarDay[]>(() => {
 })
 
 function toDay(dayStart: number, point: MonitorDailyPoint | undefined): CalendarDay {
+  // Maintenance is deliberately left out of the ratio, exactly as the server
+  // left it out of the counts: a nightly reboot must not dent the square it
+  // happens to fall in.
   const total = (point?.upCount ?? 0) + (point?.downCount ?? 0)
 
   return {
@@ -59,6 +63,7 @@ function toDay(dayStart: number, point: MonitorDailyPoint | undefined): Calendar
     ratio: total > 0 ? (point!.upCount) / total : null,
     upCount: point?.upCount ?? 0,
     downCount: point?.downCount ?? 0,
+    maintenanceCount: point?.maintenanceCount ?? 0,
     avgLatencyMs: point?.avgLatencyMs ?? null
   }
 }
@@ -89,7 +94,9 @@ const overall = computed(() => {
  */
 function dayClass(day: CalendarDay): string {
   if (day.ratio === null) {
-    return 'bg-elevated'
+    // A day nothing was judged on is not the same as a day nothing ran on: one
+    // was in maintenance, the other has no history at all.
+    return day.maintenanceCount > 0 ? 'bg-info/40' : 'bg-elevated'
   }
 
   if (day.ratio >= 0.9999) {
@@ -224,7 +231,14 @@ const caption = computed(() => {
           <span class="text-dimmed">{{ formatDate(hovered.day.dayStart) }}</span>
           <span class="mx-1.5 text-muted">·</span>
           <template v-if="hovered.day.ratio === null">
-            <span class="text-dimmed">{{ $t('monitor.detail.noData') }}</span>
+            <span
+              v-if="hovered.day.maintenanceCount"
+              class="text-info"
+            >{{ $t('status.maintenance') }}</span>
+            <span
+              v-else
+              class="text-dimmed"
+            >{{ $t('monitor.detail.noData') }}</span>
           </template>
           <template v-else>
             <span class="font-medium tabular-nums">{{ formatUptime(hovered.day.ratio) }}</span>
@@ -239,6 +253,12 @@ const caption = computed(() => {
               class="ml-1.5 text-muted tabular-nums"
             >
               {{ formatLatency(hovered.day.avgLatencyMs) }}
+            </span>
+            <span
+              v-if="hovered.day.maintenanceCount"
+              class="ml-1.5 text-info tabular-nums"
+            >
+              {{ $t('maintenance.checksInWindow', { count: formatNumber(hovered.day.maintenanceCount) }) }}
             </span>
           </template>
         </div>

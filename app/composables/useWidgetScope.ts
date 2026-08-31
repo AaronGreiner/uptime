@@ -3,7 +3,7 @@ import type { MonitorStatus, MonitorWithState } from '#shared/types/monitor'
 import { WIDGET_CONFIG_DEFAULTS } from '#shared/utils/widget'
 
 /** Worst first, so a list sorted by status opens with what needs attention. */
-const STATUS_ORDER: Record<MonitorStatus, number> = { down: 0, pending: 1, up: 2, paused: 3 }
+const STATUS_ORDER: Record<MonitorStatus, number> = { down: 0, pending: 1, up: 2, maintenance: 3, paused: 4 }
 
 /**
  * The monitors an aggregate widget covers.

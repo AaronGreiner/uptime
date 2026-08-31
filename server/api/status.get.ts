@@ -9,7 +9,7 @@ export default defineEventHandler(() => {
     counts[monitor.state.status] += 1
 
     return counts
-  }, { up: 0, down: 0, pending: 0, paused: 0 })
+  }, { up: 0, down: 0, pending: 0, paused: 0, maintenance: 0 })
 
   const ratios = [...uptime.values()].map(entry => entry.ratio).filter((ratio): ratio is number => ratio !== null)
 

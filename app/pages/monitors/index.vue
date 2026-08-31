@@ -21,12 +21,19 @@ async function reload() {
 }
 
 const { monitorPath, fullMonitorPath } = useMonitorPath()
-const { pending, checkNow, toggleActive, remove } = useMonitorActions(reload)
-const { pending: groupPending, move: moveGroup, remove: removeGroup } = useMonitorGroupActions(reload)
+const { pending, checkNow, toggleActive, setMaintenance, endMaintenance, remove } = useMonitorActions(reload)
+const {
+  pending: groupPending,
+  move: moveGroup,
+  setMaintenance: setGroupMaintenance,
+  endMaintenance: endGroupMaintenance,
+  remove: removeGroup
+} = useMonitorGroupActions(reload)
+const { menuItem: maintenanceMenuItem } = useMaintenanceMenu()
 
 const search = ref('')
 
-const MONITOR_STATUSES: MonitorStatus[] = ['up', 'down', 'pending', 'paused']
+const MONITOR_STATUSES: MonitorStatus[] = ['up', 'down', 'pending', 'maintenance', 'paused']
 
 /**
  * In the URL like the group filter, so a status count on a dashboard can link
@@ -198,7 +205,12 @@ function menuItems(monitor: MonitorWithState): DropdownMenuItem[][] {
     label: t(monitor.active ? 'monitor.actions.pause' : 'monitor.actions.resume'),
     icon: monitor.active ? 'i-lucide-pause' : 'i-lucide-play',
     onSelect: () => toggleActive(monitor)
-  }], [{
+  },
+  maintenanceMenuItem(
+    monitor,
+    duration => setMaintenance(monitor, duration),
+    () => endMaintenance(monitor)
+  )], [{
     label: t('common.delete'),
     icon: 'i-lucide-trash-2',
     color: 'error' as const,
@@ -235,7 +247,12 @@ function groupMenuItems(node: MonitorTreeNode): DropdownMenuItem[][] {
     icon: 'i-lucide-arrow-down',
     disabled: index === -1 || index >= siblings.length - 1,
     onSelect: () => moveGroup(node, 'down')
-  }], [{
+  },
+  maintenanceMenuItem(
+    node,
+    duration => setGroupMaintenance(node, duration),
+    () => endGroupMaintenance(node)
+  )], [{
     label: t('common.delete'),
     icon: 'i-lucide-trash-2',
     color: 'error' as const,

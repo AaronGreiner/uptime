@@ -1,16 +1,37 @@
+import type { MaintenanceAssignment, MaintenanceStatus } from './maintenance'
 import type { NotificationMode } from './notification'
 
 /** Kinds of checks the scheduler knows how to execute. */
 export type MonitorType = 'http' | 'ping'
 
-/** Result of the latest check, or `paused` when the monitor is disabled. */
-export type MonitorStatus = 'up' | 'down' | 'pending' | 'paused'
+/**
+ * Status as the state machine establishes and stores it.
+ *
+ * Neither `paused` nor `maintenance` is in here, and that is the invariant the
+ * whole feature rests on: both are decided when the row is *read*, from the
+ * monitor's `active` flag and from the windows, so the stored value keeps
+ * saying what the checks last established underneath a window rather than being
+ * overwritten by it.
+ */
+export type EvaluatedMonitorStatus = 'up' | 'down' | 'pending'
+
+/**
+ * Status as the interface shows it: what the checks established, or one of the
+ * two states in which no result is being judged. `paused` means the monitor is
+ * disabled, `maintenance` that a window is open over it.
+ */
+export type MonitorStatus = EvaluatedMonitorStatus | 'paused' | 'maintenance'
 
 /** Outcome of a single executed check. Never `pending` or `paused`. */
 export type HeartbeatStatus = 'up' | 'down'
 
-/** Monitor status reported after a check. A tolerated failure is `pending`. */
-export type HeartbeatReportedStatus = Exclude<MonitorStatus, 'paused'>
+/**
+ * Monitor status reported after a check. A tolerated failure is `pending`, and
+ * a check that ran inside a maintenance window is `maintenance` — which is what
+ * the uptime and incident queries filter on, while `status` next to it keeps the
+ * raw truth about whether the target answered.
+ */
+export type HeartbeatReportedStatus = EvaluatedMonitorStatus | 'maintenance'
 
 export interface MonitorHttpOptions {
   url: string
@@ -41,7 +62,7 @@ export interface NotificationAssignment {
   notificationGroupIds: number[]
 }
 
-export interface Monitor extends MonitorHttpOptions, MonitorPingOptions, NotificationAssignment {
+export interface Monitor extends MonitorHttpOptions, MonitorPingOptions, NotificationAssignment, MaintenanceAssignment {
   id: number
   name: string
   type: MonitorType
@@ -69,6 +90,13 @@ export interface MonitorState {
   certificateExpiresAt: number | null
   /** Unix seconds of the last status change, used for `up since` labels. */
   statusChangedAt: number | null
+  /**
+   * Maintenance as the server resolved it when the payload was built. The
+   * browser recomputes the same answer against the shared clock, so a window
+   * opens and closes without a request; this is what makes the first render and
+   * every non-browser consumer agree with it.
+   */
+  maintenance: MaintenanceStatus
 }
 
 export interface Heartbeat {
@@ -103,6 +131,8 @@ export interface MonitorDailyPoint {
   dayStart: number
   upCount: number
   downCount: number
+  /** Checks that ran under maintenance, counted out of the two above. */
+  maintenanceCount: number
   avgLatencyMs: number | null
 }
 
@@ -111,6 +141,8 @@ export interface MonitorStatsPoint {
   bucketStart: number
   upCount: number
   downCount: number
+  /** Checks that ran under maintenance, counted out of the two above. */
+  maintenanceCount: number
   avgLatencyMs: number | null
   minLatencyMs: number | null
   maxLatencyMs: number | null

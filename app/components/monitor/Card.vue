@@ -84,7 +84,10 @@ const cardUi = computed(() => ({
 
       <div class="flex items-center gap-1 self-start shrink-0">
         <slot name="actions" />
-        <MonitorStatusBadge :status="monitor.state.status" />
+        <MonitorStatusBadge
+          :status="monitor.state.status"
+          :maintenance="monitor.state.maintenance"
+        />
       </div>
     </div>
 

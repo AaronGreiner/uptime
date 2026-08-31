@@ -142,6 +142,14 @@ export const WIDGET_DEFINITIONS = {
     defaultHeight: 'compact',
     defaults: { range: '30d' }
   },
+  'maintenance-schedule': {
+    icon: 'i-lucide-wrench',
+    fields: ['scope', 'limit'],
+    widths: ['third', 'half', 'twoThirds', 'full'],
+    heights: ['compact', 'standard', 'tall'],
+    defaultWidth: 'half',
+    defaultHeight: 'standard'
+  },
   'heading': {
     icon: 'i-lucide-type',
     fields: ['level'],

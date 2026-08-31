@@ -1,10 +1,11 @@
+import type { MaintenanceAssignment } from './maintenance'
 import type { MonitorStatus, MonitorWithState, NotificationAssignment } from './monitor'
 
 /**
  * A node of the monitor tree. Groups nest into each other through `parentId`;
  * a null parent makes the group a root.
  */
-export interface MonitorGroup extends NotificationAssignment {
+export interface MonitorGroup extends NotificationAssignment, MaintenanceAssignment {
   id: number
   name: string
   description: string | null
@@ -40,6 +41,7 @@ export interface MonitorGroupTotals {
   down: number
   pending: number
   paused: number
+  maintenance: number
   /** Worst status found in the subtree, or null when it holds no monitors. */
   status: MonitorStatus | null
 }

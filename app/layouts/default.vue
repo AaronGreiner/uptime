@@ -20,6 +20,10 @@ useMonitorPathPreference()
 // detail page and the dashboard tiles share.
 useLatencyChartPreferences()
 
+// The zone the maintenance windows are written in, read once for every form
+// that draws one. The monitor states themselves arrive resolved from the server.
+await useMaintenanceSettings()
+
 // A dashboard opened in fullscreen renders without this sidebar. The listeners
 // that end the mode are global, so they are bound here rather than on the page.
 const { isFullscreen } = useFullscreen()

@@ -33,8 +33,11 @@ by Uptime Kuma, built with Nuxt 4, Nuxt UI 4, Bun and SQLite.
   `?fullscreen=1`.
 - **HTTP(S) and ping monitors** — status code ranges, keyword matching, custom
   headers, TLS certificate expiry and ICMP round trip times.
-- **Nested groups** — organise monitors in a tree and scope dashboards or
-  notifications to exactly the branch that needs them.
+- **Nested groups** — organise monitors in a tree and scope dashboards,
+  notifications or maintenance to exactly the branch that needs them.
+- **Maintenance windows** — recurring schedules or a switch you flip by hand,
+  on a single monitor or on a whole branch. A nightly reboot stops being an
+  outage: no alert, no incident, and the uptime figure is left alone.
 - **Incident and reliability history** — reconstruct outages, uptime, mean time
   to recovery and other reliability figures from recorded checks.
 - **SMTP and Microsoft Teams notifications** — route events through reusable
@@ -178,6 +181,31 @@ packet loss is reported in the result message.
 Both types share the check interval, timeout and retry settings. While retries
 remain, a failed monitor is *pending* rather than *down*, keeping single blips
 out of the incident history.
+
+### Maintenance
+
+Servers that get restarted on a schedule are not having an outage. A maintenance
+window says so: pick the weekdays, a start time and a length, and say whether it
+covers one monitor or a whole group. Windows live together under **Settings →
+Maintenance**, so the whole schedule of the instance reads as one list. They add
+up rather than override, so one window on a root group can cover a branch while
+a single monitor adds its own patch day.
+
+For the unplanned kind there is a switch on the monitor or group itself — an
+hour, a day, or until you turn it off again.
+
+Inside a window the checks keep running and keep recording, so the history stays
+complete and you can still see when the service came back. What changes is that
+nothing is judged: no monitor is called *down*, no notification goes out, no
+incident is reconstructed, and the failed checks are counted out of the uptime
+instead of against it. When the window closes the retry count starts from zero,
+so a machine that is still booting gets its usual tolerance before anyone is
+woken up — and an outage that was already announced before the window still gets
+its recovery notification afterwards.
+
+Windows are read against one time zone for the whole instance, set on the admin
+settings page, so a window at 03:00 stays at 03:00 across a daylight saving
+change.
 
 ### History and storage
 

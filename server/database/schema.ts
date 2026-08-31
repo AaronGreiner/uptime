@@ -1,7 +1,7 @@
 import { index, integer, primaryKey, sqliteTable, text, unique } from 'drizzle-orm/sqlite-core'
 import type { AnySQLiteColumn } from 'drizzle-orm/sqlite-core'
 import type { WidgetConfig, WidgetHeight, WidgetType, WidgetWidth } from '../../shared/types/dashboard'
-import type { HeartbeatReportedStatus, HeartbeatStatus, MonitorStatus, MonitorType } from '../../shared/types/monitor'
+import type { EvaluatedMonitorStatus, HeartbeatReportedStatus, HeartbeatStatus, MonitorType } from '../../shared/types/monitor'
 import type {
   NotificationDeliveryStatus,
   NotificationEvent,
@@ -43,6 +43,10 @@ export const monitorGroups = sqliteTable('monitor_groups', {
   position: integer('position').notNull().default(0),
   /** Where the monitors below this node take their notification groups from. */
   notificationMode: text('notification_mode').$type<NotificationMode>().notNull().default('inherit'),
+  /** Manual maintenance switch, inherited by everything below this node. */
+  maintenanceStartedAt: timestamp('maintenance_started_at'),
+  /** Null while the switch is on means "until somebody turns it off". */
+  maintenanceUntil: timestamp('maintenance_until'),
   createdAt: timestamp('created_at').notNull(),
   updatedAt: timestamp('updated_at').notNull()
 }, table => [
@@ -83,6 +87,11 @@ export const monitors = sqliteTable('monitors', {
   /** `inherit` looks at the group tree, `custom` at the monitor's own rows. */
   notificationMode: text('notification_mode').$type<NotificationMode>().notNull().default('inherit'),
 
+  /** Manual maintenance switch; the schedules live in `maintenance_windows`. */
+  maintenanceStartedAt: timestamp('maintenance_started_at'),
+  /** Null while the switch is on means "until somebody turns it off". */
+  maintenanceUntil: timestamp('maintenance_until'),
+
   createdAt: timestamp('created_at').notNull(),
   updatedAt: timestamp('updated_at').notNull()
 }, table => [
@@ -96,7 +105,8 @@ export const monitors = sqliteTable('monitors', {
  */
 export const monitorState = sqliteTable('monitor_state', {
   monitorId: integer('monitor_id').primaryKey().references(() => monitors.id, { onDelete: 'cascade' }),
-  status: text('status').$type<MonitorStatus>().notNull().default('pending'),
+  /** Never `paused` or `maintenance`: both are decided when the row is read. */
+  status: text('status').$type<EvaluatedMonitorStatus>().notNull().default('pending'),
   lastCheckedAt: timestamp('last_checked_at'),
   nextCheckAt: timestamp('next_check_at'),
   latencyMs: integer('latency_ms'),
@@ -132,12 +142,53 @@ export const monitorStatsHourly = sqliteTable('monitor_stats_hourly', {
   bucketStart: timestamp('bucket_start').notNull(),
   upCount: integer('up_count').notNull().default(0),
   downCount: integer('down_count').notNull().default(0),
+  /**
+   * Checks that ran inside a maintenance window. Counted apart from the two
+   * above rather than out of them, so a bucket that was entirely maintenance is
+   * distinguishable from an hour in which nothing was checked at all.
+   */
+  maintenanceCount: integer('maintenance_count').notNull().default(0),
   avgLatencyMs: integer('avg_latency_ms'),
   minLatencyMs: integer('min_latency_ms'),
   maxLatencyMs: integer('max_latency_ms')
 }, table => [
   unique('monitor_stats_hourly_bucket_unq').on(table.monitorId, table.bucketStart),
   index('monitor_stats_hourly_bucket_idx').on(table.bucketStart)
+])
+
+/**
+ * A recurring window during which a monitor's checks still run but are not
+ * judged. Exactly one of the two foreign keys is set: a window belongs either
+ * to one monitor or to one node of the monitor tree, and a node's windows apply
+ * to everything below it. They are managed centrally, from the maintenance
+ * settings page, rather than from inside the record they point at.
+ *
+ * Windows add up rather than override. Suppressing an alarm is not a decision
+ * that competes with another one, so a schedule on a root group and a second on
+ * a single monitor are both in force — which is why there is no `inherit` mode
+ * here the way there is for notifications.
+ */
+export const maintenanceWindows = sqliteTable('maintenance_windows', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  /**
+   * A free remark, not a label. A window is recognised by the rhythm, the time
+   * and what it covers — all three are on screen wherever it is listed — so a
+   * name would be a second identity to keep in step with the first.
+   */
+  note: text('note'),
+  monitorId: integer('monitor_id').references(() => monitors.id, { onDelete: 'cascade' }),
+  monitorGroupId: integer('monitor_group_id').references(() => monitorGroups.id, { onDelete: 'cascade' }),
+  /** Bitmask, bit 0 is Sunday through bit 6 is Saturday. */
+  weekdays: integer('weekdays').notNull().default(0),
+  /** Minutes from local midnight in the instance's maintenance time zone. */
+  startMinute: integer('start_minute').notNull().default(0),
+  durationMinutes: integer('duration_minutes').notNull().default(30),
+  enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+  createdAt: timestamp('created_at').notNull(),
+  updatedAt: timestamp('updated_at').notNull()
+}, table => [
+  index('maintenance_windows_monitor_idx').on(table.monitorId),
+  index('maintenance_windows_group_idx').on(table.monitorGroupId)
 ])
 
 export const dashboards = sqliteTable('dashboards', {
@@ -273,6 +324,7 @@ export type MonitorGroupRow = typeof monitorGroups.$inferSelect
 export type MonitorRow = typeof monitors.$inferSelect
 export type MonitorStateRow = typeof monitorState.$inferSelect
 export type HeartbeatRow = typeof heartbeats.$inferSelect
+export type MaintenanceWindowRow = typeof maintenanceWindows.$inferSelect
 export type DashboardRow = typeof dashboards.$inferSelect
 export type DashboardWidgetRow = typeof dashboardWidgets.$inferSelect
 export type UserRow = typeof users.$inferSelect

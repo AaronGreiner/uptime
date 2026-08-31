@@ -1,6 +1,7 @@
 import z from 'zod'
 import { WIDGET_HEIGHTS, WIDGET_WIDTHS } from './grid'
 import { WIDGET_LIMIT_BOUNDS, WIDGET_SORTS, WIDGET_TYPES, widgetConfigForType, widgetNeedsMonitor } from './widget'
+import { MAINTENANCE_WINDOW_BOUNDS, WEEKDAY_MASK_ALL, isTimeZoneName } from './maintenance'
 import { LATENCY_SPREADS, MONITOR_INTERVAL_BOUNDS, MONITOR_PACKET_BOUNDS, MONITOR_RETRY_BOUNDS, MONITOR_TIMEOUT_BOUNDS } from './monitor'
 import {
   NOTIFICATION_DEFAULT_TIME_ZONE,
@@ -39,6 +40,8 @@ const FALLBACK_MESSAGES: Record<string, string> = {
   'validation.email': 'Enter a valid email address',
   'validation.timezone': 'Enter a valid IANA time zone, for example Europe/Berlin',
   'validation.recipientRequired': 'Add at least one recipient',
+  'validation.weekdayRequired': 'Select at least one weekday',
+  'validation.maintenanceTarget': 'Choose a monitor or a group for this window',
   'validation.httpsUrl': 'Enter an https:// URL',
   'validation.teamsLegacyConnector': 'This is an Office 365 connector URL. Create a Teams workflow from the "Post to a channel when a webhook request is received" template and use its URL instead.'
 }
@@ -108,6 +111,55 @@ const notificationAssignment = {
   notificationMode: z.enum(NOTIFICATION_MODES).default('inherit'),
   notificationGroupIds: idList(50)
 }
+
+/**
+ * One recurring window. Windows are managed centrally rather than from inside
+ * the record they cover, so the payload names its target instead of inheriting
+ * it from the route.
+ */
+export const maintenanceWindowInputSchema = z.object({
+  note: optionalText(200),
+  monitorId: optionalId(),
+  monitorGroupId: optionalId(),
+  weekdays: z
+    .number()
+    .int()
+    .min(1, { error: message('validation.weekdayRequired') })
+    .max(WEEKDAY_MASK_ALL, { error: message('validation.weekdayRequired') }),
+  startMinute: boundedNumber(MAINTENANCE_WINDOW_BOUNDS.start.min, MAINTENANCE_WINDOW_BOUNDS.start.max),
+  durationMinutes: boundedNumber(MAINTENANCE_WINDOW_BOUNDS.duration.min, MAINTENANCE_WINDOW_BOUNDS.duration.max),
+  enabled: z.boolean().default(true)
+}).superRefine((value, context) => {
+  // Exactly one target. Both would make the window's own reach ambiguous, and
+  // neither would leave a schedule that covers nothing.
+  if ((value.monitorId === null) === (value.monitorGroupId === null)) {
+    context.addIssue({ code: 'custom', path: ['monitorId'], message: translate('validation.maintenanceTarget') })
+  }
+})
+
+export type MaintenanceWindowInput = z.output<typeof maintenanceWindowInputSchema>
+
+/**
+ * The manual switch. A null `durationSeconds` is the open ended case, which is
+ * why it is a nullable field rather than an absent one — an omitted value would
+ * be indistinguishable from a client that forgot to send it.
+ */
+export const maintenanceOverrideSchema = z.object({
+  durationSeconds: z
+    .number()
+    .int()
+    .min(60)
+    .max(365 * 86_400)
+    .nullable()
+})
+
+export const maintenanceSettingsSchema = z.object({
+  timeZone: z
+    .string()
+    .trim()
+    .max(64, { error: message('validation.tooLong', { max: 64 }) })
+    .refine(isTimeZoneName, { error: message('validation.timezone') })
+})
 
 export const monitorInputSchema = z.object({
   name: requiredText(120),

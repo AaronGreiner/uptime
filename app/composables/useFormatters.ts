@@ -29,6 +29,16 @@ export function useFormatters() {
   const dateFormat = computed(() => new Intl.DateTimeFormat(locale.value, { dateStyle: 'medium' }))
   const timeFormat = computed(() => new Intl.DateTimeFormat(locale.value, { hour: '2-digit', minute: '2-digit' }))
   const preciseTimeFormat = computed(() => new Intl.DateTimeFormat(locale.value, { hour: '2-digit', minute: '2-digit', second: '2-digit' }))
+  /*
+   * Padded on a 24 hour clock, unpadded on a 12 hour one — `03:00` in German,
+   * `3:00 AM` in English. That is the convention `UInputTime` renders its own
+   * segments with, and this formatter exists to label one of those fields, so
+   * the two have to agree character for character.
+   */
+  const timeOfDayFormat = computed(() => new Intl.DateTimeFormat(locale.value, {
+    hour: new Intl.DateTimeFormat(locale.value, { hour: 'numeric' }).resolvedOptions().hour12 ? 'numeric' : '2-digit',
+    minute: '2-digit'
+  }))
   const numberFormat = computed(() => new Intl.NumberFormat(locale.value))
 
   function formatRelativeTime(unixSeconds: number | null | undefined): string {
@@ -63,6 +73,20 @@ export function useFormatters() {
    */
   function formatTime(unixSeconds: number, withSeconds = false): string {
     return (withSeconds ? preciseTimeFormat : timeFormat).value.format(unixSeconds * 1000)
+  }
+
+  /**
+   * A time of day that is not a moment: the start or the end of a maintenance
+   * window, which is a rule about the clock on the wall rather than an instant.
+   *
+   * An English reader gets `3:00 AM` where a German one gets `03:00`, which is
+   * exactly what the `UInputTime` beside it shows. Anchored on an arbitrary
+   * date because `Intl` has no time-only formatter.
+   */
+  function formatTimeOfDay(minuteOfDay: number): string {
+    const normalized = ((Math.trunc(minuteOfDay) % 1440) + 1440) % 1440
+
+    return timeOfDayFormat.value.format(new Date(2000, 0, 1, Math.floor(normalized / 60), normalized % 60))
   }
 
   /** Compact duration such as `30 s`, `5 min` or `2 h`. */
@@ -110,6 +134,7 @@ export function useFormatters() {
 
   return {
     formatRelativeTime,
+    formatTimeOfDay,
     formatDateTime,
     formatDate,
     formatTime,

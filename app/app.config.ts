@@ -4,6 +4,14 @@ export default defineAppConfig({
       primary: 'emerald',
       neutral: 'zinc'
     },
+    alert: {
+      slots: {
+        // Same reason as the card below: `overflow-hidden` on the root disables
+        // the automatic minimum size of a flex item, and an alert placed in a
+        // panel body is squashed to a single line without this.
+        root: 'shrink-0'
+      }
+    },
     card: {
       slots: {
         // `overflow-hidden` on the card disables the automatic minimum size, so

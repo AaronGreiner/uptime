@@ -75,8 +75,16 @@ const tone = computed(() => {
     >
       {{ formatUptime(uptime?.ratio ?? null) }}
     </p>
-    <p class="text-xs @[20rem]:text-sm text-muted">
-      {{ $t('monitor.detail.uptime') }} · {{ $t(`range.${range}`) }}
+    <p class="text-xs @[20rem]:text-sm text-muted flex items-center gap-1.5 min-w-0">
+      <span class="truncate-target">{{ $t('monitor.detail.uptime') }} · {{ $t(`range.${range}`) }}</span>
+      <!-- The figure already excludes what ran inside the window; the mark is
+           there so a reader wondering why it did not move knows to look. -->
+      <UIcon
+        v-if="monitor.state.maintenance.active"
+        name="i-lucide-wrench"
+        class="size-3.5 shrink-0 text-info"
+        :aria-label="$t('status.maintenance')"
+      />
     </p>
   </UCard>
   <DashboardWidgetMissing v-else />

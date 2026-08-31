@@ -1,5 +1,6 @@
 import { and, eq, isNull, lte, or } from 'drizzle-orm'
-import type { MonitorStatus } from '../../shared/types/monitor'
+import type { MaintenanceStatus } from '../../shared/types/maintenance'
+import type { EvaluatedMonitorStatus } from '../../shared/types/monitor'
 import type { NotificationEvent } from '../../shared/types/notification'
 import { monitorTarget } from '../../shared/utils/monitor'
 import { STATS_RANGE_SECONDS } from '../../shared/utils/stats'
@@ -135,14 +136,38 @@ export function recordCheckResult(monitor: MonitorRow, result: CheckResult): Not
   const previous = database.select().from(monitorState).where(eq(monitorState.monitorId, monitor.id)).get()
   const previousStatus = previous?.status ?? 'pending'
 
-  const consecutiveFailures = result.status === 'down' ? (previous?.consecutiveFailures ?? 0) + 1 : 0
-  const consecutiveSuccesses = result.status === 'up' ? (previous?.consecutiveSuccesses ?? 0) + 1 : 0
+  /*
+   * Maintenance freezes the state machine rather than feeding it a different
+   * answer. The counters, the status and `statusChangedAt` all keep what they
+   * held when the window opened, and three things follow from that alone:
+   *
+   * - no transition happens, so `buildNotificationEvent` below finds nothing to
+   *   report without needing to know about maintenance at all;
+   * - a monitor that was up enters the window with a failure count of zero, so
+   *   once the window closes the retries are counted from the start — a server
+   *   that is still booting gets its full tolerance;
+   * - a monitor that was already down and reported stays down underneath, so
+   *   the recovery is still delivered when it finally answers again.
+   *
+   * The heartbeat is written either way and keeps the raw outcome; only its
+   * `reportedStatus` says the reading was not judged.
+   */
+  const maintenance = resolveMonitorMaintenance(monitor, now)
+
+  const consecutiveFailures = maintenance.active
+    ? previous?.consecutiveFailures ?? 0
+    : result.status === 'down' ? (previous?.consecutiveFailures ?? 0) + 1 : 0
+  const consecutiveSuccesses = maintenance.active
+    ? previous?.consecutiveSuccesses ?? 0
+    : result.status === 'up' ? (previous?.consecutiveSuccesses ?? 0) + 1 : 0
 
   // While retries are left the monitor is "pending" rather than down, which keeps
   // a single blip out of the incident history.
-  const status: MonitorStatus = result.status === 'up'
-    ? 'up'
-    : consecutiveFailures > monitor.retries ? 'down' : 'pending'
+  const status: EvaluatedMonitorStatus = maintenance.active
+    ? previousStatus
+    : result.status === 'up'
+      ? 'up'
+      : consecutiveFailures > monitor.retries ? 'down' : 'pending'
 
   // Returned rather than run: the identifier makes the pushed heartbeat the very
   // same row a later refetch would deliver, so the two can never be drawn twice.
@@ -150,7 +175,7 @@ export function recordCheckResult(monitor: MonitorRow, result: CheckResult): Not
     monitorId: monitor.id,
     checkedAt: now,
     status: result.status,
-    reportedStatus: status,
+    reportedStatus: maintenance.active ? 'maintenance' : status,
     latencyMs: result.latencyMs,
     statusCode: result.statusCode,
     message: result.message
@@ -188,7 +213,7 @@ export function recordCheckResult(monitor: MonitorRow, result: CheckResult): Not
     }
   }).returning().get()
 
-  publishCheckResult(monitor, current, heartbeat)
+  publishCheckResult(monitor, current, heartbeat, maintenance)
 
   return buildNotificationEvent(monitor, previous, status, previousStatus, result, certificateExpiresAt, now)
 }
@@ -198,7 +223,12 @@ export function recordCheckResult(monitor: MonitorRow, result: CheckResult): Not
  * the monitor list returns, so a client can patch its cache in place instead of
  * asking for the whole list again.
  */
-function publishCheckResult(monitor: MonitorRow, state: MonitorStateRow, heartbeat: HeartbeatRow): void {
+function publishCheckResult(
+  monitor: MonitorRow,
+  state: MonitorStateRow,
+  heartbeat: HeartbeatRow,
+  maintenance: MaintenanceStatus
+): void {
   // The uptime is a query of its own, worth skipping while nobody is watching.
   if (!hasLiveListeners()) {
     return
@@ -207,7 +237,7 @@ function publishCheckResult(monitor: MonitorRow, state: MonitorStateRow, heartbe
   publishLiveEvent({
     type: 'monitor.checked',
     monitorId: monitor.id,
-    state: serializeMonitorState(monitor, state),
+    state: serializeMonitorState(monitor, state, maintenance),
     uptime24h: calculateUptimeBulk([monitor.id], STATS_RANGE_SECONDS['24h']).get(monitor.id) ?? emptyUptime(),
     heartbeat
   })
@@ -216,8 +246,8 @@ function publishCheckResult(monitor: MonitorRow, state: MonitorStateRow, heartbe
 function buildNotificationEvent(
   monitor: MonitorRow,
   previous: MonitorStateRow | undefined,
-  status: MonitorStatus,
-  previousStatus: MonitorStatus,
+  status: EvaluatedMonitorStatus,
+  previousStatus: EvaluatedMonitorStatus,
   result: CheckResult,
   certificateExpiresAt: number | null,
   now: number
