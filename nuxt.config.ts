@@ -1,5 +1,6 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
-import { MONITOR_GROUP_ICONS } from './shared/utils/group'
+import { MONITOR_GROUP_FALLBACK_ICON } from './shared/utils/group'
+import { ICON_COLLECTIONS } from './shared/utils/icon'
 import { MONITOR_STATUS_ICONS, MONITOR_TYPE_ICONS } from './shared/utils/monitor'
 import { NOTIFICATION_PROVIDER_ICONS } from './shared/utils/notification'
 import { UI_PREFERENCE_MAX_AGE_SECONDS } from './shared/utils/ui'
@@ -7,7 +8,7 @@ import { WIDGET_DEFINITIONS } from './shared/utils/widget'
 
 // Names assembled at runtime are invisible to the scanner, so they are listed.
 const dynamicIconNames = [
-  ...MONITOR_GROUP_ICONS,
+  MONITOR_GROUP_FALLBACK_ICON,
   ...Object.values(MONITOR_TYPE_ICONS),
   ...Object.values(MONITOR_STATUS_ICONS),
   ...Object.values(NOTIFICATION_PROVIDER_ICONS),
@@ -147,6 +148,22 @@ export default defineNuxtConfig({
     }
   },
 
+  vite: {
+    optimizeDeps: {
+      // Discover these before serving the first page. Late optimization can
+      // invalidate imports while the browser is still loading the application.
+      include: [
+        '@internationalized/date',
+        '@vue/devtools-core',
+        '@vue/devtools-kit',
+        '@vueuse/integrations/useSortable',
+        'lucide',
+        'morphicons/vue',
+        'zod'
+      ]
+    }
+  },
+
   eslint: {
     config: {
       stylistic: {
@@ -173,7 +190,12 @@ export default defineNuxtConfig({
   },
 
   icon: {
-    provider: 'none',
+    provider: 'server',
+    fallbackToApi: false,
+    serverBundle: {
+      collections: [...ICON_COLLECTIONS],
+      remote: false
+    },
     clientBundle: {
       icons: dynamicIconNames,
       scan: true

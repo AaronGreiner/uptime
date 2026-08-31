@@ -62,12 +62,18 @@ const cardUi = computed(() => ({
         </p>
         <NuxtLink
           :to="`/monitors/${monitor.id}`"
-          class="font-medium text-highlighted hover:text-primary transition-colors truncate-target block"
+          class="font-medium text-highlighted hover:text-primary transition-colors flex items-center gap-2 min-w-0"
         >
-          <AppHighlight
-            :text="monitor.name"
-            :query="query"
+          <UIcon
+            :name="monitorIcon(monitor)"
+            class="size-4 shrink-0 text-muted"
           />
+          <span class="min-w-0 truncate-target">
+            <AppHighlight
+              :text="monitor.name"
+              :query="query"
+            />
+          </span>
         </NuxtLink>
         <!-- While the header stacks, the target costs the row the pulse bar
              needs, so it returns together with the side by side header. -->

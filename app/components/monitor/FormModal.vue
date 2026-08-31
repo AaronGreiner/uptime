@@ -36,6 +36,7 @@ const UNGROUPED_VALUE = 0
 function createState(monitor?: Monitor | null): MonitorInput {
   return {
     name: monitor?.name ?? '',
+    icon: monitor?.icon ?? null,
     type: monitor?.type ?? 'http',
     description: monitor?.description ?? null,
     groupId: monitor ? monitor.groupId : props.defaultGroupId ?? null,
@@ -186,6 +187,16 @@ async function onSubmit(event: FormSubmitEvent<MonitorInput>) {
               />
             </UFormField>
           </div>
+
+          <UFormField
+            :label="$t('iconPicker.label')"
+            name="icon"
+          >
+            <AppIconPicker
+              v-model="state.icon"
+              :fallback-icon="monitorTypeIcon(state.type)"
+            />
+          </UFormField>
 
           <div class="grid gap-4 sm:grid-cols-2">
             <UFormField

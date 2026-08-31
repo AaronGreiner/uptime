@@ -23,6 +23,7 @@ export default defineEventHandler(async (event) => {
 
   database.update(dashboards).set({
     name: input.name,
+    icon: input.icon,
     slug: input.slug,
     description: input.description,
     updatedAt: nowInSeconds()

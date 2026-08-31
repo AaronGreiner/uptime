@@ -8,6 +8,7 @@ import type { MonitorInput } from '#shared/utils/validation'
 export function toMonitorInput(monitor: Monitor): MonitorInput {
   return {
     name: monitor.name,
+    icon: monitor.icon,
     type: monitor.type,
     description: monitor.description,
     groupId: monitor.groupId,

@@ -67,6 +67,7 @@ export interface Dashboard {
   id: number
   slug: string
   name: string
+  icon: string | null
   description: string | null
   isDefault: boolean
   position: number

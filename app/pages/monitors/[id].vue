@@ -60,7 +60,7 @@ const { data: heartbeats, refresh: refreshHeartbeats } = await useAsyncData(
 
 /** Only needed after an edit; check results arrive over the event stream. */
 async function reload() {
-  await Promise.all([refresh(), refreshStats(), refreshHeartbeats()])
+  await Promise.all([refresh(), refreshStats(), refreshHeartbeats(), refreshNuxtData('monitors')])
 }
 
 // The state and the heartbeat travel with the event, the chart buckets have to
@@ -162,12 +162,17 @@ const recentChecks = computed(() => [...(heartbeats.value ?? [])].reverse().slic
     id="monitor-detail"
   >
     <template #header>
-      <UDashboardNavbar :ui="{ title: 'min-w-0' }">
+      <UDashboardNavbar
+        :ui="{ title: 'min-w-0' }"
+      >
         <template #title>
-          <MonitorPathLabel :monitor="monitor" />
+          <MonitorPathLabel
+            :monitor="monitor"
+            :show-icon="false"
+          />
         </template>
 
-        <template #leading>
+        <template #leading="{ ui }">
           <AppSidebarCollapse />
           <UButton
             to="/monitors"
@@ -175,6 +180,10 @@ const recentChecks = computed(() => [...(heartbeats.value ?? [])].reverse().slic
             color="neutral"
             variant="ghost"
             :aria-label="$t('monitor.title')"
+          />
+          <UIcon
+            :name="monitorIcon(monitor)"
+            :class="ui.icon()"
           />
         </template>
 

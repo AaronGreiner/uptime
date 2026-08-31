@@ -10,6 +10,7 @@ export function serializeDashboard(row: DashboardRow): Dashboard {
     id: row.id,
     slug: row.slug,
     name: row.name,
+    icon: row.icon,
     description: row.description,
     isDefault: row.isDefault,
     position: row.position,

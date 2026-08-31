@@ -111,6 +111,7 @@ const typeItems = computed(() => WIDGET_TYPES.map(type => ({
 
 const monitorItems = computed(() => props.monitors.map(monitor => ({
   label: monitorPath(monitor),
+  icon: monitorIcon(monitor),
   // Searched but never drawn: the label follows the reader's breadcrumb format,
   // and a group shortened out of it still has to find its monitors here.
   path: fullMonitorPath(monitor),

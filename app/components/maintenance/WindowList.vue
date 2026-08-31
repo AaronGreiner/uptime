@@ -53,7 +53,7 @@ function target(window: MaintenanceWindow) {
 
   return {
     label: monitor ? fullMonitorPath(monitor) : t('maintenance.unknownTarget'),
-    icon: monitor ? monitorTypeIcon(monitor.type) : 'i-lucide-circle-help',
+    icon: monitor ? monitorIcon(monitor) : 'i-lucide-circle-help',
     covers: 1,
     isGroup: false
   }

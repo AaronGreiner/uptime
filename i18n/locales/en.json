@@ -41,6 +41,30 @@
     "switchToDarkMode": "Switch to dark mode",
     "error": "Something went wrong"
   },
+  "iconPicker": {
+    "label": "Icon",
+    "title": "Choose an icon",
+    "choose": "Choose an icon",
+    "apply": "Use icon",
+    "preview": "Preview",
+    "results": "Icon previews",
+    "collections": "Icon collection",
+    "allCollections": "All collections",
+    "count": "{count} icons",
+    "used": "Currently used",
+    "usedEmpty": "Icons appear here after saving a group, monitor or dashboard.",
+    "usedError": "Could not load currently used icons.",
+    "default": "Default icon",
+    "search": "Search icons…",
+    "empty": "No icons found.",
+    "loadError": "Could not load the icons.",
+    "hint": "Search by the library's English icon name or a brand name.",
+    "namedIcon": "{name} · {collection}",
+    "collection": {
+      "lucide": "Lucide",
+      "simple-icons": "Simple Icons"
+    }
+  },
   "status": {
     "up": "Up",
     "down": "Down",
@@ -686,6 +710,7 @@
     "unauthorized": "Please sign in as admin to do that."
   },
   "validation": {
+    "icon": "Choose an icon from the available collections",
     "httpsUrl": "Enter an https:// URL",
     "teamsLegacyConnector": "This is an Office 365 connector URL. Create a Teams workflow from the \"Post to a channel when a webhook request is received\" template and use its URL instead.",
     "email": "Enter a valid email address",

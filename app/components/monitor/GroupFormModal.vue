@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { FormSubmitEvent } from '@nuxt/ui'
 import type { MonitorGroup, MonitorGroupNode } from '#shared/types/group'
-import { MONITOR_GROUP_ICONS, MONITOR_GROUP_MAX_DEPTH, joinMonitorPath, monitorGroupIcon } from '#shared/utils/group'
+import { MONITOR_GROUP_FALLBACK_ICON, MONITOR_GROUP_MAX_DEPTH, joinMonitorPath, monitorGroupIcon } from '#shared/utils/group'
 import { monitorGroupInputSchema } from '#shared/utils/validation'
 import type { MonitorGroupInput } from '#shared/utils/validation'
 
@@ -103,14 +103,6 @@ function savedPath(group: MonitorGroup): string {
   return joinMonitorPath([...(parent?.path ?? []), group.name])
 }
 
-/**
- * Icon names are not worth eighteen locale keys, but `i-lucide-book-open` is not
- * something to read out either, so the accessible name is derived from the name.
- */
-function iconLabel(icon: string): string {
-  return icon.replace(/^i-lucide-/, '').replace(/-/g, ' ')
-}
-
 async function onSubmit(event: FormSubmitEvent<MonitorGroupInput>) {
   submitting.value = true
 
@@ -193,23 +185,10 @@ async function onSubmit(event: FormSubmitEvent<MonitorGroupInput>) {
           :label="$t('group.fields.icon')"
           name="icon"
         >
-          <div
-            class="flex flex-wrap gap-1.5"
-            role="group"
-            :aria-label="$t('group.fields.icon')"
-          >
-            <UButton
-              v-for="icon in MONITOR_GROUP_ICONS"
-              :key="icon"
-              :icon="icon"
-              size="sm"
-              :color="selectedIcon === icon ? 'primary' : 'neutral'"
-              :variant="selectedIcon === icon ? 'subtle' : 'ghost'"
-              :aria-label="iconLabel(icon)"
-              :aria-pressed="selectedIcon === icon"
-              @click="state.icon = icon"
-            />
-          </div>
+          <AppIconPicker
+            v-model="state.icon"
+            :fallback-icon="MONITOR_GROUP_FALLBACK_ICON"
+          />
         </UFormField>
 
         <UFormField

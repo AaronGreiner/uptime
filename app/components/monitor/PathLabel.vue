@@ -4,13 +4,16 @@ import { MONITOR_PATH_SEPARATOR, joinMonitorPath } from '#shared/utils/group'
 
 const props = withDefaults(defineProps<{
   /** A monitor, whose breadcrumb is resolved from the shared group tree. */
-  monitor?: Pick<Monitor, 'name' | 'groupId'> | null
+  monitor?: Pick<Monitor, 'name' | 'groupId' | 'icon'> | null
+  /** Off when the surrounding heading already draws the monitor icon. */
+  showIcon?: boolean
   /** Name of a record that carries its own breadcrumb, such as a delivery. */
   name?: string
   /** Group names from the root down, for the same case. */
   path?: string[]
 }>(), {
   monitor: null,
+  showIcon: true,
   name: undefined,
   path: undefined
 })
@@ -35,6 +38,11 @@ const full = computed(() => joinMonitorPath([...segments.value, label.value]))
     class="flex items-baseline gap-1 min-w-0"
     :title="full"
   >
+    <UIcon
+      v-if="showIcon && isCustomIcon(monitor?.icon)"
+      :name="monitor.icon"
+      class="size-4 shrink-0 self-center text-muted me-1"
+    />
     <span
       v-if="shown.length"
       class="min-w-0 shrink-[999] font-normal text-dimmed truncate-target"

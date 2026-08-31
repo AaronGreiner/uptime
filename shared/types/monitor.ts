@@ -65,6 +65,7 @@ export interface NotificationAssignment {
 export interface Monitor extends MonitorHttpOptions, MonitorPingOptions, NotificationAssignment, MaintenanceAssignment {
   id: number
   name: string
+  icon: string | null
   type: MonitorType
   description: string | null
   /** Group the monitor belongs to, or null when it sits at the tree root. */

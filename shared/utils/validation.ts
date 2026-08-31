@@ -1,5 +1,6 @@
 import z from 'zod'
 import { WIDGET_HEIGHTS, WIDGET_WIDTHS } from './grid'
+import { isCustomIcon } from './icon'
 import { WIDGET_SORTS, WIDGET_TYPES, widgetConfigForType, widgetNeedsMonitor } from './widget'
 import { MAINTENANCE_WINDOW_BOUNDS, WEEKDAY_MASK_ALL, isTimeZoneName } from './maintenance'
 import { LATENCY_CHART_STYLES, MONITOR_INTERVAL_BOUNDS, MONITOR_PACKET_BOUNDS, MONITOR_RETRY_BOUNDS, MONITOR_TIMEOUT_BOUNDS } from './monitor'
@@ -28,6 +29,7 @@ const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
  */
 const FALLBACK_MESSAGES: Record<string, string> = {
   'validation.required': 'This field is required',
+  'validation.icon': 'Choose an icon from the available collections',
   'validation.tooLong': 'Use at most {max} characters',
   'validation.url': 'Enter a valid http:// or https:// URL',
   'validation.hostname': 'Enter a valid hostname or IP address',
@@ -86,6 +88,9 @@ const optionalText = (max: number) => z
   .max(max, { error: message('validation.tooLong', { max }) })
   .nullish()
   .transform(value => value || null)
+
+const optionalIcon = optionalText(100)
+  .refine(value => value === null || isCustomIcon(value), { error: message('validation.icon') })
 
 const boundedNumber = (min: number, max: number) => z
   .number({ error: message('validation.outOfRange', { min, max }) })
@@ -163,6 +168,7 @@ export const maintenanceSettingsSchema = z.object({
 
 export const monitorInputSchema = z.object({
   name: requiredText(120),
+  icon: optionalIcon,
   type: z.enum(['http', 'ping'], { error: message('validation.required') }),
   description: optionalText(500),
   groupId: optionalId(),
@@ -225,8 +231,7 @@ export type MonitorInput = z.output<typeof monitorInputSchema>
 export const monitorGroupInputSchema = z.object({
   name: requiredText(120),
   description: optionalText(500),
-  /** Free form so a future icon picker is not blocked by an enum here. */
-  icon: optionalText(60),
+  icon: optionalIcon,
   parentId: optionalId(),
 
   ...notificationAssignment
@@ -241,6 +246,7 @@ export const monitorGroupMoveSchema = z.object({
 
 export const dashboardInputSchema = z.object({
   name: requiredText(120),
+  icon: optionalIcon,
   slug: requiredText(80).regex(SLUG_PATTERN, { error: message('validation.slug') }),
   description: optionalText(500),
   isDefault: z.boolean().default(false)

@@ -41,6 +41,30 @@
     "switchToDarkMode": "Zum dunklen Modus wechseln",
     "error": "Da ist etwas schiefgelaufen"
   },
+  "iconPicker": {
+    "label": "Icon",
+    "title": "Icon auswählen",
+    "choose": "Icon auswählen",
+    "apply": "Icon übernehmen",
+    "preview": "Vorschau",
+    "results": "Icon-Vorschauen",
+    "collections": "Icon-Bibliothek",
+    "allCollections": "Alle Bibliotheken",
+    "count": "{count} Icons",
+    "used": "Aktuell verwendet",
+    "usedEmpty": "Icons erscheinen hier nach dem Speichern einer Gruppe, eines Monitors oder eines Dashboards.",
+    "usedError": "Aktuell verwendete Icons konnten nicht geladen werden.",
+    "default": "Standardicon",
+    "search": "Icons durchsuchen…",
+    "empty": "Keine Icons gefunden.",
+    "loadError": "Die Icons konnten nicht geladen werden.",
+    "hint": "Suche nach dem englischen Iconnamen der Bibliothek oder einem Markennamen.",
+    "namedIcon": "{name} · {collection}",
+    "collection": {
+      "lucide": "Lucide",
+      "simple-icons": "Simple Icons"
+    }
+  },
   "status": {
     "up": "Erreichbar",
     "down": "Ausfall",
@@ -686,6 +710,7 @@
     "unauthorized": "Bitte melde dich als Admin an, um das zu tun."
   },
   "validation": {
+    "icon": "Wähle ein Icon aus den verfügbaren Bibliotheken",
     "httpsUrl": "Geben Sie eine https://-URL ein",
     "teamsLegacyConnector": "Das ist eine Office-365-Connector-URL. Legen Sie in Teams einen Workflow aus der Vorlage \"Beim Empfang einer Webhookanforderung in einem Kanal posten\" an und verwenden Sie dessen URL.",
     "email": "Geben Sie eine gültige E-Mail-Adresse ein",

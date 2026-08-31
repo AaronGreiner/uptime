@@ -1,4 +1,5 @@
 import type { Heartbeat, LatencyChartStyle, Monitor, MonitorStatus, MonitorType } from '../types/monitor'
+import { isCustomIcon } from './icon'
 
 export const MONITOR_TYPES: MonitorType[] = ['http', 'ping']
 
@@ -117,6 +118,11 @@ export function monitorStatusTextClass(status: MonitorStatus): string {
 /** Icon standing for the kind of check, used wherever the type is not spelled out. */
 export function monitorTypeIcon(type: MonitorType): string {
   return MONITOR_TYPE_ICONS[type]
+}
+
+/** The monitor's identity icon, falling back to the kind of check it performs. */
+export function monitorIcon(monitor: Pick<Monitor, 'icon' | 'type'>): string {
+  return isCustomIcon(monitor.icon) ? monitor.icon : monitorTypeIcon(monitor.type)
 }
 
 export function monitorStatusIcon(status: MonitorStatus): string {

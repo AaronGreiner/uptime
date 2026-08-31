@@ -76,7 +76,7 @@ const targetItems = computed(() => [
   ...monitors.value.map(monitor => ({
     label: fullMonitorPath(monitor),
     value: `${MONITOR_PREFIX}:${monitor.id}`,
-    icon: monitorTypeIcon(monitor.type)
+    icon: monitorIcon(monitor)
   }))
 ])
 

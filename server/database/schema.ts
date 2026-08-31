@@ -56,6 +56,7 @@ export const monitorGroups = sqliteTable('monitor_groups', {
 export const monitors = sqliteTable('monitors', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   name: text('name').notNull(),
+  icon: text('icon'),
   type: text('type').$type<MonitorType>().notNull(),
   description: text('description'),
   /** Null means the monitor sits at the root of the tree, next to the groups. */
@@ -195,6 +196,7 @@ export const dashboards = sqliteTable('dashboards', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   slug: text('slug').notNull().unique(),
   name: text('name').notNull(),
+  icon: text('icon'),
   description: text('description'),
   isDefault: integer('is_default', { mode: 'boolean' }).notNull().default(false),
   position: integer('position').notNull().default(0),

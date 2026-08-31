@@ -35,7 +35,7 @@ const dashboardNavigation = computed<NavigationMenuItem[]>(() => [
   { label: t('nav.dashboards'), type: 'label' },
   ...dashboards.value.map(dashboard => ({
     label: dashboard.name,
-    icon: dashboard.isDefault ? 'i-lucide-layout-dashboard' : 'i-lucide-layout-panel-left',
+    icon: dashboardIcon(dashboard),
     to: `/d/${dashboard.slug}`
   })),
   ...(isAdmin.value

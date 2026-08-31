@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from '@nuxt/ui'
-import type { DashboardWidget } from '#shared/types/dashboard'
+import type { Dashboard, DashboardWidget } from '#shared/types/dashboard'
 
 const route = useRoute()
 const router = useRouter()
@@ -66,6 +66,16 @@ watch(isFullscreen, (active) => {
 function openWidgetModal(widget: DashboardWidget | null) {
   editedWidget.value = widget
   widgetModalOpen.value = true
+}
+
+async function onDashboardSaved(saved: Dashboard) {
+  await refreshDashboards()
+
+  if (saved.slug === slug.value) {
+    await refreshDashboard()
+  } else {
+    await router.push(`/d/${saved.slug}`)
+  }
 }
 
 async function removeWidget(widget: DashboardWidget) {
@@ -155,10 +165,13 @@ const showToolbar = computed(() => Boolean(dashboard.value?.description) || edit
       <UDashboardNavbar
         v-else
         :title="dashboard.name"
-        icon="i-lucide-layout-dashboard"
       >
-        <template #leading>
+        <template #leading="{ ui }">
           <AppSidebarCollapse />
+          <UIcon
+            :name="dashboardIcon(dashboard)"
+            :class="ui.icon()"
+          />
         </template>
 
         <template #right>
@@ -280,7 +293,7 @@ const showToolbar = computed(() => Boolean(dashboard.value?.description) || edit
         <DashboardFormModal
           v-model:open="dashboardModalOpen"
           :dashboard="dashboard"
-          @saved="refreshDashboards(); router.push(`/d/${$event.slug}`)"
+          @saved="onDashboardSaved"
         />
 
         <ConfirmModal

@@ -135,7 +135,7 @@ export function useMonitorNavigation() {
     return {
       key: `monitor-${monitor.id}`,
       label: monitor.name,
-      icon: monitorTypeIcon(monitor.type),
+      icon: monitorIcon(monitor),
       status: monitor.state.status,
       to: `/monitors/${monitor.id}`,
       children: [],

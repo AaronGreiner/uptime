@@ -69,6 +69,10 @@ export function aggregateHourlyStats(): void {
    * Latency is left out of the maintenance readings too. A server that is
    * rebooting answers slowly when it answers at all, and letting that into the
    * average would move the very curve the window exists to protect.
+   *
+   * Legacy rows can outlive a monitor if foreign keys were disabled when it was
+   * deleted. Ignore those rows so one orphan cannot block every rollup and the
+   * retention cleanup that follows. The original readings remain untouched.
    */
   database.run(sql`
     insert into monitor_stats_hourly
@@ -85,6 +89,7 @@ export function aggregateHourlyStats(): void {
       max(case when reported_status <> 'maintenance' and status = 'up' then latency_ms end)
     from heartbeats
     where checked_at >= ${from}
+      and exists (select 1 from monitors where monitors.id = heartbeats.monitor_id)
     group by monitor_id, bucket_start
     on conflict(monitor_id, bucket_start) do update set
       up_count = excluded.up_count,

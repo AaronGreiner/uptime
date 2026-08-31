@@ -1,5 +1,6 @@
 import type { MonitorGroup, MonitorGroupNode, MonitorGroupTotals, MonitorPathFormat, MonitorTreeNode } from '../types/group'
 import type { MonitorStatus, MonitorWithState } from '../types/monitor'
+import { isCustomIcon } from './icon'
 
 /**
  * How deep the tree may nest, counting the root as level one. The limit keeps
@@ -7,31 +8,7 @@ import type { MonitorStatus, MonitorWithState } from '../types/monitor'
  */
 export const MONITOR_GROUP_MAX_DEPTH = 5
 
-/** Icon offered in the group form. The first entry is the fallback. */
-export const MONITOR_GROUP_ICONS = [
-  'i-lucide-folder',
-  'i-lucide-rocket',
-  'i-lucide-server',
-  'i-lucide-globe',
-  'i-lucide-webhook',
-  'i-lucide-database',
-  'i-lucide-network',
-  'i-lucide-shield',
-  'i-lucide-book-open',
-  'i-lucide-flask-conical',
-  'i-lucide-puzzle',
-  'i-lucide-cloud',
-  'i-lucide-container',
-  'i-lucide-cpu',
-  'i-lucide-mail',
-  'i-lucide-credit-card',
-  'i-lucide-users',
-  'i-lucide-building'
-] as const
-
-export const MONITOR_GROUP_FALLBACK_ICON = MONITOR_GROUP_ICONS[0]
-
-const MONITOR_GROUP_ICON_SET = new Set<string>(MONITOR_GROUP_ICONS)
+export const MONITOR_GROUP_FALLBACK_ICON = 'i-lucide-folder'
 
 /**
  * Worst status first. A group reports the most severe state below it.
@@ -44,7 +21,7 @@ const MONITOR_GROUP_ICON_SET = new Set<string>(MONITOR_GROUP_ICONS)
 const STATUS_SEVERITY: MonitorStatus[] = ['down', 'pending', 'up', 'maintenance', 'paused']
 
 export function monitorGroupIcon(group: Pick<MonitorGroup, 'icon'> | null | undefined): string {
-  return group?.icon && MONITOR_GROUP_ICON_SET.has(group.icon)
+  return isCustomIcon(group?.icon)
     ? group.icon
     : MONITOR_GROUP_FALLBACK_ICON
 }

@@ -19,6 +19,7 @@ const toast = useToast()
 function createState(dashboard?: Dashboard | null): DashboardInput {
   return {
     name: dashboard?.name ?? '',
+    icon: dashboard?.icon ?? null,
     slug: dashboard?.slug ?? '',
     description: dashboard?.description ?? null,
     isDefault: dashboard?.isDefault ?? false
@@ -102,6 +103,16 @@ async function onSubmit(event: FormSubmitEvent<DashboardInput>) {
             v-model="state.name"
             class="w-full"
             placeholder="Production"
+          />
+        </UFormField>
+
+        <UFormField
+          :label="$t('iconPicker.label')"
+          name="icon"
+        >
+          <AppIconPicker
+            v-model="state.icon"
+            :fallback-icon="dashboardIcon({ icon: null, isDefault: state.isDefault })"
           />
         </UFormField>
 

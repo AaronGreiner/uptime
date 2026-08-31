@@ -35,6 +35,10 @@ by Uptime Kuma, built with Nuxt 4, Nuxt UI 4, Bun and SQLite.
   headers, TLS certificate expiry and ICMP round trip times.
 - **Nested groups** — organise monitors in a tree and scope dashboards,
   notifications or maintenance to exactly the branch that needs them.
+- **Custom icons** — choose icons for groups, monitors and dashboards from a
+  searchable Lucide and Simple Icons preview grid. Icons currently used by any
+  group, monitor or dashboard appear separately for quick reuse. Icons are
+  served locally without contacting an external icon service.
 - **Maintenance windows** — recurring schedules or a switch you flip by hand,
   on a single monitor or on a whole branch. A nightly reboot stops being an
   outage: no alert, no incident, and the uptime figure is left alone.

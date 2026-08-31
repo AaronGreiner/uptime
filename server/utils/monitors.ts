@@ -40,6 +40,7 @@ export function serializeMonitor(
   return {
     id: row.id,
     name: row.name,
+    icon: row.icon,
     type: row.type,
     description: row.description,
     groupId: row.groupId,
