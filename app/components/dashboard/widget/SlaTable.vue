@@ -69,6 +69,7 @@ const caption = computed(() => `${formatUptime(target.value)} · ${t(`range.${ra
 
 <template>
   <DashboardWidgetShell
+    list
     :title="title"
     :dense="widget.height === 'compact'"
     :caption="caption"

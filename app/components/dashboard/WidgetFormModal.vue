@@ -55,6 +55,7 @@ function createState(widget?: DashboardWidget | null): WidgetInput {
     config: {
       title: widget?.config.title ?? '',
       range: widget?.config.range ?? defaults.range,
+      style: widget?.config.style ?? defaults.style,
       level: widget?.config.level ?? defaults.level,
       monitorIds: widget?.config.monitorIds ?? defaults.monitorIds,
       groupId: widget?.config.groupId ?? defaults.groupId,
@@ -79,7 +80,13 @@ watch(open, (isOpen) => {
  * adopts the settings the new type prefers for the ones the old type never had
  * a field for.
  */
-watch(() => state.value.type, (type, previous) => {
+watch([() => state.value.type, state], ([type, current], [previous, old]) => {
+  // Opening another widget replaces the form with its saved configuration.
+  // Only a type change within that form should adopt the new type's defaults.
+  if (current !== old) {
+    return
+  }
+
   const size = clampWidgetSize(type, state.value.width, state.value.height)
   const defaults = widgetConfigDefaults(type)
 

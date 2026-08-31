@@ -32,6 +32,7 @@ const title = computed(() => props.widget.config.title || t('widget.type.inciden
 
 <template>
   <DashboardWidgetShell
+    list
     :title="title"
     :dense="widget.height === 'compact'"
     :caption="$t(`range.${range}`)"

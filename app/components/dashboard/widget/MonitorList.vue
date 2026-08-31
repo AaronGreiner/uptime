@@ -23,6 +23,7 @@ const caption = computed(() => t('monitor.count', scoped.value.length))
 
 <template>
   <DashboardWidgetShell
+    list
     :title="title"
     :dense="widget.height === 'compact'"
     :caption="caption"

@@ -125,7 +125,6 @@ const cardUi = computed(() => ({
       class="mt-auto"
       :monitor-id="monitor.id"
       :heartbeats="monitor.recentHeartbeats"
-      :show-legend="!dense"
     />
   </UCard>
 </template>

@@ -30,9 +30,6 @@ const TOP_PADDING = 24
  */
 const GAP_FACTOR = 2.5
 
-/** Above this share of the plot height the tooltip would cover the curve it describes. */
-const TOOLTIP_FLIP_RATIO = 0.45
-
 /** Share of the readings the scale has to hold once the maxima are drawn. */
 const SCALE_QUANTILE = 0.98
 
@@ -441,7 +438,7 @@ const maintenanceBands = computed(() => bandsWhere(point => point.maintenanceCou
 
 const hoverIndex = ref<number | null>(null)
 const isHovering = ref(false)
-const plotWidth = ref(0)
+const plot = useTemplateRef<HTMLElement>('plot')
 
 const hoveredPoint = computed(() => hoverIndex.value === null ? null : props.points[hoverIndex.value] ?? null)
 
@@ -455,28 +452,22 @@ const hoveredHeight = computed(() => hoveredPoint.value?.avgLatencyMs == null
   ? null
   : yOf(hoveredPoint.value.avgLatencyMs) / VIEW_HEIGHT)
 
-/** The topmost reading drawn at the hovered bucket, which is what has to be cleared. */
-const hoveredPeak = computed(() => {
-  const point = hoveredPoint.value
+/** Anchor the readout above this bucket, using the same coordinates as the pointer. */
+const tooltipReference = computed(() => {
+  const element = plot.value
+  const ratio = hoveredRatio.value
 
-  if (!point) {
-    return null
-  }
+  return element
+    ? {
+        contextElement: element,
+        getBoundingClientRect: () => {
+          const bounds = element.getBoundingClientRect()
 
-  const drawn = [
-    showsSpread.value ? point.maxLatencyMs : null,
-    point.avgLatencyMs
-  ].filter(value => value !== null)
-
-  return drawn.length ? yOf(Math.max(...drawn)) / VIEW_HEIGHT : null
+          return new DOMRect(bounds.left + ratio * bounds.width, bounds.top, 0, bounds.height)
+        }
+      }
+    : undefined
 })
-
-/**
- * The tooltip sits at the top edge, and moves to the bottom one whenever the
- * reading it describes is high enough that it would otherwise cover its own
- * curve. The axis maximum steps aside for the same reason.
- */
-const tooltipAtTop = computed(() => hoveredPeak.value === null || hoveredPeak.value >= TOOLTIP_FLIP_RATIO)
 
 /**
  * The span of the hovered bucket, where a style draws one. The tooltip reports
@@ -494,40 +485,6 @@ const boundsLabel = computed(() => {
   return point.minLatencyMs === point.maxLatencyMs
     ? null
     : `${formatNumber(point.minLatencyMs)}–${formatLatency(point.maxLatencyMs)}`
-})
-
-/**
- * Kept inside the plot rather than centred on the bucket at any cost: half a
- * tooltip hanging over the edge of a widget is exactly where the first and the
- * last check of a range are read.
- */
-const tooltip = useTemplateRef<HTMLElement>('tooltip')
-const tooltipWidth = ref(0)
-
-const tooltipStyle = computed(() => {
-  const half = tooltipWidth.value / 2
-  const offset = hoveredRatio.value * plotWidth.value
-
-  return {
-    left: `${plotWidth.value > tooltipWidth.value ? Math.min(Math.max(offset, half), plotWidth.value - half) : half}px`
-  }
-})
-
-onMounted(() => {
-  const element = tooltip.value
-
-  if (!element) {
-    return
-  }
-
-  // The border box, which `contentRect` is not: the tooltip is clamped by what
-  // it occupies, padding and border included.
-  const observer = new ResizeObserver(() => {
-    tooltipWidth.value = element.offsetWidth
-  })
-
-  observer.observe(element)
-  onScopeDispose(() => observer.disconnect())
 })
 
 /**
@@ -560,8 +517,6 @@ function onPointerMove(event: PointerEvent) {
     return
   }
 
-  plotWidth.value = bounds.width
-
   const ratio = Math.min(1, Math.max(0, (event.clientX - bounds.left) / bounds.width))
 
   hoverIndex.value = nearestIndex(domain.value.start + ratio * domain.value.span)
@@ -571,168 +526,164 @@ function onPointerMove(event: PointerEvent) {
 
 <template>
   <div class="flex flex-col gap-2 h-full min-h-0">
-    <div
-      class="relative w-full flex-1 min-h-0"
-      :style="height ? { height: `${height}px`, flex: 'none' } : undefined"
-      @pointermove="onPointerMove"
-      @pointerleave="isHovering = false"
+    <AppChartTooltip
+      :open="showTooltip"
+      :reference="tooltipReference"
+      @update:open="isHovering = $event"
     >
-      <svg
-        class="absolute inset-0 size-full overflow-visible"
-        :viewBox="`0 0 ${VIEW_WIDTH} ${VIEW_HEIGHT}`"
-        preserveAspectRatio="none"
-        aria-hidden="true"
+      <div
+        ref="plot"
+        class="relative w-full flex-1 min-h-0"
+        :style="height ? { height: `${height}px`, flex: 'none' } : undefined"
+        @pointermove="onPointerMove"
+        @pointerleave="isHovering = false"
       >
-        <defs>
-          <linearGradient
-            :id="`gradient-${chartId}`"
+        <svg
+          class="absolute inset-0 size-full overflow-visible"
+          :viewBox="`0 0 ${VIEW_WIDTH} ${VIEW_HEIGHT}`"
+          preserveAspectRatio="none"
+          aria-hidden="true"
+        >
+          <defs>
+            <linearGradient
+              :id="`gradient-${chartId}`"
+              x1="0"
+              y1="0"
+              x2="0"
+              y2="1"
+            >
+              <stop
+                offset="0%"
+                class="text-primary"
+                stop-color="currentColor"
+                stop-opacity="0.28"
+              />
+              <stop
+                offset="100%"
+                class="text-primary"
+                stop-color="currentColor"
+                stop-opacity="0"
+              />
+            </linearGradient>
+          </defs>
+
+          <line
+            v-for="fraction in [0.25, 0.5, 0.75]"
+            :key="fraction"
             x1="0"
+            :y1="TOP_PADDING + (VIEW_HEIGHT - TOP_PADDING) * fraction"
+            :x2="VIEW_WIDTH"
+            :y2="TOP_PADDING + (VIEW_HEIGHT - TOP_PADDING) * fraction"
+            class="stroke-default"
+            stroke-width="1"
+            vector-effect="non-scaling-stroke"
+            stroke-dasharray="3 5"
+          />
+
+          <rect
+            v-for="band in maintenanceBands"
+            :key="`maintenance-${band.key}`"
+            :x="band.x"
+            y="0"
+            :width="band.width"
+            :height="VIEW_HEIGHT"
+            class="fill-info/15"
+          />
+
+          <rect
+            v-for="outage in outages"
+            :key="outage.key"
+            :x="outage.x"
+            y="0"
+            :width="outage.width"
+            :height="VIEW_HEIGHT"
+            class="fill-error/15"
+          />
+
+          <path
+            v-for="(path, index) in bandPaths"
+            :key="`band-${index}`"
+            :d="path"
+            :class="activeStyle === 'neutral' ? 'fill-neutral-500/25' : 'fill-primary/10'"
+          />
+
+          <path
+            v-for="(path, index) in bandEdgePaths"
+            :key="`edge-${index}`"
+            :d="path"
+            fill="none"
+            class="stroke-primary/40"
+            stroke-width="1"
+            vector-effect="non-scaling-stroke"
+          />
+
+          <line
+            v-for="tick in spreadTicks"
+            :key="`tick-${tick.key}`"
+            :x1="tick.x"
+            :y1="tick.y1"
+            :x2="tick.x"
+            :y2="tick.y2"
+            class="stroke-primary/25"
+            stroke-width="1"
+            vector-effect="non-scaling-stroke"
+          />
+
+          <path
+            v-for="(path, index) in areaPaths"
+            :key="`area-${index}`"
+            :d="path"
+            :fill="`url(#gradient-${chartId})`"
+          />
+
+          <path
+            v-for="(path, index) in linePaths"
+            :key="`line-${index}`"
+            :d="path"
+            fill="none"
+            class="stroke-primary"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            vector-effect="non-scaling-stroke"
+          />
+
+          <line
+            v-if="showTooltip"
+            :x1="xOf(hoveredPoint!.bucketStart)"
             y1="0"
-            x2="0"
-            y2="1"
-          >
-            <stop
-              offset="0%"
-              class="text-primary"
-              stop-color="currentColor"
-              stop-opacity="0.28"
-            />
-            <stop
-              offset="100%"
-              class="text-primary"
-              stop-color="currentColor"
-              stop-opacity="0"
-            />
-          </linearGradient>
-        </defs>
+            :x2="xOf(hoveredPoint!.bucketStart)"
+            :y2="VIEW_HEIGHT"
+            class="stroke-toned"
+            stroke-width="1"
+            vector-effect="non-scaling-stroke"
+          />
+        </svg>
 
-        <line
-          v-for="fraction in [0.25, 0.5, 0.75]"
-          :key="fraction"
-          x1="0"
-          :y1="TOP_PADDING + (VIEW_HEIGHT - TOP_PADDING) * fraction"
-          :x2="VIEW_WIDTH"
-          :y2="TOP_PADDING + (VIEW_HEIGHT - TOP_PADDING) * fraction"
-          class="stroke-default"
-          stroke-width="1"
-          vector-effect="non-scaling-stroke"
-          stroke-dasharray="3 5"
-        />
+        <span
+          class="absolute left-0 top-0 text-xs text-dimmed tabular-nums"
+        >{{ formatLatency(yMax) }}</span>
 
-        <rect
-          v-for="band in maintenanceBands"
-          :key="`maintenance-${band.key}`"
-          :x="band.x"
-          y="0"
-          :width="band.width"
-          :height="VIEW_HEIGHT"
-          class="fill-info/15"
-        />
-
-        <rect
-          v-for="outage in outages"
-          :key="outage.key"
-          :x="outage.x"
-          y="0"
-          :width="outage.width"
-          :height="VIEW_HEIGHT"
-          class="fill-error/15"
-        />
-
-        <path
-          v-for="(path, index) in bandPaths"
-          :key="`band-${index}`"
-          :d="path"
-          :class="activeStyle === 'neutral' ? 'fill-neutral-500/25' : 'fill-primary/10'"
-        />
-
-        <path
-          v-for="(path, index) in bandEdgePaths"
-          :key="`edge-${index}`"
-          :d="path"
-          fill="none"
-          class="stroke-primary/40"
-          stroke-width="1"
-          vector-effect="non-scaling-stroke"
-        />
-
-        <line
-          v-for="tick in spreadTicks"
-          :key="`tick-${tick.key}`"
-          :x1="tick.x"
-          :y1="tick.y1"
-          :x2="tick.x"
-          :y2="tick.y2"
-          class="stroke-primary/25"
-          stroke-width="1"
-          vector-effect="non-scaling-stroke"
-        />
-
-        <path
-          v-for="(path, index) in areaPaths"
-          :key="`area-${index}`"
-          :d="path"
-          :fill="`url(#gradient-${chartId})`"
-        />
-
-        <path
-          v-for="(path, index) in linePaths"
-          :key="`line-${index}`"
-          :d="path"
-          fill="none"
-          class="stroke-primary"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          vector-effect="non-scaling-stroke"
-        />
-
-        <line
-          v-if="showTooltip"
-          :x1="xOf(hoveredPoint!.bucketStart)"
-          y1="0"
-          :x2="xOf(hoveredPoint!.bucketStart)"
-          :y2="VIEW_HEIGHT"
-          class="stroke-toned"
-          stroke-width="1"
-          vector-effect="non-scaling-stroke"
-        />
-      </svg>
-
-      <span
-        class="absolute left-0 top-0 text-xs text-dimmed tabular-nums transition-opacity"
-        :class="showTooltip && tooltipAtTop ? 'opacity-0' : 'opacity-100'"
-      >{{ formatLatency(yMax) }}</span>
-
-      <!--
+        <!--
         Drawn as an element rather than as an SVG circle: the plot is stretched
         to the container with `preserveAspectRatio="none"`, which would turn a
         circle into an ellipse of whatever shape the cell happens to have.
       -->
-      <span
-        v-if="showTooltip && hoveredHeight !== null"
-        class="pointer-events-none absolute size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary ring-2 ring-default"
-        :style="{ left: `${hoveredRatio * 100}%`, top: `${hoveredHeight * 100}%` }"
-      />
+        <span
+          v-if="showTooltip && hoveredHeight !== null"
+          class="pointer-events-none absolute size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary ring-2 ring-default"
+          :style="{ left: `${hoveredRatio * 100}%`, top: `${hoveredHeight * 100}%` }"
+        />
 
-      <div
-        v-if="!hasData"
-        class="absolute inset-0 grid place-items-center text-sm text-dimmed"
-      >
-        {{ $t(measured ? 'monitor.detail.collecting' : 'monitor.detail.noData') }}
+        <div
+          v-if="!hasData"
+          class="absolute inset-0 grid place-items-center text-sm text-dimmed"
+        >
+          {{ $t(measured ? 'monitor.detail.collecting' : 'monitor.detail.noData') }}
+        </div>
       </div>
 
-      <!--
-        Always mounted, and hidden rather than unmounted or taken out of the
-        layout: the box has to keep being measured while it is invisible, or the
-        clamp above would run against a width of zero the first time it is shown.
-      -->
-      <div
-        ref="tooltip"
-        class="pointer-events-none absolute z-10 w-max max-w-full -translate-x-1/2 rounded-md border border-default bg-elevated px-2 py-1 text-xs shadow-lg"
-        :class="[tooltipAtTop ? 'top-0' : 'bottom-0', showTooltip ? 'opacity-100' : 'invisible opacity-0']"
-        :style="tooltipStyle"
-      >
+      <template #content>
         <template v-if="hoveredPoint">
           <div class="text-[11px]/4 text-dimmed tabular-nums">
             {{ bucketLabel(hoveredPoint.bucketStart) }}
@@ -757,8 +708,8 @@ function onPointerMove(event: PointerEvent) {
             {{ $t('maintenance.checksInWindow', { count: hoveredPoint.maintenanceCount }) }}
           </div>
         </template>
-      </div>
-    </div>
+      </template>
+    </AppChartTooltip>
 
     <div
       v-if="points.length > 1"

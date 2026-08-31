@@ -70,6 +70,7 @@ function rowLabel(row: Row): string {
 
 <template>
   <DashboardWidgetShell
+    list
     :title="title"
     :dense="widget.height === 'compact'"
     :caption="caption"

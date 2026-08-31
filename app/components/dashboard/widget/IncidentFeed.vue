@@ -30,6 +30,7 @@ const caption = computed(() => failing.value.length ? t('monitor.downCount', fai
 
 <template>
   <DashboardWidgetShell
+    list
     :title="title"
     :dense="widget.height === 'compact'"
     :caption="caption"
@@ -56,7 +57,10 @@ const caption = computed(() => failing.value.length ? t('monitor.downCount', fai
           >
             <MonitorPathLabel :monitor="monitor" />
           </NuxtLink>
-          <span class="col-start-2 text-xs text-muted tabular-nums shrink-0">
+          <span
+            class="col-start-2 min-w-0 truncate text-xs text-muted tabular-nums shrink-0"
+            :title="formatRelativeTime(monitor.state.statusChangedAt)"
+          >
             {{ formatRelativeTime(monitor.state.statusChangedAt) }}
           </span>
         </div>

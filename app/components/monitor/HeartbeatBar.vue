@@ -2,13 +2,10 @@
 import type { Heartbeat } from '#shared/types/monitor'
 import { HEARTBEAT_BAR_CLASS, HEARTBEAT_ROW_CLASS, heartbeatCountForWidth } from '#shared/utils/monitor'
 
-const props = withDefaults(defineProps<{
+const props = defineProps<{
   monitorId: number
   heartbeats: Heartbeat[]
-  showLegend?: boolean
-}>(), {
-  showLegend: true
-})
+}>()
 
 const { formatDateTime, formatLatency } = useFormatters()
 const row = useTemplateRef<HTMLElement>('row')
@@ -19,6 +16,12 @@ const { heartbeats, ensure } = useHeartbeatHistory(
 )
 
 const hovered = ref<Heartbeat | null>(null)
+const tooltipReference = shallowRef<HTMLElement>()
+
+function onEnter(event: MouseEvent, heartbeat: Heartbeat) {
+  tooltipReference.value = event.currentTarget as HTMLElement
+  hovered.value = heartbeat
+}
 
 function loadToWidth(width: number) {
   requiredCount.value = heartbeatCountForWidth(width)
@@ -55,7 +58,11 @@ onScopeDispose(stopResume)
 </script>
 
 <template>
-  <div class="flex flex-col gap-1.5 @container">
+  <AppChartTooltip
+    :open="hovered !== null"
+    :reference="tooltipReference"
+    @update:open="!$event && (hovered = null)"
+  >
     <!--
       The bars are a fixed size and the row decides how many of them fit, not how
       wide each one is: the same stretch of history then reads the same width in
@@ -83,7 +90,7 @@ onScopeDispose(stopResume)
           monitorStatusBackgroundClass(heartbeat.reportedStatus),
           hovered && hovered.id !== heartbeat.id ? 'opacity-40' : 'opacity-100'
         ]"
-        @mouseenter="hovered = heartbeat"
+        @mouseenter="onEnter($event, heartbeat)"
       />
       <div
         v-if="!heartbeats.length"
@@ -91,27 +98,28 @@ onScopeDispose(stopResume)
       />
     </div>
 
-    <!-- The threshold is the card's stacked header minus its padding: a cell
-         that narrow is also too short to spend a row on timestamps. -->
-    <div
-      v-if="showLegend"
-      class="hidden @[11rem]:flex items-center justify-between gap-2 text-xs text-dimmed h-4"
-    >
-      <template v-if="hovered">
-        <span class="truncate-target">{{ formatDateTime(hovered.checkedAt) }}</span>
-        <span
-          class="shrink-0 tabular-nums"
-          :class="monitorStatusTextClass(hovered.reportedStatus)"
+    <template #content>
+      <div
+        v-if="hovered"
+        class="space-y-1"
+      >
+        <div class="text-dimmed tabular-nums">
+          {{ formatDateTime(hovered.checkedAt) }}
+        </div>
+        <div :class="monitorStatusTextClass(hovered.reportedStatus)">
+          {{ $t(`status.${hovered.reportedStatus}`) }}
+          <span
+            v-if="hovered.latencyMs !== null"
+            class="tabular-nums"
+          > · {{ formatLatency(hovered.latencyMs) }}</span>
+        </div>
+        <div
+          v-if="hovered.message"
+          class="text-muted"
         >
-          {{ hovered.status === 'up' ? formatLatency(hovered.latencyMs) : hovered.message }}
-        </span>
-      </template>
-      <!--
-        Nothing but the reserved height until a bar is hovered. How far back the
-        row reaches depends on how many bars fit, which it is never told, so
-        naming the oldest check in the list would label a bar that may well be
-        off the left edge — and the newest one is already on the card.
-      -->
-    </div>
-  </div>
+          {{ hovered.message }}
+        </div>
+      </div>
+    </template>
+  </AppChartTooltip>
 </template>

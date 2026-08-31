@@ -48,6 +48,7 @@ const title = computed(() => props.widget.config.title || t('widget.type.certifi
 
 <template>
   <DashboardWidgetShell
+    list
     :title="title"
     :dense="widget.height === 'compact'"
     :empty="!rows.length"

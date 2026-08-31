@@ -517,6 +517,16 @@ scaled settings preview behaves like the dashboard. `widgetListFetchLimit`
 provides an initial render and request bound from the height token; incident
 history uses it to avoid fetching rows no cell can show. Old `config.limit`
 values are ignored on read and dropped on the next save.
+The shell's `list` variant reduces vertical card padding, leaving the row pitch
+unchanged so compact, standard and tall lists use their space without squeezing
+the text.
+
+**Chart tooltips.** `AppChartTooltip` wraps Nuxt UI's tooltip once per chart,
+with its reference following the hovered bucket, day or heartbeat. Its portal
+escapes the card's clipping and wraps long readings to the viewport. References
+use viewport coordinates, including in the scaled widget preview; never mix a
+`getBoundingClientRect()` width with an unscaled `offsetWidth`. The heartbeat
+readout is a tooltip at every size, with no hidden or reserved legend row.
 
 **Widget preview.** The settings dialog renders the real widget with the real
 data next to the form, at the pixel size the chosen width and height produce on a
@@ -537,8 +547,8 @@ A widget is exactly as tall as its cell, so its body clips and never scrolls.
 every tile wherever the platform does not draw scrollbars as overlays, and
 centred content could not be scrolled into view anyway. Content that stops
 fitting has to be dropped at the container width where it does, not left to
-overflow: `MonitorCard` hides the target line while its header is stacked, and
-`MonitorHeartbeatBar` hides its hover readout below the same width. When you add a
+overflow: `MonitorCard` hides the target line while its header is stacked, while
+hover details use a portal so they stay readable at every width. When you add a
 widget or a size, check every combination in `WIDGET_DEFINITIONS` against the
 shortest row height (`lg:auto-rows-[60px]`).
 

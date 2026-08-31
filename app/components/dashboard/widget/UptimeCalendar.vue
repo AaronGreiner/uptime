@@ -149,16 +149,12 @@ function dayClass(day: CalendarDay): string {
   return day.ratio >= 0.95 ? 'bg-error/60' : 'bg-error'
 }
 
-/** The readout occupies the opposite edge so it stays inside narrow cards too. */
-const hovered = ref<{ day: CalendarDay, below: boolean } | null>(null)
+const hovered = ref<{ day: CalendarDay } | null>(null)
+const tooltipReference = shallowRef<HTMLElement>()
 
 function onEnter(event: MouseEvent, day: CalendarDay) {
-  const square = event.currentTarget as HTMLElement
-  const frame = square.offsetParent as HTMLElement | null
-  hovered.value = {
-    day,
-    below: square.offsetTop < (frame?.clientHeight ?? 0) / 2
-  }
+  tooltipReference.value = event.currentTarget as HTMLElement
+  hovered.value = { day }
 }
 
 const title = computed(() => props.widget.config.title || monitorPath(monitor.value) || t('widget.type.uptime-calendar'))
@@ -209,85 +205,86 @@ const caption = computed(() => {
       >
         {{ $t('monitor.detail.noData') }}
       </div>
-      <!--
-        Two boxes on purpose: the inner one clips the weeks that do not fit, the
-        outer one carries the readout, which must be able to leave the row without
-        being cut off by the very clipping that makes the row work.
-      -->
-      <div
+      <AppChartTooltip
         v-else
-        class="relative h-full"
-        @mouseleave="hovered = null"
+        :open="hovered !== null"
+        :reference="tooltipReference"
+        @update:open="!$event && (hovered = null)"
       >
-        <!--
-          Weeks are columns of fixed size squares, so the cell decides how many
-          weeks it holds rather than how large a day is. Reversed like the pulse
-          bar: the row packs at its right edge, the oldest weeks run off to the
-          left, and the fade turns the cut into an edge rather than half a column.
-        -->
-        <div class="flex flex-row-reverse h-full items-center overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_1rem)]">
-          <div
-            class="grid grid-flow-col grid-rows-7 shrink-0"
-            :class="CALENDAR_GRID_CLASS"
-          >
+        <div
+          class="h-full"
+          @mouseleave="hovered = null"
+        >
+          <!--
+            Weeks are columns of fixed size squares, so the cell decides how many
+            weeks it holds rather than how large a day is. Reversed like the pulse
+            bar: the row packs at its right edge, the oldest weeks run off to the
+            left, and the fade turns the cut into an edge rather than half a column.
+          -->
+          <div class="flex flex-row-reverse h-full items-center overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_1rem)]">
             <div
-              v-for="blank in leadingBlanks"
-              :key="`blank-${blank}`"
-              :class="CALENDAR_SQUARE_CLASS"
-            />
-            <div
-              v-for="day in calendar"
-              :key="day.dayStart"
-              class="rounded-[2px] transition-opacity duration-150"
-              :class="[
-                CALENDAR_SQUARE_CLASS,
-                dayClass(day),
-                hovered && hovered.day.dayStart !== day.dayStart ? 'opacity-40' : 'opacity-100'
-              ]"
-              @mouseenter="onEnter($event, day)"
-            />
+              class="grid grid-flow-col grid-rows-7 shrink-0"
+              :class="CALENDAR_GRID_CLASS"
+            >
+              <div
+                v-for="blank in leadingBlanks"
+                :key="`blank-${blank}`"
+                :class="CALENDAR_SQUARE_CLASS"
+              />
+              <div
+                v-for="day in calendar"
+                :key="day.dayStart"
+                class="rounded-[2px] transition-opacity duration-150"
+                :class="[
+                  CALENDAR_SQUARE_CLASS,
+                  dayClass(day),
+                  hovered && hovered.day.dayStart !== day.dayStart ? 'opacity-40' : 'opacity-100'
+                ]"
+                @mouseenter="onEnter($event, day)"
+              />
+            </div>
           </div>
         </div>
-
-        <div
-          v-if="hovered"
-          class="pointer-events-none absolute inset-x-0 z-10 flex flex-wrap items-baseline gap-x-1.5 rounded-md border border-default bg-elevated px-2 py-1 text-xs shadow-lg"
-          :class="hovered.below ? 'bottom-0' : 'top-0'"
-        >
-          <span class="text-dimmed">{{ formatDate(hovered.day.dayStart) }}</span>
-          <template v-if="hovered.day.ratio === null">
-            <span
-              v-if="hovered.day.maintenanceCount"
-              class="text-info"
-            >{{ $t('status.maintenance') }}</span>
-            <span
-              v-else
-              class="text-dimmed"
-            >{{ $t('monitor.detail.noData') }}</span>
-          </template>
-          <template v-else>
-            <span class="font-medium tabular-nums">{{ formatUptime(hovered.day.ratio) }}</span>
-            <span
-              v-if="hovered.day.downCount"
-              class="text-error tabular-nums"
-            >
-              {{ formatNumber(hovered.day.downCount) }} × {{ $t('status.down') }}
-            </span>
-            <span
-              v-if="hovered.day.avgLatencyMs !== null"
-              class="text-muted tabular-nums"
-            >
-              {{ formatLatency(hovered.day.avgLatencyMs) }}
-            </span>
-            <span
-              v-if="hovered.day.maintenanceCount"
-              class="text-info tabular-nums"
-            >
-              {{ $t('maintenance.checksInWindow', { count: formatNumber(hovered.day.maintenanceCount) }) }}
-            </span>
-          </template>
-        </div>
-      </div>
+        <template #content>
+          <div
+            v-if="hovered"
+            class="flex flex-wrap items-baseline gap-x-1.5"
+          >
+            <span class="text-dimmed">{{ formatDate(hovered.day.dayStart) }}</span>
+            <template v-if="hovered.day.ratio === null">
+              <span
+                v-if="hovered.day.maintenanceCount"
+                class="text-info"
+              >{{ $t('status.maintenance') }}</span>
+              <span
+                v-else
+                class="text-dimmed"
+              >{{ $t('monitor.detail.noData') }}</span>
+            </template>
+            <template v-else>
+              <span class="font-medium tabular-nums">{{ formatUptime(hovered.day.ratio) }}</span>
+              <span
+                v-if="hovered.day.downCount"
+                class="text-error tabular-nums"
+              >
+                {{ formatNumber(hovered.day.downCount) }} × {{ $t('status.down') }}
+              </span>
+              <span
+                v-if="hovered.day.avgLatencyMs !== null"
+                class="text-muted tabular-nums"
+              >
+                {{ formatLatency(hovered.day.avgLatencyMs) }}
+              </span>
+              <span
+                v-if="hovered.day.maintenanceCount"
+                class="text-info tabular-nums"
+              >
+                {{ $t('maintenance.checksInWindow', { count: formatNumber(hovered.day.maintenanceCount) }) }}
+              </span>
+            </template>
+          </div>
+        </template>
+      </AppChartTooltip>
     </div>
   </DashboardWidgetShell>
   <DashboardWidgetMissing v-else />

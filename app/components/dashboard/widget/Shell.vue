@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { NuxtLink } from '#components'
 
-withDefaults(defineProps<{
+const props = withDefaults(defineProps<{
   /** Plain wording; the `title` slot replaces it where a breadcrumb is drawn. */
   title: string
   /** Makes the title a link, for a widget that stands for one monitor. */
@@ -10,6 +10,8 @@ withDefaults(defineProps<{
   caption?: string
   /** Very short cells tighten the padding instead of dropping content. */
   dense?: boolean
+  /** Lists keep their row spacing but need less vertical card padding. */
+  list?: boolean
   empty?: boolean
   emptyLabel?: string
   emptyIcon?: string
@@ -17,10 +19,19 @@ withDefaults(defineProps<{
   to: undefined,
   caption: undefined,
   dense: false,
+  list: false,
   empty: false,
   emptyLabel: undefined,
   emptyIcon: 'i-lucide-inbox'
 })
+
+const bodyClass = computed(() => [
+  'flex-1 flex flex-col min-h-0 overflow-hidden',
+  props.dense || props.list ? 'gap-2' : 'gap-3',
+  props.list
+    ? (props.dense ? 'px-3 py-1.5 sm:px-4 sm:py-1.5' : 'px-4 py-3 sm:px-5 sm:py-3')
+    : (props.dense ? 'p-3 sm:p-4' : 'p-4 sm:p-5')
+].join(' '))
 </script>
 
 <template>
@@ -29,9 +40,7 @@ withDefaults(defineProps<{
     class="h-full @container"
     :ui="{
       root: 'flex flex-col overflow-hidden',
-      body: dense
-        ? 'p-3 sm:p-4 flex-1 flex flex-col gap-2 min-h-0 overflow-hidden'
-        : 'p-4 sm:p-5 flex-1 flex flex-col gap-3 min-h-0 overflow-hidden'
+      body: bodyClass
     }"
   >
     <div class="flex shrink-0 items-baseline justify-between gap-2">
