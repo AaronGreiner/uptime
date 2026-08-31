@@ -104,7 +104,17 @@ export default defineNuxtPlugin((nuxtApp) => {
 
     // Only once the markup is on the page: a result arriving mid hydration would
     // rewrite the very data hydration is about to compare.
-    nuxtApp.hook('app:mounted', () => {
+    //
+    // `app:mounted` is not that moment. Every page hangs in the `<Suspense>`
+    // around `<NuxtPage>`, so mounting the application returns while the page
+    // itself is still resolving, and the whole dashboard hydrates a few hundred
+    // milliseconds later — long enough for a check result to land in between,
+    // patch the monitor list and refetch the chart buckets, and leave every
+    // affected component hydrating against markup that no longer describes it.
+    // `app:suspense:resolve` is the first hook that means what the sentence
+    // above says. Opening twice is a no-op, so the later navigations that also
+    // resolve suspense cost nothing.
+    nuxtApp.hook('app:suspense:resolve', () => {
       document.addEventListener('visibilitychange', onVisibilityChange)
       open()
     })
