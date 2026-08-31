@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { DashboardWidget } from '#shared/types/dashboard'
 import type { MonitorWithState } from '#shared/types/monitor'
-import { WIDGET_CONFIG_DEFAULTS } from '#shared/utils/widget'
 
 const props = defineProps<{
   widget: DashboardWidget
@@ -25,8 +24,6 @@ const failing = computed(() => scoped.value
     return severity || (a.state.statusChangedAt ?? 0) - (b.state.statusChangedAt ?? 0)
   }))
 
-const rows = computed(() => failing.value.slice(0, props.widget.config.limit ?? WIDGET_CONFIG_DEFAULTS.limit))
-
 const title = computed(() => props.widget.config.title || t('widget.type.incident-feed'))
 const caption = computed(() => failing.value.length ? t('monitor.downCount', failing.value.length) : undefined)
 </script>
@@ -34,18 +31,20 @@ const caption = computed(() => failing.value.length ? t('monitor.downCount', fai
 <template>
   <DashboardWidgetShell
     :title="title"
+    :dense="widget.height === 'compact'"
     :caption="caption"
-    :empty="!rows.length"
+    :empty="!failing.length"
     :empty-label="$t('widget.incidents.allClear')"
     empty-icon="i-lucide-circle-check"
   >
-    <ul class="flex flex-col">
-      <li
-        v-for="monitor in rows"
-        :key="monitor.id"
-        class="py-1 border-b border-default/50 last:border-0"
-      >
-        <div class="flex items-center gap-2">
+    <DashboardWidgetList
+      :items="failing"
+      :item-key="monitor => monitor.id"
+      :height="widget.height"
+      class="auto-rows-[45px] @[14rem]:auto-rows-[29px] @[22rem]:auto-rows-[45px]"
+    >
+      <template #default="{ item: monitor }">
+        <div class="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2 @[14rem]:flex">
           <UIcon
             :name="monitor.state.status === 'down' ? 'i-lucide-circle-x' : 'i-lucide-triangle-alert'"
             class="size-3.5 shrink-0"
@@ -57,7 +56,7 @@ const caption = computed(() => failing.value.length ? t('monitor.downCount', fai
           >
             <MonitorPathLabel :monitor="monitor" />
           </NuxtLink>
-          <span class="text-xs text-muted tabular-nums shrink-0">
+          <span class="col-start-2 text-xs text-muted tabular-nums shrink-0">
             {{ formatRelativeTime(monitor.state.statusChangedAt) }}
           </span>
         </div>
@@ -68,7 +67,7 @@ const caption = computed(() => failing.value.length ? t('monitor.downCount', fai
         >
           {{ monitor.state.message }}
         </p>
-      </li>
-    </ul>
+      </template>
+    </DashboardWidgetList>
   </DashboardWidgetShell>
 </template>

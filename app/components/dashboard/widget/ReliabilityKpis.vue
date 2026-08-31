@@ -68,8 +68,8 @@ const title = computed(() => props.widget.config.title || t('widget.type.reliabi
     :ui="{
       root: 'flex flex-col overflow-hidden',
       body: compact
-        ? 'px-3 py-2 sm:p-4 flex-1 flex flex-col justify-center gap-1 min-h-0 overflow-hidden'
-        : 'flex-1 flex flex-col justify-center gap-4 min-h-0 overflow-hidden'
+        ? 'px-3 py-2 sm:px-4 sm:py-2 flex-1 flex flex-col justify-center gap-1 min-h-0 overflow-hidden'
+        : 'p-3 sm:p-4 flex-1 flex flex-col justify-center gap-2 @[22rem]:gap-4 min-h-0 overflow-hidden'
     }"
   >
     <div class="flex items-baseline justify-between gap-3">
@@ -85,24 +85,24 @@ const title = computed(() => props.widget.config.title || t('widget.type.reliabi
     </div>
 
     <div
-      class="grid grid-cols-2 @[22rem]:grid-cols-3 @[42rem]:grid-cols-5"
-      :class="compact ? 'gap-x-3 gap-y-1 @[42rem]:gap-2' : 'gap-3 @[22rem]:gap-4'"
+      class="grid grid-cols-1 @[22rem]:grid-cols-3 @[42rem]:grid-cols-5"
+      :class="compact ? 'gap-x-3 gap-y-1 @[42rem]:gap-2' : 'gap-1 @[22rem]:gap-4'"
     >
       <div
         v-for="tile in tiles"
         :key="tile.key"
-        class="min-w-0"
+        class="min-w-0 flex items-baseline justify-between gap-2 @[22rem]:block"
       >
         <p
-          class="text-muted truncate-target"
+          class="min-w-0 text-muted truncate-target"
           :class="compact ? 'text-xs leading-4' : 'text-sm leading-tight'"
           :title="$t(tile.labelKey)"
         >
           {{ $t(tile.labelKey) }}
         </p>
         <p
-          class="font-semibold tabular-nums truncate-target"
-          :class="[tile.class, compact ? 'text-lg leading-5' : 'text-xl @[26rem]:text-2xl']"
+          class="shrink-0 font-semibold tabular-nums leading-4 @[22rem]:leading-5"
+          :class="[tile.class, compact ? 'text-sm @[22rem]:text-lg' : 'text-base @[22rem]:text-xl @[26rem]:text-2xl']"
         >
           {{ tile.value }}
         </p>

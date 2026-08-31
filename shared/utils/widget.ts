@@ -17,7 +17,6 @@ export type WidgetField
     | 'scope'
     | 'range'
     | 'level'
-    | 'limit'
     | 'target'
     | 'sort'
     | 'style'
@@ -33,8 +32,6 @@ export interface WidgetDefinition {
   /** Overrides WIDGET_CONFIG_DEFAULTS where the type wants something else. */
   defaults?: Partial<WidgetConfig>
 }
-
-export const WIDGET_LIMIT_BOUNDS = { min: 1, max: 50 }
 
 /** Selectable SLA targets, as ratios. */
 export const WIDGET_SLA_TARGETS = [0.99, 0.995, 0.999, 0.9995, 0.9999] as const
@@ -53,30 +50,30 @@ export const WIDGET_DEFINITIONS = {
     icon: 'i-lucide-square-activity',
     fields: ['monitor'],
     widths: WIDGET_WIDTHS,
-    heights: ['compact', 'standard'],
+    heights: ['compact', 'standard', 'tall'],
     defaultWidth: 'third',
     defaultHeight: 'standard'
   },
   'uptime-summary': {
     icon: 'i-lucide-percent',
     fields: ['monitor', 'range'],
-    widths: ['quarter', 'third', 'half'],
-    heights: ['compact', 'standard'],
+    widths: WIDGET_WIDTHS,
+    heights: ['compact', 'standard', 'tall'],
     defaultWidth: 'quarter',
     defaultHeight: 'compact'
   },
   'latency-chart': {
     icon: 'i-lucide-chart-line',
     fields: ['monitor', 'range', 'style'],
-    widths: ['half', 'twoThirds', 'full'],
-    heights: ['standard', 'tall'],
+    widths: WIDGET_WIDTHS,
+    heights: ['compact', 'standard', 'tall'],
     defaultWidth: 'half',
     defaultHeight: 'standard'
   },
   'uptime-calendar': {
     icon: 'i-lucide-calendar-days',
     fields: ['monitor'],
-    widths: ['half', 'twoThirds', 'full'],
+    widths: WIDGET_WIDTHS,
     // Seven rows of fixed size squares need more than a compact cell can give.
     heights: ['standard', 'tall'],
     defaultWidth: 'half',
@@ -85,39 +82,39 @@ export const WIDGET_DEFINITIONS = {
   'status-overview': {
     icon: 'i-lucide-layout-grid',
     fields: ['scope'],
-    widths: ['half', 'twoThirds', 'full'],
-    heights: ['compact', 'standard'],
+    widths: ['third', 'half', 'twoThirds', 'full'],
+    heights: ['compact', 'standard', 'tall'],
     defaultWidth: 'full',
     defaultHeight: 'compact'
   },
   'monitor-list': {
     icon: 'i-lucide-list',
-    fields: ['scope', 'sort', 'limit'],
-    widths: ['third', 'half', 'twoThirds', 'full'],
+    fields: ['scope', 'sort'],
+    widths: WIDGET_WIDTHS,
     heights: ['compact', 'standard', 'tall'],
     defaultWidth: 'half',
     defaultHeight: 'standard'
   },
   'incident-feed': {
     icon: 'i-lucide-siren',
-    fields: ['scope', 'limit'],
-    widths: ['third', 'half', 'twoThirds', 'full'],
+    fields: ['scope'],
+    widths: WIDGET_WIDTHS,
     heights: ['compact', 'standard', 'tall'],
     defaultWidth: 'half',
     defaultHeight: 'standard'
   },
   'certificate-expiry': {
     icon: 'i-lucide-shield-check',
-    fields: ['scope', 'limit'],
-    widths: ['third', 'half', 'twoThirds', 'full'],
+    fields: ['scope'],
+    widths: WIDGET_WIDTHS,
     heights: ['compact', 'standard', 'tall'],
     defaultWidth: 'half',
     defaultHeight: 'standard'
   },
   'sla-table': {
     icon: 'i-lucide-target',
-    fields: ['scope', 'range', 'target', 'limit'],
-    widths: ['half', 'twoThirds', 'full'],
+    fields: ['scope', 'range', 'target'],
+    widths: WIDGET_WIDTHS,
     heights: ['compact', 'standard', 'tall'],
     defaultWidth: 'full',
     defaultHeight: 'standard',
@@ -126,26 +123,26 @@ export const WIDGET_DEFINITIONS = {
   },
   'incident-history': {
     icon: 'i-lucide-history',
-    fields: ['scope', 'range', 'limit'],
-    widths: ['half', 'twoThirds', 'full'],
-    heights: ['standard', 'tall'],
+    fields: ['scope', 'range'],
+    widths: WIDGET_WIDTHS,
+    heights: ['compact', 'standard', 'tall'],
     defaultWidth: 'half',
     defaultHeight: 'standard',
-    defaults: { range: '30d', limit: 10 }
+    defaults: { range: '30d' }
   },
   'reliability-kpis': {
     icon: 'i-lucide-gauge',
     fields: ['scope', 'range'],
-    widths: ['half', 'twoThirds', 'full'],
-    heights: ['compact', 'standard'],
+    widths: ['third', 'half', 'twoThirds', 'full'],
+    heights: ['compact', 'standard', 'tall'],
     defaultWidth: 'full',
     defaultHeight: 'compact',
     defaults: { range: '30d' }
   },
   'maintenance-schedule': {
     icon: 'i-lucide-wrench',
-    fields: ['scope', 'limit'],
-    widths: ['third', 'half', 'twoThirds', 'full'],
+    fields: ['scope'],
+    widths: WIDGET_WIDTHS,
     heights: ['compact', 'standard', 'tall'],
     defaultWidth: 'half',
     defaultHeight: 'standard'
@@ -153,7 +150,7 @@ export const WIDGET_DEFINITIONS = {
   'heading': {
     icon: 'i-lucide-type',
     fields: ['level'],
-    widths: ['half', 'twoThirds', 'full'],
+    widths: WIDGET_WIDTHS,
     heights: ['slim'],
     defaultWidth: 'full',
     defaultHeight: 'slim'
@@ -178,7 +175,6 @@ export function widgetHasField(type: WidgetType, field: WidgetField): boolean {
 export const WIDGET_CONFIG_DEFAULTS: Omit<Required<WidgetConfig>, 'title'> = {
   range: '24h',
   level: 2,
-  limit: 5,
   target: 0.999,
   sort: 'status',
   style: 'inherit',
@@ -221,9 +217,6 @@ export function widgetConfigForType(type: WidgetType, config: WidgetConfig = {})
         break
       case 'level':
         result.level = config.level ?? fallback.level
-        break
-      case 'limit':
-        result.limit = config.limit ?? fallback.limit
         break
       case 'target':
         result.target = config.target ?? fallback.target

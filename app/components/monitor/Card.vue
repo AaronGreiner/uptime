@@ -37,8 +37,8 @@ const pathTitle = computed(() => joinMonitorPath(groupSegments(props.monitor)))
 const cardUi = computed(() => ({
   root: 'flex flex-col overflow-hidden @container',
   body: props.dense
-    ? 'p-3 sm:p-4 flex-1 flex flex-col gap-2 min-h-0 overflow-hidden'
-    : 'p-4 sm:p-6 flex-1 flex flex-col gap-3 min-h-0 overflow-hidden'
+    ? 'p-3 sm:p-3 flex-1 flex flex-col gap-2 min-h-0 overflow-hidden'
+    : 'p-4 sm:p-4 flex-1 flex flex-col gap-3 min-h-0 overflow-hidden'
 }))
 </script>
 

@@ -38,8 +38,6 @@ export interface WidgetConfig {
   monitorIds?: number[]
   /** Group whose subtree an aggregate widget covers, or null for no group scope. */
   groupId?: number | null
-  /** Rows rendered by list widgets. */
-  limit?: number
   /** Uptime an SLA table measures against, as a ratio between 0 and 1. */
   target?: number
   /** Order used by monitor lists. */

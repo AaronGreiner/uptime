@@ -372,7 +372,6 @@
       "level": "Size",
       "monitors": "Monitors",
       "group": "Group",
-      "limit": "Rows shown",
       "target": "Uptime target",
       "sort": "Order",
       "width": "Width",

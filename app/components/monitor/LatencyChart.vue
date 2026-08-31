@@ -729,7 +729,7 @@ function onPointerMove(event: PointerEvent) {
       -->
       <div
         ref="tooltip"
-        class="pointer-events-none absolute z-10 w-max -translate-x-1/2 rounded-md border border-default bg-elevated px-2 py-1 text-xs shadow-lg"
+        class="pointer-events-none absolute z-10 w-max max-w-full -translate-x-1/2 rounded-md border border-default bg-elevated px-2 py-1 text-xs shadow-lg"
         :class="[tooltipAtTop ? 'top-0' : 'bottom-0', showTooltip ? 'opacity-100' : 'invisible opacity-0']"
         :style="tooltipStyle"
       >
@@ -737,7 +737,7 @@ function onPointerMove(event: PointerEvent) {
           <div class="text-[11px]/4 text-dimmed tabular-nums">
             {{ bucketLabel(hoveredPoint.bucketStart) }}
           </div>
-          <div class="flex items-baseline gap-1.5">
+          <div class="flex flex-wrap items-baseline gap-x-1.5">
             <span class="font-medium tabular-nums">{{ formatLatency(hoveredPoint.avgLatencyMs) }}</span>
             <span
               v-if="boundsLabel"
@@ -762,10 +762,16 @@ function onPointerMove(event: PointerEvent) {
 
     <div
       v-if="points.length > 1"
-      class="flex items-center justify-between text-xs text-dimmed tabular-nums"
+      class="flex min-w-0 items-center justify-between gap-2 text-xs text-dimmed tabular-nums"
     >
-      <span>{{ axisLabel(points[0]!.bucketStart) }}</span>
-      <span>{{ axisLabel(points.at(-1)!.bucketStart) }}</span>
+      <span
+        class="min-w-0 truncate"
+        :title="axisLabel(points[0]!.bucketStart)"
+      >{{ axisLabel(points[0]!.bucketStart) }}</span>
+      <span
+        class="min-w-0 truncate text-right"
+        :title="axisLabel(points.at(-1)!.bucketStart)"
+      >{{ axisLabel(points.at(-1)!.bucketStart) }}</span>
     </div>
   </div>
 </template>

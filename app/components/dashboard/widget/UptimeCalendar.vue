@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { DashboardWidget } from '#shared/types/dashboard'
 import type { MonitorDailyPoint, MonitorWithState } from '#shared/types/monitor'
-import { CALENDAR_GRID_CLASS, CALENDAR_SQUARE_CLASS, calendarDaysForWidth } from '#shared/utils/grid'
+import { CALENDAR_GRID_CLASS, CALENDAR_SQUARE_CLASS, CALENDAR_SQUARE_PITCH_PX, calendarDaysForWidth } from '#shared/utils/grid'
 
 const props = defineProps<{
   widget: DashboardWidget
@@ -14,9 +14,29 @@ const MAX_DAYS = 365
 const { t } = useI18n()
 const { formatDate, formatLatency, formatNumber, formatUptime } = useFormatters()
 const { monitorPath } = useMonitorPath()
+const frame = useTemplateRef<HTMLElement>('frame')
+const columns = ref<number | null>(null)
+
+watch(frame, (element, _previous, onCleanup) => {
+  if (!element) {
+    return
+  }
+
+  const observer = new ResizeObserver(([entry]) => {
+    columns.value = Math.max(1, Math.floor(((entry?.contentRect.width ?? element.clientWidth) + 3) / CALENDAR_SQUARE_PITCH_PX))
+    hovered.value = null
+  })
+
+  observer.observe(element)
+  onCleanup(() => observer.disconnect())
+}, { flush: 'post' })
 
 const monitor = computed(() => props.monitors.find(entry => entry.id === props.widget.monitorId) ?? null)
-const days = computed(() => calendarDaysForWidth(props.widget.width, MAX_DAYS))
+const days = computed(() => Math.min(MAX_DAYS, Math.max(
+  calendarDaysForWidth(props.widget.width, MAX_DAYS),
+  // Include a partial week at each end when a wide screen needs more history.
+  columns.value === null ? 0 : (columns.value + 1) * 7
+)))
 
 const { data, status } = useMonitorDaily(() => props.widget.monitorId, days)
 
@@ -34,7 +54,7 @@ interface CalendarDay {
  * rather than left to the grid: a missing day has to occupy its square, or every
  * day after it slides into the wrong weekday.
  */
-const calendar = computed<CalendarDay[]>(() => {
+const history = computed<CalendarDay[]>(() => {
   const points = new Map((data.value?.points ?? []).map(point => [point.dayStart, point]))
 
   if (!points.size) {
@@ -49,7 +69,22 @@ const calendar = computed<CalendarDay[]>(() => {
     result.push(toDay(dayStart, points.get(dayStart)))
   }
 
-  return result
+  return result.slice(-days.value)
+})
+
+/** Keep whole week columns and the newest partial week; captions follow what is visible. */
+const calendar = computed(() => {
+  const first = history.value[0]
+
+  if (!first || columns.value === null) {
+    return history.value
+  }
+
+  const blanks = (new Date(first.dayStart * 1000).getDay() + 6) % 7
+  const totalColumns = Math.ceil((blanks + history.value.length) / 7)
+  const start = Math.max(0, (totalColumns - columns.value) * 7 - blanks)
+
+  return history.value.slice(start)
 })
 
 function toDay(dayStart: number, point: MonitorDailyPoint | undefined): CalendarDay {
@@ -114,27 +149,15 @@ function dayClass(day: CalendarDay): string {
   return day.ratio >= 0.95 ? 'bg-error/60' : 'bg-error'
 }
 
-/** Height the readout needs above a square before it has to hang below it. */
-const READOUT_HEIGHT_PX = 30
-
-/** The hovered square and where to hang its readout, in container pixels. */
-const hovered = ref<{ day: CalendarDay, x: number, y: number, below: boolean, anchorEnd: boolean } | null>(null)
+/** The readout occupies the opposite edge so it stays inside narrow cards too. */
+const hovered = ref<{ day: CalendarDay, below: boolean } | null>(null)
 
 function onEnter(event: MouseEvent, day: CalendarDay) {
   const square = event.currentTarget as HTMLElement
   const frame = square.offsetParent as HTMLElement | null
-  const x = square.offsetLeft + square.offsetWidth / 2
-
   hovered.value = {
     day,
-    x,
-    y: square.offsetTop,
-    // Always opens towards the middle of the card, so it stays inside it
-    // whatever the wording of the day it describes turns out to be. Centring it
-    // over the square instead would need its width, which it does not have yet.
-    anchorEnd: x > (frame?.clientWidth ?? 0) / 2,
-    // The top row has nothing above it to hang from.
-    below: square.offsetTop < READOUT_HEIGHT_PX
+    below: square.offsetTop < (frame?.clientHeight ?? 0) / 2
   }
 }
 
@@ -150,7 +173,6 @@ const caption = computed(() => {
 <template>
   <DashboardWidgetShell
     v-if="monitor"
-    plain
     :title="title"
     :to="`/monitors/${monitor.id}`"
     :caption="caption"
@@ -165,7 +187,18 @@ const caption = computed(() => {
       />
     </template>
 
-    <template #default>
+    <template #caption>
+      <span
+        v-if="overall !== null"
+        class="hidden @[24rem]:inline"
+      >{{ formatUptime(overall) }} · </span>
+      {{ $t('widget.calendar.days', { days: calendar.length || days }) }}
+    </template>
+
+    <div
+      ref="frame"
+      class="h-full"
+    >
       <USkeleton
         v-if="status === 'pending' && !data"
         class="size-full"
@@ -176,12 +209,6 @@ const caption = computed(() => {
       >
         {{ $t('monitor.detail.noData') }}
       </div>
-      <!--
-        Weeks are columns of fixed size squares, so the cell decides how many weeks
-        it holds rather than how large a day is. Reversed like the pulse bar: the
-        row packs at its right edge, the oldest weeks run off to the left, and the
-        fade turns the cut into an edge rather than half a column.
-      -->
       <!--
         Two boxes on purpose: the inner one clips the weeks that do not fit, the
         outer one carries the readout, which must be able to leave the row without
@@ -224,12 +251,10 @@ const caption = computed(() => {
 
         <div
           v-if="hovered"
-          class="pointer-events-none absolute z-10 rounded-md border border-default bg-elevated px-2 py-1 text-xs shadow-lg whitespace-nowrap"
-          :class="[hovered.below ? '' : '-translate-y-full', hovered.anchorEnd ? '-translate-x-full' : '']"
-          :style="{ left: `${hovered.x}px`, top: `${hovered.below ? hovered.y + 17 : hovered.y - 6}px` }"
+          class="pointer-events-none absolute inset-x-0 z-10 flex flex-wrap items-baseline gap-x-1.5 rounded-md border border-default bg-elevated px-2 py-1 text-xs shadow-lg"
+          :class="hovered.below ? 'bottom-0' : 'top-0'"
         >
           <span class="text-dimmed">{{ formatDate(hovered.day.dayStart) }}</span>
-          <span class="mx-1.5 text-muted">·</span>
           <template v-if="hovered.day.ratio === null">
             <span
               v-if="hovered.day.maintenanceCount"
@@ -244,26 +269,26 @@ const caption = computed(() => {
             <span class="font-medium tabular-nums">{{ formatUptime(hovered.day.ratio) }}</span>
             <span
               v-if="hovered.day.downCount"
-              class="ml-1.5 text-error tabular-nums"
+              class="text-error tabular-nums"
             >
               {{ formatNumber(hovered.day.downCount) }} × {{ $t('status.down') }}
             </span>
             <span
               v-if="hovered.day.avgLatencyMs !== null"
-              class="ml-1.5 text-muted tabular-nums"
+              class="text-muted tabular-nums"
             >
               {{ formatLatency(hovered.day.avgLatencyMs) }}
             </span>
             <span
               v-if="hovered.day.maintenanceCount"
-              class="ml-1.5 text-info tabular-nums"
+              class="text-info tabular-nums"
             >
               {{ $t('maintenance.checksInWindow', { count: formatNumber(hovered.day.maintenanceCount) }) }}
             </span>
           </template>
         </div>
       </div>
-    </template>
+    </div>
   </DashboardWidgetShell>
   <DashboardWidgetMissing v-else />
 </template>

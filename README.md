@@ -272,11 +272,14 @@ Issues and pull requests are welcome. Before opening a pull request, run
 `bun run typecheck` and `bun run lint`. Keep code and documentation in English,
 and add every user-facing string to both locale files.
 
+**Codex by OpenAI** contributed the widget sizing review, automatic list capacity
+and browser verification of the responsive widget layouts.
+
 ## AI disclosure
 
 > [!NOTE]
 > This project was created by **Aaron Greiner** in collaboration with AI tools,
-> including **Claude by Anthropic** and **ChatGPT by OpenAI**. AI assisted with
+> including **Claude by Anthropic**, **ChatGPT by OpenAI** and **Codex by OpenAI**. AI assisted with
 > implementation, review, documentation and problem-solving; the project is
 > directed, curated and maintained by its human author.
 

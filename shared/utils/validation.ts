@@ -1,6 +1,6 @@
 import z from 'zod'
 import { WIDGET_HEIGHTS, WIDGET_WIDTHS } from './grid'
-import { WIDGET_LIMIT_BOUNDS, WIDGET_SORTS, WIDGET_TYPES, widgetConfigForType, widgetNeedsMonitor } from './widget'
+import { WIDGET_SORTS, WIDGET_TYPES, widgetConfigForType, widgetNeedsMonitor } from './widget'
 import { MAINTENANCE_WINDOW_BOUNDS, WEEKDAY_MASK_ALL, isTimeZoneName } from './maintenance'
 import { LATENCY_CHART_STYLES, MONITOR_INTERVAL_BOUNDS, MONITOR_PACKET_BOUNDS, MONITOR_RETRY_BOUNDS, MONITOR_TIMEOUT_BOUNDS } from './monitor'
 import {
@@ -254,7 +254,6 @@ export const widgetConfigSchema = z.object({
   level: z.union([z.literal(1), z.literal(2), z.literal(3)]).optional(),
   monitorIds: z.array(z.number().int().positive()).max(100).optional(),
   groupId: z.number().int().positive().nullish().transform(value => value ?? null).optional(),
-  limit: boundedNumber(WIDGET_LIMIT_BOUNDS.min, WIDGET_LIMIT_BOUNDS.max).optional(),
   target: z.number().min(0.5).max(1).optional(),
   sort: z.enum(WIDGET_SORTS).optional(),
   style: z.enum([...LATENCY_CHART_STYLES, 'inherit']).optional()

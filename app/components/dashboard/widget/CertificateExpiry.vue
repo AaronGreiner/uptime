@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { DashboardWidget } from '#shared/types/dashboard'
 import type { MonitorWithState } from '#shared/types/monitor'
-import { WIDGET_CONFIG_DEFAULTS } from '#shared/utils/widget'
 
 const props = defineProps<{
   widget: DashboardWidget
@@ -33,7 +32,7 @@ const rows = computed<CertificateRow[]>(() => scoped.value
       : []
   })
   .sort((a, b) => a.expiresAt - b.expiresAt)
-  .slice(0, props.widget.config.limit ?? WIDGET_CONFIG_DEFAULTS.limit))
+)
 
 /** Each monitor carries its own warning window, so the tone follows that one. */
 function tone(row: CertificateRow): string {
@@ -50,37 +49,41 @@ const title = computed(() => props.widget.config.title || t('widget.type.certifi
 <template>
   <DashboardWidgetShell
     :title="title"
+    :dense="widget.height === 'compact'"
     :empty="!rows.length"
     :empty-label="$t('widget.certificates.none')"
     empty-icon="i-lucide-shield-off"
   >
-    <ul class="flex flex-col">
-      <li
-        v-for="row in rows"
-        :key="row.monitor.id"
-        class="flex items-center gap-2 py-1 border-b border-default/50 last:border-0"
-      >
-        <UIcon
-          name="i-lucide-shield"
-          class="size-3.5 shrink-0"
-          :class="tone(row)"
-        />
-        <NuxtLink
-          :to="`/monitors/${row.monitor.id}`"
-          class="flex-1 min-w-0 text-sm text-highlighted hover:text-primary transition-colors"
-        >
-          <MonitorPathLabel :monitor="row.monitor" />
-        </NuxtLink>
-        <span class="hidden @[22rem]:inline text-xs text-dimmed tabular-nums shrink-0">
-          {{ formatDate(row.expiresAt) }}
-        </span>
-        <span
-          class="text-xs font-medium tabular-nums shrink-0 w-16 text-right"
-          :class="tone(row)"
-        >
-          {{ row.days < 0 ? $t('monitor.detail.certificateExpired') : $t('widget.certificates.days', { days: row.days }) }}
-        </span>
-      </li>
-    </ul>
+    <DashboardWidgetList
+      :items="rows"
+      :item-key="row => row.monitor.id"
+      :height="widget.height"
+      class="auto-rows-[45px] @[14rem]:auto-rows-[29px]"
+    >
+      <template #default="{ item: row }">
+        <div class="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2 @[14rem]:flex">
+          <UIcon
+            name="i-lucide-shield"
+            class="size-3.5 shrink-0"
+            :class="tone(row)"
+          />
+          <NuxtLink
+            :to="`/monitors/${row.monitor.id}`"
+            class="flex-1 min-w-0 text-sm text-highlighted hover:text-primary transition-colors"
+          >
+            <MonitorPathLabel :monitor="row.monitor" />
+          </NuxtLink>
+          <span class="hidden @[22rem]:inline text-xs text-dimmed tabular-nums shrink-0">
+            {{ formatDate(row.expiresAt) }}
+          </span>
+          <span
+            class="col-start-2 text-xs font-medium tabular-nums shrink-0 @[14rem]:w-16 @[14rem]:text-right"
+            :class="tone(row)"
+          >
+            {{ row.days < 0 ? $t('monitor.detail.certificateExpired') : $t('widget.certificates.days', { days: row.days }) }}
+          </span>
+        </div>
+      </template>
+    </DashboardWidgetList>
   </DashboardWidgetShell>
 </template>

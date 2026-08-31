@@ -47,7 +47,7 @@ const rows = computed<SlaRow[]>(() => scoped.value
     }
   })
   .sort((a, b) => (a.ratio ?? 1) - (b.ratio ?? 1) || a.monitor.name.localeCompare(b.monitor.name))
-  .slice(0, props.widget.config.limit ?? WIDGET_CONFIG_DEFAULTS.limit))
+)
 
 function budgetLabel(row: SlaRow): string {
   return row.budgetLeftSeconds < 0
@@ -70,18 +70,20 @@ const caption = computed(() => `${formatUptime(target.value)} · ${t(`range.${ra
 <template>
   <DashboardWidgetShell
     :title="title"
+    :dense="widget.height === 'compact'"
     :caption="caption"
     :empty="!rows.length"
     :empty-label="$t('widget.list.noMonitors')"
     empty-icon="i-lucide-target"
   >
-    <ul class="flex flex-col">
-      <li
-        v-for="row in rows"
-        :key="row.monitor.id"
-        class="py-1 border-b border-default/50 last:border-0"
-      >
-        <div class="flex items-center gap-2">
+    <DashboardWidgetList
+      :items="rows"
+      :item-key="row => row.monitor.id"
+      :height="widget.height"
+      class="auto-rows-[45px] @[14rem]:auto-rows-[29px] @[20rem]:auto-rows-[37px]"
+    >
+      <template #default="{ item: row }">
+        <div class="flex flex-col @[14rem]:flex-row @[14rem]:items-center gap-x-2">
           <NuxtLink
             :to="`/monitors/${row.monitor.id}`"
             class="flex-1 min-w-0 text-sm text-highlighted hover:text-primary transition-colors"
@@ -89,7 +91,7 @@ const caption = computed(() => `${formatUptime(target.value)} · ${t(`range.${ra
             <MonitorPathLabel :monitor="row.monitor" />
           </NuxtLink>
           <span
-            class="text-sm font-medium tabular-nums shrink-0 w-20 text-right"
+            class="text-xs @[14rem]:text-sm font-medium tabular-nums shrink-0 @[14rem]:w-20 @[14rem]:text-right"
             :class="tone(row)"
           >
             {{ formatUptime(row.ratio) }}
@@ -114,7 +116,7 @@ const caption = computed(() => `${formatUptime(target.value)} · ${t(`range.${ra
             :style="{ width: `${Math.max(2, row.used * 100)}%` }"
           />
         </div>
-      </li>
-    </ul>
+      </template>
+    </DashboardWidgetList>
   </DashboardWidgetShell>
 </template>

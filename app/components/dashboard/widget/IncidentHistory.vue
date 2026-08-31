@@ -3,6 +3,7 @@ import type { DashboardWidget } from '#shared/types/dashboard'
 import type { Incident } from '#shared/types/incident'
 import type { MonitorWithState } from '#shared/types/monitor'
 import type { StatsRange } from '#shared/types/stats'
+import { widgetListFetchLimit } from '#shared/utils/grid'
 import { WIDGET_CONFIG_DEFAULTS } from '#shared/utils/widget'
 
 const props = defineProps<{
@@ -16,7 +17,7 @@ const now = useNow()
 const { scopedIds, isAll } = useWidgetScope(() => props.widget)
 
 const range = computed<StatsRange>(() => props.widget.config.range ?? WIDGET_CONFIG_DEFAULTS.range)
-const limit = computed(() => props.widget.config.limit ?? WIDGET_CONFIG_DEFAULTS.limit)
+const limit = computed(() => widgetListFetchLimit(props.widget.height))
 
 const { data, status } = useScopeIncidents(scopedIds, isAll, range, limit)
 
@@ -32,21 +33,23 @@ const title = computed(() => props.widget.config.title || t('widget.type.inciden
 <template>
   <DashboardWidgetShell
     :title="title"
+    :dense="widget.height === 'compact'"
     :caption="$t(`range.${range}`)"
-    :empty="status !== 'pending' && !data.incidents.length"
+    :empty="status !== 'pending' && !data?.incidents.length"
     :empty-label="$t('widget.incidents.noneInRange')"
     empty-icon="i-lucide-circle-check"
   >
-    <ul class="flex flex-col">
-      <li
-        v-for="incident in data.incidents"
-        :key="`${incident.monitorId}-${incident.startedAt}`"
-        class="py-1 border-b border-default/50 last:border-0"
-      >
-        <div class="flex items-center gap-2">
+    <DashboardWidgetList
+      :items="data?.incidents ?? []"
+      :item-key="incident => `${incident.monitorId}-${incident.startedAt}`"
+      :height="widget.height"
+      class="auto-rows-[61px] @[14rem]:auto-rows-[45px]"
+    >
+      <template #default="{ item: incident }">
+        <div class="flex flex-wrap @[14rem]:flex-nowrap items-center gap-x-2">
           <NuxtLink
             :to="`/monitors/${incident.monitorId}`"
-            class="flex-1 min-w-0 text-sm text-highlighted hover:text-primary transition-colors truncate-target"
+            class="basis-full @[14rem]:basis-auto flex-1 min-w-0 text-sm text-highlighted hover:text-primary transition-colors truncate-target"
           >
             <MonitorPathLabel
               v-if="monitorsById.get(incident.monitorId)"
@@ -76,7 +79,7 @@ const title = computed(() => props.widget.config.title || t('widget.type.inciden
             ? `${formatDateTime(incident.startedAt)} · ${incident.message}`
             : formatDateTime(incident.startedAt) }}
         </p>
-      </li>
-    </ul>
+      </template>
+    </DashboardWidgetList>
   </DashboardWidgetShell>
 </template>

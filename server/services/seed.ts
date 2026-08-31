@@ -590,8 +590,8 @@ function buildDemoDashboards(created: CreatedMonitor[], groupIds: Map<string, nu
   const infrastructureMonitorNames = ['Cloudflare DNS', 'Google DNS', 'Quad9 DNS', 'Cloudflare Edge']
 
   place(overview.id, 'status-overview', 'full', 'compact', null, {})
-  place(overview.id, 'incident-feed', 'half', 'standard', null, { limit: 5 })
-  place(overview.id, 'certificate-expiry', 'half', 'standard', null, { limit: 5 })
+  place(overview.id, 'incident-feed', 'half', 'standard', null, {})
+  place(overview.id, 'certificate-expiry', 'half', 'standard', null, {})
   place(overview.id, 'heading', 'full', 'slim', null, { title: 'Production', level: 2 })
   place(overview.id, 'latency-chart', 'twoThirds', 'tall', mainSite, { range: '24h' })
   place(overview.id, 'monitor', 'third', 'standard', mainSite, {})
@@ -599,8 +599,7 @@ function buildDemoDashboards(created: CreatedMonitor[], groupIds: Map<string, nu
   place(overview.id, 'heading', 'full', 'slim', null, { title: 'Infrastructure', level: 2 })
   place(overview.id, 'monitor-list', 'half', 'standard', null, {
     groupId: infrastructureGroup,
-    sort: 'status',
-    limit: 6
+    sort: 'status'
   })
   place(overview.id, 'uptime-calendar', 'half', 'standard', monitorId('Cloudflare DNS'), {})
   place(overview.id, 'heading', 'full', 'slim', null, { title: 'Vendors', level: 2 })
@@ -611,8 +610,7 @@ function buildDemoDashboards(created: CreatedMonitor[], groupIds: Map<string, nu
   place(production.id, 'sla-table', 'full', 'standard', null, {
     groupId: productionGroup,
     range: '30d',
-    target: 0.999,
-    limit: 7
+    target: 0.999
   })
   place(production.id, 'heading', 'full', 'slim', null, { title: 'Web', level: 2 })
   place(production.id, 'latency-chart', 'twoThirds', 'tall', mainSite, { range: '24h' })
@@ -621,8 +619,7 @@ function buildDemoDashboards(created: CreatedMonitor[], groupIds: Map<string, nu
   place(production.id, 'uptime-calendar', 'half', 'standard', mainSite, {})
   place(production.id, 'monitor-list', 'half', 'standard', null, {
     groupId: productionGroup,
-    sort: 'latency',
-    limit: 6
+    sort: 'latency'
   })
   place(production.id, 'heading', 'full', 'slim', null, { title: 'APIs & Documentation', level: 2 })
 
@@ -636,16 +633,13 @@ function buildDemoDashboards(created: CreatedMonitor[], groupIds: Map<string, nu
   place(infrastructure.id, 'latency-chart', 'half', 'standard', monitorId('Cloudflare Edge'), { range: '24h' })
   place(infrastructure.id, 'monitor-list', 'half', 'standard', null, {
     groupId: infrastructureGroup,
-    sort: 'name',
-    limit: 6
+    sort: 'name'
   })
   place(infrastructure.id, 'certificate-expiry', 'half', 'standard', null, {
-    groupId: infrastructureGroup,
-    limit: 5
+    groupId: infrastructureGroup
   })
   place(infrastructure.id, 'maintenance-schedule', 'half', 'standard', null, {
-    groupId: infrastructureGroup,
-    limit: 6
+    groupId: infrastructureGroup
   })
 
   for (const name of infrastructureMonitorNames) {
@@ -654,10 +648,10 @@ function buildDemoDashboards(created: CreatedMonitor[], groupIds: Map<string, nu
 
   place(reliability.id, 'reliability-kpis', 'full', 'compact', null, { range: '30d' })
   place(reliability.id, 'heading', 'full', 'slim', null, { title: 'Incidents', level: 2 })
-  place(reliability.id, 'incident-history', 'twoThirds', 'tall', null, { range: '30d', limit: 12 })
-  place(reliability.id, 'incident-feed', 'third', 'tall', null, { limit: 8 })
+  place(reliability.id, 'incident-history', 'twoThirds', 'tall', null, { range: '30d' })
+  place(reliability.id, 'incident-feed', 'third', 'tall', null, {})
   place(reliability.id, 'heading', 'full', 'slim', null, { title: 'Uptime targets', level: 2 })
-  place(reliability.id, 'sla-table', 'full', 'tall', null, { range: '30d', target: 0.999, limit: 14 })
+  place(reliability.id, 'sla-table', 'full', 'tall', null, { range: '30d', target: 0.999 })
   place(reliability.id, 'heading', 'full', 'slim', null, { title: 'The two that keep failing', level: 2 })
   place(reliability.id, 'uptime-calendar', 'half', 'standard', monitorId('Example Service'), {})
   place(reliability.id, 'uptime-calendar', 'half', 'standard', monitorId('Billing (legacy)'), {})

@@ -17,7 +17,7 @@ const compact = computed(() => props.widget.height === 'compact')
 const cardUi = computed(() => ({
   root: 'flex @container',
   body: compact.value
-    ? 'flex-1 flex flex-col justify-center gap-1 min-h-0 overflow-hidden px-3 py-2 sm:p-4'
+    ? 'flex-1 flex flex-col justify-center gap-1 min-h-0 overflow-hidden px-3 py-2 sm:px-4 sm:py-2'
     : 'flex-1 flex flex-col justify-center gap-4 min-h-0 overflow-hidden'
 }))
 
@@ -58,17 +58,15 @@ function statusLink(status: MonitorStatus | 'all'): string {
  * window; and an instance that never uses the feature keeps the six tile layout
  * it had, rather than paying a narrower column for a figure that is always zero.
  *
- * Every step gains a column with the tile, so the two layouts have the same
- * number of rows at every width: three, two and one. The extra tile therefore
- * costs a little width and no height at all — which matters, because the body
- * clips and the shortest cell this widget offers has no room for a fourth row.
- * Both strings stay literal; Tailwind cannot emit a column count assembled at
- * runtime.
+ * Wider cells gain a column with the maintenance tile. Narrow cells keep two
+ * columns with inline figures and give uptime its own row, so neither its
+ * percentage nor the fourth row clips in a compact cell. Both strings stay
+ * literal; Tailwind cannot emit a column count assembled at runtime.
  */
 const showMaintenance = computed(() => counts.value.maintenance > 0)
 
 const gridColumnsClass = computed(() => (showMaintenance.value
-  ? 'grid-cols-3 @[22rem]:grid-cols-4 @[46rem]:grid-cols-7'
+  ? 'grid-cols-2 @[22rem]:grid-cols-4 @[46rem]:grid-cols-7'
   : 'grid-cols-2 @[22rem]:grid-cols-3 @[46rem]:grid-cols-6'))
 
 const tiles = computed(() => ([
@@ -157,7 +155,10 @@ const tiles = computed(() => ([
         :key="tile.key"
         :to="tile.to"
         class="min-w-0 rounded-md @[60rem]:flex @[60rem]:items-center @[60rem]:justify-center @[60rem]:gap-2.5"
-        :class="tile.to ? 'transition-opacity hover:opacity-70' : ''"
+        :class="[
+          tile.to ? 'transition-opacity hover:opacity-70' : '',
+          tile.key === 'uptime' ? 'col-span-2 @[22rem]:col-span-1' : ''
+        ]"
       >
         <UIcon
           :name="tile.icon"
@@ -165,21 +166,21 @@ const tiles = computed(() => ([
           :class="tile.class"
         />
 
-        <div class="min-w-0">
+        <div class="min-w-0 flex items-baseline justify-between gap-1 @[22rem]:block">
           <!--
             The labels stay at one size while the figures grow. Letting them grow
             too clipped the longest of them in German at the six column step.
           -->
           <p
-            class="text-muted truncate-target"
+            class="min-w-0 text-muted truncate-target"
             :class="compact ? 'text-xs leading-4' : 'text-sm leading-tight'"
             :title="$t(tile.labelKey)"
           >
             {{ $t(tile.labelKey) }}
           </p>
           <p
-            class="font-semibold tabular-nums @[46rem]:text-[2rem] @[46rem]:leading-9 @[60rem]:text-4xl @[60rem]:leading-10"
-            :class="[tile.class, compact ? 'text-lg leading-5' : 'text-xl @[26rem]:text-2xl']"
+            class="shrink-0 font-semibold tabular-nums leading-5 @[46rem]:text-[2rem] @[46rem]:leading-9 @[60rem]:text-4xl @[60rem]:leading-10"
+            :class="[tile.class, compact ? 'text-sm @[22rem]:text-lg' : 'text-lg @[22rem]:text-xl @[26rem]:text-2xl']"
           >
             {{ tile.value }}
           </p>

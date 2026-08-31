@@ -9,7 +9,6 @@ import { fuzzyScore } from '#shared/utils/search'
 import { STATS_RANGES } from '#shared/utils/stats'
 import {
   WIDGET_DEFINITIONS,
-  WIDGET_LIMIT_BOUNDS,
   WIDGET_SLA_TARGETS,
   WIDGET_SORTS,
   WIDGET_TYPES,
@@ -59,7 +58,6 @@ function createState(widget?: DashboardWidget | null): WidgetInput {
       level: widget?.config.level ?? defaults.level,
       monitorIds: widget?.config.monitorIds ?? defaults.monitorIds,
       groupId: widget?.config.groupId ?? defaults.groupId,
-      limit: widget?.config.limit ?? defaults.limit,
       target: widget?.config.target ?? defaults.target,
       sort: widget?.config.sort ?? defaults.sort
     },
@@ -88,7 +86,7 @@ watch(() => state.value.type, (type, previous) => {
   state.value.width = size.width
   state.value.height = size.height
 
-  for (const field of ['range', 'limit', 'style'] as const) {
+  for (const field of ['range', 'style'] as const) {
     if (!widgetHasField(previous, field)) {
       Object.assign(state.value.config, { [field]: defaults[field] })
     }
@@ -419,19 +417,6 @@ async function onSubmit(event: FormSubmitEvent<WidgetInput>) {
                 value-key="value"
                 :search-input="false"
                 class="w-full"
-              />
-            </UFormField>
-
-            <UFormField
-              v-if="hasField('limit')"
-              :label="$t('widget.fields.limit')"
-              name="config.limit"
-            >
-              <UInputNumber
-                v-model="state.config.limit"
-                class="w-full"
-                :min="WIDGET_LIMIT_BOUNDS.min"
-                :max="WIDGET_LIMIT_BOUNDS.max"
               />
             </UFormField>
 

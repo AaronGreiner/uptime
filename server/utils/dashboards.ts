@@ -1,7 +1,7 @@
 import { asc, eq, max } from 'drizzle-orm'
 import type { Dashboard, DashboardWidget, DashboardWithWidgets } from '../../shared/types/dashboard'
 import { isLatencyChartStyle } from '../../shared/utils/monitor'
-import { clampWidgetSize } from '../../shared/utils/widget'
+import { clampWidgetSize, widgetConfigForType } from '../../shared/utils/widget'
 import { dashboards, dashboardWidgets } from '../database/schema'
 import type { DashboardRow, DashboardWidgetRow } from '../database/schema'
 
@@ -36,7 +36,7 @@ export function serializeWidget(row: DashboardWidgetRow): DashboardWidget {
     dashboardId: row.dashboardId,
     type: row.type,
     monitorId: row.monitorId,
-    config,
+    config: widgetConfigForType(row.type, config),
     position: row.position,
     ...size,
     createdAt: row.createdAt,

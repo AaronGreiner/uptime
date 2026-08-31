@@ -35,7 +35,7 @@ const { data, status } = useMonitorStats(() => props.widget.monitorId, range)
     v-if="monitor"
     :title="title"
     :to="`/monitors/${monitor.id}`"
-    plain
+    :dense="widget.height === 'compact'"
     :caption="$t(`range.${range}`)"
   >
     <template #title>

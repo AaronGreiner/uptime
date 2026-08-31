@@ -58,6 +58,18 @@ export function widgetPixelHeight(height: WidgetHeight): number {
   return rows * WIDGET_ROW_HEIGHT_PX + (rows - 1) * WIDGET_GAP_PX
 }
 
+/**
+ * An SSR-safe request bound for lists fetched separately from the monitor cache.
+ * Mobile rows are 68 px tall; even without card padding no cell can show more
+ * than this many of the shortest (29 px) list rows. The browser then renders
+ * only the complete rows that fit its measured body.
+ */
+export function widgetListFetchLimit(height: WidgetHeight): number {
+  const rows = WIDGET_HEIGHT_ROWS[height]
+
+  return Math.ceil((rows * 68 + (rows - 1) * WIDGET_GAP_PX) / 29)
+}
+
 /** Width a cell occupies inside a grid of the given total width, in pixels. */
 export function widgetPixelWidth(width: WidgetWidth, gridWidth: number): number {
   const columns = WIDGET_WIDTH_COLUMNS[width]

@@ -13,16 +13,13 @@ withDefaults(defineProps<{
   empty?: boolean
   emptyLabel?: string
   emptyIcon?: string
-  /** Drops the list treatment for content that fills the body itself. */
-  plain?: boolean
 }>(), {
   to: undefined,
   caption: undefined,
   dense: false,
   empty: false,
   emptyLabel: undefined,
-  emptyIcon: 'i-lucide-inbox',
-  plain: false
+  emptyIcon: 'i-lucide-inbox'
 })
 </script>
 
@@ -37,11 +34,11 @@ withDefaults(defineProps<{
         : 'p-4 sm:p-5 flex-1 flex flex-col gap-3 min-h-0 overflow-hidden'
     }"
   >
-    <div class="flex items-baseline justify-between gap-3">
+    <div class="flex shrink-0 items-baseline justify-between gap-2">
       <component
         :is="to ? NuxtLink : 'p'"
         :to="to"
-        class="min-w-0 text-sm @[24rem]:text-base font-medium text-highlighted truncate-target"
+        class="min-w-0 flex-1 text-sm @[24rem]:text-base font-medium text-highlighted truncate-target"
         :class="to ? 'hover:text-primary transition-colors' : ''"
       >
         <slot name="title">
@@ -54,15 +51,18 @@ withDefaults(defineProps<{
         caption says what the widget shows, the control is a convenience the
         detail page and the settings offer as well.
       -->
-      <div class="flex items-center gap-2 shrink-0">
+      <div class="flex min-w-0 max-w-[55%] shrink-0 items-center gap-2">
         <div class="hidden @[24rem]:flex">
           <slot name="actions" />
         </div>
         <p
           v-if="caption"
-          class="text-[0.6875rem] @[24rem]:text-xs text-dimmed"
+          class="truncate text-[0.6875rem] @[24rem]:text-xs text-dimmed"
+          :title="caption"
         >
-          {{ caption }}
+          <slot name="caption">
+            {{ caption }}
+          </slot>
         </p>
       </div>
     </div>
@@ -74,22 +74,16 @@ withDefaults(defineProps<{
       <p class="flex items-center gap-2 text-sm text-dimmed">
         <UIcon
           :name="emptyIcon"
-          class="size-4"
+          class="size-4 shrink-0"
         />
         {{ emptyLabel }}
       </p>
     </div>
 
-    <!--
-      The cell height is fixed, so a list that outgrows it is clipped rather than
-      scrolled; see MonitorCard. The bottom padding is exactly the height of the
-      fade, so a list that fits is faded over its padding and looks untouched,
-      while a clipped one ends in a gradient instead of in half a row.
-    -->
+    <!-- Lists measure this body and render only complete rows. -->
     <div
       v-else
       class="flex-1 min-h-0 overflow-hidden"
-      :class="plain ? '' : 'pb-3 [mask-image:linear-gradient(to_bottom,black_calc(100%-0.75rem),transparent)]'"
     >
       <slot />
     </div>

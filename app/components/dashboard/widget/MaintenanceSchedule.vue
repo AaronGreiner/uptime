@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { DashboardWidget } from '#shared/types/dashboard'
 import type { MonitorWithState } from '#shared/types/monitor'
-import { WIDGET_CONFIG_DEFAULTS } from '#shared/utils/widget'
 
 const props = defineProps<{
   widget: DashboardWidget
@@ -54,8 +53,6 @@ const rows = computed<Row[]>(() => {
   return [...active, ...upcoming]
 })
 
-const limited = computed(() => rows.value.slice(0, props.widget.config.limit ?? WIDGET_CONFIG_DEFAULTS.limit))
-
 const activeCount = computed(() => rows.value.filter(row => row.active).length)
 
 const title = computed(() => props.widget.config.title || t('widget.type.maintenance-schedule'))
@@ -74,45 +71,55 @@ function rowLabel(row: Row): string {
 <template>
   <DashboardWidgetShell
     :title="title"
+    :dense="widget.height === 'compact'"
     :caption="caption"
-    :empty="!limited.length"
+    :empty="!rows.length"
     :empty-label="$t('maintenance.noneScheduled')"
     empty-icon="i-lucide-wrench"
   >
-    <ul class="flex flex-col">
-      <li
-        v-for="row in limited"
-        :key="row.monitor.id"
-        class="flex items-center gap-2 py-1 border-b border-default/50 last:border-0"
-      >
-        <UIcon
-          name="i-lucide-wrench"
-          class="size-3.5 shrink-0"
-          :class="row.active ? 'text-info' : 'text-dimmed'"
-        />
-        <NuxtLink
-          :to="`/monitors/${row.monitor.id}`"
-          class="flex-1 min-w-0 text-sm text-highlighted hover:text-primary transition-colors"
-        >
-          <MonitorPathLabel :monitor="row.monitor" />
-        </NuxtLink>
-        <!-- The wording carries the time, so the cell that cannot hold both
+    <DashboardWidgetList
+      :items="rows"
+      :item-key="row => row.monitor.id"
+      :height="widget.height"
+      class="auto-rows-[45px] @[14rem]:auto-rows-[29px]"
+    >
+      <template #default="{ item: row }">
+        <div class="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2 @[14rem]:flex">
+          <UIcon
+            name="i-lucide-wrench"
+            class="size-3.5 shrink-0"
+            :class="row.active ? 'text-info' : 'text-dimmed'"
+          />
+          <NuxtLink
+            :to="`/monitors/${row.monitor.id}`"
+            class="flex-1 min-w-0 text-sm text-highlighted hover:text-primary transition-colors"
+          >
+            <MonitorPathLabel :monitor="row.monitor" />
+          </NuxtLink>
+          <!-- The wording carries the time, so the cell that cannot hold both
              keeps the relative one: how soon is the reading, the clock time is
              the detail behind it. -->
-        <span
-          class="hidden @[20rem]:inline text-xs shrink-0 truncate-target max-w-40"
-          :class="row.active ? 'text-info' : 'text-muted'"
-          :title="rowLabel(row)"
-        >
-          {{ rowLabel(row) }}
-        </span>
-        <span
-          v-if="!row.active"
-          class="@[20rem]:hidden text-xs text-muted tabular-nums shrink-0"
-        >
-          {{ formatRelativeTime(row.startsAt) }}
-        </span>
-      </li>
-    </ul>
+          <span
+            class="hidden @[20rem]:inline text-xs shrink-0 truncate-target max-w-40"
+            :class="row.active ? 'text-info' : 'text-muted'"
+            :title="rowLabel(row)"
+          >
+            {{ rowLabel(row) }}
+          </span>
+          <span
+            v-if="!row.active"
+            class="col-start-2 @[20rem]:hidden text-xs text-muted tabular-nums shrink-0"
+          >
+            {{ formatRelativeTime(row.startsAt) }}
+          </span>
+          <span
+            v-else
+            class="col-start-2 text-xs text-info @[14rem]:hidden"
+          >
+            {{ $t('status.maintenance') }}
+          </span>
+        </div>
+      </template>
+    </DashboardWidgetList>
   </DashboardWidgetShell>
 </template>

@@ -505,9 +505,18 @@ What follows from that is that neither widget takes a count as a setting.
 fill a half width cell. A wider pulse bar measures its row after mount and uses
 the public heartbeat endpoint to extend a per-monitor client cache only as far
 as that row needs, so polling the list does not carry a full-width history for
-every monitor. The calendar asks the server for the days its *width token*
-implies rather than for a measured width, so the request is the same on both
-sides of hydration, and the row then clips whatever the real cell cannot hold.
+every monitor. The calendar's initial request follows its width token so it is
+the same on both sides of hydration. After mount it keeps only complete week
+columns, plus the newest partial week, and extends the request if a wider screen
+can show more. Its day count and average describe the visible days.
+
+List widgets likewise have no row-count setting. `DashboardWidgetList` measures
+its body and reads the row height from CSS, including container-query changes,
+then renders as many complete rows as fit. Measurements use layout pixels so the
+scaled settings preview behaves like the dashboard. `widgetListFetchLimit`
+provides an initial render and request bound from the height token; incident
+history uses it to avoid fetching rows no cell can show. Old `config.limit`
+values are ignored on read and dropped on the next save.
 
 **Widget preview.** The settings dialog renders the real widget with the real
 data next to the form, at the pixel size the chosen width and height produce on a
@@ -530,7 +539,7 @@ centred content could not be scrolled into view anyway. Content that stops
 fitting has to be dropped at the container width where it does, not left to
 overflow: `MonitorCard` hides the target line while its header is stacked, and
 `MonitorHeartbeatBar` hides its hover readout below the same width. When you add a
-widget or a size, check every combination in `WIDGET_SIZE_RULES` against the
+widget or a size, check every combination in `WIDGET_DEFINITIONS` against the
 shortest row height (`lg:auto-rows-[60px]`).
 
 **Validation.** zod schemas in `shared/utils/validation.ts` are the single source
