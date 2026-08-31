@@ -369,47 +369,55 @@ written by an effect afterwards.
 
 A setting several components read at once needs the `useState` in front of the
 cookie that `useMonitorPathPreference` describes above; the response time chart
-has two of them. `useLatencySeries` holds the curves it draws (`min`, `avg`,
-`max`, at least one of them) and `useLatencySpread` how the two bounds are
-drawn; `useLatencyChartPreferences()` binds both to their cookies once from the
+has one. `useLatencyChartStyle` holds how it is drawn, and
+`useLatencyChartStylePreference()` binds it to its cookie once from the
 dashboard layout. The chart reads that state rather than taking props: what is
 shown belongs to whoever is looking, not to the page that happens to be drawing.
 
-The one exception is a widget, which may pin a spread through `config.spread`
-and defaults to `inherit` — a dashboard is composed once and read by everybody,
-so its author can insist on a look without taking the reader's away everywhere
-else. Only the spread; the curves stay the reader's throughout.
+The one exception is a widget, which may pin a style through `config.style` and
+defaults to `inherit` — a dashboard is composed once and read by everybody, so
+its author can insist on a look without taking the reader's away everywhere
+else.
 
-**Drawing the spread.** Min and max are what the checks inside one bucket
-ranged over rather than series of their own, which is what the three treatments
-in `LATENCY_SPREADS` differ over. `band` fills between them and draws both
-edges as curves, dropping the average's gradient — two translucent primaries
-over one another read as a third shade that means nothing. `ticks` gives every
-bucket its own stroke and draws nothing between two of them, which is the
-honest reading: an extreme is one check, not a value the monitor held until the
-next. `neutral` takes the fill out of the primary colour instead, so the
-average keeps it. A lone bound has no spread to draw and falls back to a thin
-curve in every treatment.
+`serializeWidget` reads legacy `config.spread` values as `config.style` when no
+style is set, preserving existing widget choices. The next save stores the new
+field. The browser preference uses a new cookie; old series and spread cookies
+are ignored, so readers without a new preference start with `average`.
 
-The axis maximum follows what is drawn, and with the maxima on it holds all but
-the slowest `SCALE_QUANTILE` of the readings. Scaling to the true peak is what
-a chart normally does, but a bucket maximum is a single check: one timed out
+**Drawing the chart.** `LATENCY_CHART_STYLES` is that one setting, and its four
+entries are whole charts rather than curves to be combined. The average is
+always drawn; `average` draws nothing besides it. Min and max are what the
+checks inside one bucket ranged over rather than series of their own, so they
+only ever appear as a pair, and the other three styles differ over how that
+range is drawn. `band` fills between them and draws both edges as curves,
+dropping the average's gradient — two translucent primaries over one another
+read as a third shade that means nothing. `ticks` gives every bucket its own
+stroke and draws nothing between two of them, which is the honest reading: an
+extreme is one check, not a value the monitor held until the next. `neutral`
+takes the fill out of the primary colour instead, so the average keeps it.
+
+A widget hands its pinned style down as `chart-style` to distinguish the chart
+setting from the native inline `style` attribute.
+
+The axis maximum follows what is drawn, and under a spread style it holds all
+but the slowest `SCALE_QUANTILE` of the readings. Scaling to the true peak is
+what a chart normally does, but a bucket maximum is a single check: one timed out
 request would set the scale for a whole month and press the series flat against
 the baseline, which is the one thing the bounds were turned on to avoid. Those
 few readings run off the top instead — `yOf` clamps to the edge — and the
 tooltip still reports every one of them. With the average alone nothing is cut,
 because a bucket average is already a reading over many checks.
 
-**Controls inside a widget.** `MonitorLatencySeriesToggle` is offered in the
-widget header as well as on the detail page and in the settings, so a reader who
-only ever opens dashboards can reach it. The spread is not: it is a look rather
-than a reading, so it lives in the settings and in the widget's own form. `useWidgetEditing` is how a widget
-learns that it is being arranged rather than read — provided by the grid in edit
-mode and by the settings preview — and the toggle steps aside there, because the
-resize and drag buttons occupy the same corner. It is an inject rather than a
-prop: every widget takes the same two props, which is what lets the grid and the
-preview render any of them without a branch. A cell narrower than `24rem` drops
-the control instead of squeezing it next to the caption.
+**Controls inside a widget.** No widget header offers the reader a setting: the
+chart style is a look rather than a reading, so it is chosen in the settings and
+pinned in the widget's own form. The machinery for one is still in place.
+`DashboardWidgetShell`'s `actions` slot draws a control ahead of the caption and
+drops it on a cell narrower than `24rem` instead of squeezing it in, and
+`useWidgetEditing` is how a widget learns that it is being arranged rather than
+read — provided by the grid in edit mode and by the settings preview — so a
+control can step aside where the resize and drag buttons occupy the same corner.
+It is an inject rather than a prop: every widget takes the same two props, which
+is what lets the grid and the preview render any of them without a branch.
 
 **Morphing icons.** `AppMorphIcon` is the shared wrapper around morphicons. It
 resolves stable Lucide `IconNode` references from `MORPH_ICONS` in

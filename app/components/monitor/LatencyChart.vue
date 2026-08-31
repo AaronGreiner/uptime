@@ -1,12 +1,17 @@
 <script setup lang="ts">
-import type { LatencySpread, MonitorStatsPoint } from '#shared/types/monitor'
+import type { LatencyChartStyle, MonitorStatsPoint } from '#shared/types/monitor'
+import { latencyStyleShowsSpread } from '#shared/utils/monitor'
 
 const props = defineProps<{
   points: MonitorStatsPoint[]
   /** Fixed plot height in pixels. Omit to fill the available space. */
   height?: number
-  /** Overrides the reader's spread treatment, for a widget that insists on one. */
-  spread?: LatencySpread
+  /**
+   * Overrides the reader's chart style, for a widget that insists on one.
+   * Named apart from the `style` attribute, which Vue applies to the root
+   * element whatever a component declares.
+   */
+  chartStyle?: LatencyChartStyle
 }>()
 
 /**
@@ -42,24 +47,19 @@ function quantileOf(values: number[], share: number): number {
   return sorted[Math.floor((sorted.length - 1) * share)]!
 }
 
-const { t } = useI18n()
 const { formatLatency, formatNumber, formatTime, formatDate } = useFormatters()
 
 /**
- * The curves to draw, from the reader's own browser rather than from a prop:
- * the setting belongs to whoever is looking, not to a widget or a page, so the
- * detail chart and every dashboard tile answer to the same switch.
+ * How the chart is drawn. The reader's own setting unless a widget hands one
+ * down: a dashboard is composed once and read by everybody, so its author may
+ * pin a look, while everything else follows whoever is looking.
  */
-const { shows } = useLatencySeriesToggle()
+const readerStyle = useLatencyChartStyle()
 
-/**
- * How the spread is drawn. The reader's setting unless a widget hands one down:
- * a dashboard is composed once and read by everybody, so its author may pin a
- * look, while everything else follows whoever is looking.
- */
-const readerSpread = useLatencySpread()
+const activeStyle = computed<LatencyChartStyle>(() => props.chartStyle ?? readerStyle.value)
 
-const spread = computed<LatencySpread>(() => props.spread ?? readerSpread.value)
+/** The average is always drawn; the three other styles add the spread around it. */
+const showsSpread = computed(() => latencyStyleShowsSpread(activeStyle.value))
 
 const chartId = useId()
 
@@ -165,12 +165,11 @@ const bucketLabel = computed(() => {
  */
 const yMax = computed(() => {
   const drawn = props.points.map(point => Math.max(
-    shows('avg') ? point.avgLatencyMs ?? 0 : 0,
-    shows('min') ? point.minLatencyMs ?? 0 : 0,
-    shows('max') ? point.maxLatencyMs ?? 0 : 0
+    point.avgLatencyMs ?? 0,
+    showsSpread.value ? point.maxLatencyMs ?? 0 : 0
   ))
 
-  const peak = Math.max(shows('max') ? quantileOf(drawn, SCALE_QUANTILE) : Math.max(...drawn, 0), 1)
+  const peak = Math.max(showsSpread.value ? quantileOf(drawn, SCALE_QUANTILE) : Math.max(...drawn, 0), 1)
   const magnitude = 10 ** Math.floor(Math.log10(peak))
   const step = [1, 2, 2.5, 5, 10].find(factor => factor * magnitude >= peak) ?? 10
 
@@ -243,28 +242,18 @@ function segmentsOf(valueOf: (point: MonitorStatsPoint) => number | null): PlotP
   })))
 }
 
-const segments = computed(() => shows('avg') ? segmentsOf(point => point.avgLatencyMs) : [])
+const segments = computed(() => segmentsOf(point => point.avgLatencyMs))
 
 /**
  * The spread of the checks inside each bucket, as runs holding both bounds.
  *
  * Drawn as one filled band rather than as two curves: min and max are not
  * series of their own, they are the two edges of what a single bucket saw, and
- * the area between them is the reading. A single bound on its own has no band
- * to fill and falls back to a line below.
+ * the area between them is the reading.
  */
-const bandRuns = computed(() => shows('min') && shows('max')
+const bandRuns = computed(() => showsSpread.value
   ? runs(point => point.minLatencyMs !== null && point.maxLatencyMs !== null ? point.minLatencyMs : null)
   : [])
-
-/** A lone bound, drawn as a thin curve where the band cannot be. */
-const boundSegments = computed(() => {
-  if (shows('min') === shows('max')) {
-    return []
-  }
-
-  return segmentsOf(point => shows('min') ? point.minLatencyMs : point.maxLatencyMs)
-})
 
 /**
  * Monotone cubic interpolation (Fritsch–Carlson), emitted as one Bézier per
@@ -340,7 +329,7 @@ function linePathsOf(source: PlotPoint[][]): string[] {
  * drawn between two buckets, which is the whole point of the treatment — an
  * extreme is a single check, not a value the monitor held until the next one.
  */
-const spreadTicks = computed(() => spread.value !== 'ticks'
+const spreadTicks = computed(() => activeStyle.value !== 'ticks'
   ? []
   : bandRuns.value.flatMap(run => run.map(point => ({
       key: point.bucketStart,
@@ -350,7 +339,7 @@ const spreadTicks = computed(() => spread.value !== 'ticks'
     }))))
 
 /** `band`: the two edges of the fill, drawn as curves of their own. */
-const bandEdgePaths = computed(() => spread.value !== 'band'
+const bandEdgePaths = computed(() => activeStyle.value !== 'band'
   ? []
   : [
       ...linePathsOf(bandRuns.value.map(run => run.map(point => ({ x: xOf(point.bucketStart), y: yOf(point.maxLatencyMs!) })))),
@@ -359,15 +348,13 @@ const bandEdgePaths = computed(() => spread.value !== 'band'
 
 const linePaths = computed(() => linePathsOf(segments.value))
 
-const boundPaths = computed(() => linePathsOf(boundSegments.value))
-
 /**
  * The fill below the average. Dropped under a filled band of the same colour:
  * two translucent primaries over one another read as a third shade that means
  * nothing. The other two treatments keep it — `ticks` has no fill to collide
  * with, and `neutral` deliberately colours the two apart.
  */
-const areaPaths = computed(() => bandRuns.value.length && spread.value === 'band'
+const areaPaths = computed(() => bandRuns.value.length && activeStyle.value === 'band'
   ? []
   : segments.value
       .filter(segment => segment.length > 1)
@@ -387,7 +374,7 @@ const areaPaths = computed(() => bandRuns.value.length && spread.value === 'band
  * two bounds would have been on their own. A run of one bucket has no curve to
  * close and is drawn as the sliver between its two readings.
  */
-const bandPaths = computed(() => (spread.value === 'ticks' ? [] : bandRuns.value).map((run) => {
+const bandPaths = computed(() => (activeStyle.value === 'ticks' ? [] : bandRuns.value).map((run) => {
   const upper = run.map(point => ({ x: xOf(point.bucketStart), y: yOf(point.maxLatencyMs!) }))
   const lower = [...run].reverse().map(point => ({ x: xOf(point.bucketStart), y: yOf(point.minLatencyMs!) }))
   const first = upper[0]!
@@ -464,7 +451,7 @@ const showTooltip = computed(() => hasData.value && isHovering.value && hoveredP
 const hoveredRatio = computed(() => hoveredPoint.value ? xOf(hoveredPoint.value.bucketStart) / VIEW_WIDTH : 0)
 
 /** Marker position, on the average — the only curve a single point stands for. */
-const hoveredHeight = computed(() => !shows('avg') || hoveredPoint.value?.avgLatencyMs == null
+const hoveredHeight = computed(() => hoveredPoint.value?.avgLatencyMs == null
   ? null
   : yOf(hoveredPoint.value.avgLatencyMs) / VIEW_HEIGHT)
 
@@ -477,9 +464,8 @@ const hoveredPeak = computed(() => {
   }
 
   const drawn = [
-    shows('max') ? point.maxLatencyMs : null,
-    shows('avg') ? point.avgLatencyMs : null,
-    shows('min') ? point.minLatencyMs : null
+    showsSpread.value ? point.maxLatencyMs : null,
+    point.avgLatencyMs
   ].filter(value => value !== null)
 
   return drawn.length ? yOf(Math.max(...drawn)) / VIEW_HEIGHT : null
@@ -493,33 +479,21 @@ const hoveredPeak = computed(() => {
 const tooltipAtTop = computed(() => hoveredPeak.value === null || hoveredPeak.value >= TOOLTIP_FLIP_RATIO)
 
 /**
- * The bounds of the hovered bucket, as far as they are drawn: the span for a
- * band, a named single reading for a lone bound, nothing where neither is
- * shown. The tooltip reports what the chart draws — a number for a curve that
- * is not there reads as a second series rather than as extra detail.
+ * The span of the hovered bucket, where a style draws one. The tooltip reports
+ * what the chart draws — a number for something that is not on screen reads as
+ * a second series rather than as extra detail.
  */
 const boundsLabel = computed(() => {
   const point = hoveredPoint.value
 
-  if (!point) {
+  if (!showsSpread.value || !point || point.minLatencyMs === null || point.maxLatencyMs === null) {
     return null
   }
 
-  const min = shows('min') ? point.minLatencyMs : null
-  const max = shows('max') ? point.maxLatencyMs : null
-
-  if (min !== null && max !== null) {
-    // A bucket holding a single check has no span to report next to its average.
-    return min === max
-      ? (shows('avg') ? null : formatLatency(min))
-      : `${formatNumber(min)}–${formatLatency(max)}`
-  }
-
-  if (min !== null) {
-    return `${t('monitor.latencySeries.min')} ${formatLatency(min)}`
-  }
-
-  return max === null ? null : `${t('monitor.latencySeries.max')} ${formatLatency(max)}`
+  // A bucket holding a single check has no span to report next to its average.
+  return point.minLatencyMs === point.maxLatencyMs
+    ? null
+    : `${formatNumber(point.minLatencyMs)}–${formatLatency(point.maxLatencyMs)}`
 })
 
 /**
@@ -669,7 +643,7 @@ function onPointerMove(event: PointerEvent) {
           v-for="(path, index) in bandPaths"
           :key="`band-${index}`"
           :d="path"
-          :class="spread === 'neutral' ? 'fill-neutral-500/25' : 'fill-primary/10'"
+          :class="activeStyle === 'neutral' ? 'fill-neutral-500/25' : 'fill-primary/10'"
         />
 
         <path
@@ -691,18 +665,6 @@ function onPointerMove(event: PointerEvent) {
           :y2="tick.y2"
           class="stroke-primary/25"
           stroke-width="1"
-          vector-effect="non-scaling-stroke"
-        />
-
-        <path
-          v-for="(path, index) in boundPaths"
-          :key="`bound-${index}`"
-          :d="path"
-          fill="none"
-          class="stroke-primary/50"
-          stroke-width="1.5"
-          stroke-linecap="round"
-          stroke-linejoin="round"
           vector-effect="non-scaling-stroke"
         />
 
@@ -776,14 +738,10 @@ function onPointerMove(event: PointerEvent) {
             {{ bucketLabel(hoveredPoint.bucketStart) }}
           </div>
           <div class="flex items-baseline gap-1.5">
-            <span
-              v-if="shows('avg')"
-              class="font-medium tabular-nums"
-            >{{ formatLatency(hoveredPoint.avgLatencyMs) }}</span>
+            <span class="font-medium tabular-nums">{{ formatLatency(hoveredPoint.avgLatencyMs) }}</span>
             <span
               v-if="boundsLabel"
-              class="tabular-nums"
-              :class="shows('avg') ? 'text-dimmed' : 'font-medium'"
+              class="text-dimmed tabular-nums"
             >{{ boundsLabel }}</span>
           </div>
           <div

@@ -1,4 +1,4 @@
-import type { LatencySpread } from './monitor'
+import type { LatencyChartStyle } from './monitor'
 import type { StatsRange } from './stats'
 
 /** Widget kinds that can be placed on a dashboard grid. */
@@ -45,11 +45,11 @@ export interface WidgetConfig {
   /** Order used by monitor lists. */
   sort?: WidgetSort
   /**
-   * Spread treatment of a latency chart, or `inherit` to follow whatever the
-   * reader has set for themselves. A dashboard is composed once and read by
+   * How a latency chart is drawn, or `inherit` to follow whatever the reader
+   * has set for themselves. A dashboard is composed once and read by
    * everybody, so a widget may insist on a look — but does not have to.
    */
-  spread?: LatencySpread | 'inherit'
+  style?: LatencyChartStyle | 'inherit'
 }
 
 export interface DashboardWidget {

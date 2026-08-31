@@ -11,16 +11,12 @@ const props = defineProps<{
 
 const { monitorPath } = useMonitorPath()
 
-// The curves are a per-reader setting, offered here as well as on the detail
-// page — but not while the tile is being resized or dragged.
-const editing = useWidgetEditing()
-
 const monitor = computed(() => props.monitors.find(entry => entry.id === props.widget.monitorId) ?? null)
 const range = computed<StatsRange>(() => props.widget.config.range ?? WIDGET_CONFIG_DEFAULTS.range)
 
-/** `inherit` leaves the treatment to the reader, which is what the chart does with no prop. */
-const spread = computed(() => {
-  const configured = props.widget.config.spread ?? WIDGET_CONFIG_DEFAULTS.spread
+/** `inherit` leaves the style to the reader, which is what the chart does with no prop. */
+const chartStyle = computed(() => {
+  const configured = props.widget.config.style ?? WIDGET_CONFIG_DEFAULTS.style
 
   return configured === 'inherit' ? undefined : configured
 })
@@ -52,13 +48,6 @@ const { data, status } = useMonitorStats(() => props.widget.monitorId, range)
       />
     </template>
 
-    <template
-      v-if="!editing"
-      #actions
-    >
-      <MonitorLatencySeriesToggle size="xs" />
-    </template>
-
     <template #default>
       <USkeleton
         v-if="status === 'pending' && !data"
@@ -68,7 +57,7 @@ const { data, status } = useMonitorStats(() => props.widget.monitorId, range)
         v-else
         class="h-full min-h-0"
         :points="data?.points ?? []"
-        :spread="spread"
+        :chart-style="chartStyle"
       />
     </template>
   </DashboardWidgetShell>

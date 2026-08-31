@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Heartbeat, MonitorStatsPoint, MonitorUptime } from '#shared/types/monitor'
 import type { StatsRange } from '#shared/types/stats'
-import { MONITOR_RECENT_CHECK_LIMIT, MONITOR_RECENT_TABLE_ROWS, appendHeartbeat } from '#shared/utils/monitor'
+import { MONITOR_RECENT_CHECK_LIMIT, MONITOR_RECENT_TABLE_ROWS, appendHeartbeat, latencyStyleShowsSpread } from '#shared/utils/monitor'
 import { STATS_RANGES, isStatsRange } from '#shared/utils/stats'
 
 const route = useRoute()
@@ -33,18 +33,16 @@ useSeoMeta({ title: () => monitorPath(monitor.value) || t('monitor.title') })
 // The chosen range carries over to the next monitor and survives a reload.
 const range = useUiPreference<StatsRange>('stats-range', () => '24h', isStatsRange)
 
-const latencySeries = useLatencySeries()
+const latencyChartStyle = useLatencyChartStyle()
 
 /**
- * The heading below the chart title names what is drawn. With the average alone
- * that is the sentence it has always been; any other selection is listed, so
- * the line never promises an average the reader has switched off.
+ * The heading below the chart title names what is drawn, so it follows the
+ * reader's chart style: the three styles that add the spread around the average
+ * say so rather than promising an average alone.
  */
-const chartDescription = computed(() => latencySeries.value.length === 1 && latencySeries.value[0] === 'avg'
-  ? t('monitor.detail.avgResponseTime')
-  : t('monitor.detail.seriesShown', {
-      series: latencySeries.value.map(series => t(`monitor.latencySeries.${series}`)).join(' · ')
-    }))
+const chartDescription = computed(() => latencyStyleShowsSpread(latencyChartStyle.value)
+  ? t('monitor.detail.avgResponseTimeWithSpread')
+  : t('monitor.detail.avgResponseTime'))
 
 const { data: stats, refresh: refreshStats } = await useAsyncData(
   () => `monitor-stats-${monitorId.value}-${range.value}`,
@@ -377,7 +375,6 @@ const recentChecks = computed(() => [...(heartbeats.value ?? [])].reverse().slic
               </p>
             </div>
             <div class="flex flex-wrap items-center gap-2">
-              <MonitorLatencySeriesToggle />
               <USelectMenu
                 v-model="range"
                 :items="rangeItems"

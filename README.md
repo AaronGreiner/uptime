@@ -207,6 +207,18 @@ Windows are read against one time zone for the whole instance, set on the admin
 settings page, so a window at 03:00 stays at 03:00 across a daylight saving
 change.
 
+### Response time charts
+
+Choose the chart style under **Settings → General → Response time chart**.
+**Average only** is the default. **Outlined band**, **Ticks per bucket** and
+**Neutral band** also show the minimum–maximum range around the average.
+Minimum, average and maximum cannot be toggled individually.
+
+The choice is stored in your browser and applies to monitor details and dashboard
+charts. A latency widget can override it through **Chart style** in its settings;
+**From settings** follows the browser preference. Chart headers have no style
+selector.
+
 ### History and storage
 
 Every check writes one row to `heartbeats`. A maintenance job rolls those rows

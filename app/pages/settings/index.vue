@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { MONITOR_PATH_FORMATS } from '#shared/utils/group'
-import { LATENCY_SPREADS } from '#shared/utils/monitor'
+import { LATENCY_CHART_STYLES } from '#shared/utils/monitor'
 
 const { t, locale, locales, setLocale } = useI18n()
 const colorMode = useColorMode()
 const { morphMotion } = useMorphMotion()
 const monitorPathFormat = useMonitorPathFormat()
-const latencySpread = useLatencySpread()
+const latencyChartStyle = useLatencyChartStyle()
 
 useSeoMeta({ title: () => t('settings.general') })
 
@@ -27,8 +27,8 @@ const monitorPathItems = computed(() => MONITOR_PATH_FORMATS.map(value => ({
   value
 })))
 
-const latencySpreadItems = computed(() => LATENCY_SPREADS.map(value => ({
-  label: t(`monitor.latencySpread.${value}`),
+const latencyStyleItems = computed(() => LATENCY_CHART_STYLES.map(value => ({
+  label: t(`monitor.latencyStyle.${value}`),
   value
 })))
 
@@ -108,8 +108,8 @@ const language = computed({
               />
             </UFormField>
 
-            <!-- Below the control rather than above it, so the four selects
-                 stay on one line with each other. -->
+            <!-- Hints below the control rather than above it, so a field
+                 carrying one keeps its select level with its neighbour. -->
             <UFormField
               :label="$t('settings.monitorPath')"
               :help="$t('settings.monitorPathHint')"
@@ -124,22 +124,12 @@ const language = computed({
             </UFormField>
 
             <UFormField
-              :label="$t('settings.latencySeries')"
-              :help="$t('settings.latencySeriesHint')"
-            >
-              <MonitorLatencySeriesToggle
-                block
-                size="md"
-              />
-            </UFormField>
-
-            <UFormField
-              :label="$t('settings.latencySpread')"
-              :help="$t('settings.latencySpreadHint')"
+              :label="$t('settings.latencyStyle')"
+              :help="$t('settings.latencyStyleHint')"
             >
               <USelectMenu
-                v-model="latencySpread"
-                :items="latencySpreadItems"
+                v-model="latencyChartStyle"
+                :items="latencyStyleItems"
                 value-key="value"
                 :search-input="false"
                 class="w-full"

@@ -1,5 +1,6 @@
 import { asc, eq, max } from 'drizzle-orm'
 import type { Dashboard, DashboardWidget, DashboardWithWidgets } from '../../shared/types/dashboard'
+import { isLatencyChartStyle } from '../../shared/utils/monitor'
 import { clampWidgetSize } from '../../shared/utils/widget'
 import { dashboards, dashboardWidgets } from '../database/schema'
 import type { DashboardRow, DashboardWidgetRow } from '../database/schema'
@@ -19,13 +20,23 @@ export function serializeDashboard(row: DashboardRow): Dashboard {
 
 export function serializeWidget(row: DashboardWidgetRow): DashboardWidget {
   const size = clampWidgetSize(row.type, row.width, row.height)
+  const config = { ...row.config }
+
+  // Older widgets stored the chart treatment as `spread`. Preserve that choice
+  // on read; the next save writes the current `style` field instead.
+  if (row.type === 'latency-chart' && 'spread' in config) {
+    if (config.style === undefined && (isLatencyChartStyle(config.spread) || config.spread === 'inherit')) {
+      config.style = config.spread
+    }
+    delete config.spread
+  }
 
   return {
     id: row.id,
     dashboardId: row.dashboardId,
     type: row.type,
     monitorId: row.monitorId,
-    config: row.config ?? {},
+    config,
     position: row.position,
     ...size,
     createdAt: row.createdAt,

@@ -16,9 +16,9 @@ useLiveMonitors()
 // Binds the breadcrumb format to its cookie, once, for every label below.
 useMonitorPathPreference()
 
-// The same for the response time charts, whose curves and spread treatment the
-// detail page and the dashboard tiles share.
-useLatencyChartPreferences()
+// The same for the response time charts, whose style the detail page and the
+// dashboard tiles share.
+useLatencyChartStylePreference()
 
 // The zone the maintenance windows are written in, read once for every form
 // that draws one. The monitor states themselves arrive resolved from the server.

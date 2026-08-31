@@ -139,8 +139,7 @@
     "detail": {
       "responseTime": "Antwortzeit",
       "avgResponseTime": "Durchschnittliche Antwortzeit",
-      "latencySeries": "Angezeigte Kurven",
-      "seriesShown": "Angezeigt: {series}",
+      "avgResponseTimeWithSpread": "Durchschnittliche Antwortzeit mit Spannweite",
       "lastCheck": "Letzte Prüfung",
       "nextCheck": "Nächste Prüfung",
       "uptime": "Verfügbarkeit",
@@ -158,12 +157,8 @@
       "interval": "alle {seconds}",
       "collecting": "Sammelt noch Daten …"
     },
-    "latencySeries": {
-      "min": "Min",
-      "avg": "Ø",
-      "max": "Max"
-    },
-    "latencySpread": {
+    "latencyStyle": {
+      "average": "Nur Durchschnitt",
       "band": "Fläche mit Kanten",
       "ticks": "Striche je Messpunkt",
       "neutral": "Neutrale Fläche"
@@ -373,7 +368,7 @@
       "title": "Titel",
       "monitor": "Monitor",
       "range": "Zeitraum",
-      "spread": "Spannweite",
+      "style": "Darstellung",
       "level": "Größe",
       "monitors": "Monitore",
       "group": "Gruppe",
@@ -398,7 +393,7 @@
       "uptime": "Geringste Verfügbarkeit",
       "latency": "Langsamste"
     },
-    "spread": {
+    "style": {
       "inherit": "Aus den Einstellungen"
     },
     "scope": {
@@ -642,10 +637,8 @@
     "iconMotion": "Symbolanimationen",
     "monitorPath": "Monitornamen",
     "monitorPathHint": "Wie viel vom Gruppenpfad ein Monitor im Namen trägt.",
-    "latencySeries": "Antwortzeit-Diagramm",
-    "latencySeriesHint": "Welche Kurven jedes Antwortzeit-Diagramm zeichnet.",
-    "latencySpread": "Spannweite Min–Max",
-    "latencySpreadHint": "Wie die Spannweite gezeichnet wird, solange Min oder Max angezeigt werden.",
+    "latencyStyle": "Antwortzeit-Diagramm",
+    "latencyStyleHint": "Wie jedes Antwortzeit-Diagramm seine Messwerte zeichnet.",
     "themeOption": {
       "light": "Hell",
       "dark": "Dunkel",

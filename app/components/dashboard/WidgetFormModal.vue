@@ -4,7 +4,7 @@ import type { DashboardWidget, WidgetHeight, WidgetWidth } from '#shared/types/d
 import type { MonitorWithState } from '#shared/types/monitor'
 import type { StatsRange } from '#shared/types/stats'
 import { joinMonitorPath, monitorGroupIcon } from '#shared/utils/group'
-import { LATENCY_SPREADS } from '#shared/utils/monitor'
+import { LATENCY_CHART_STYLES } from '#shared/utils/monitor'
 import { fuzzyScore } from '#shared/utils/search'
 import { STATS_RANGES } from '#shared/utils/stats'
 import {
@@ -88,7 +88,7 @@ watch(() => state.value.type, (type, previous) => {
   state.value.width = size.width
   state.value.height = size.height
 
-  for (const field of ['range', 'limit', 'spread'] as const) {
+  for (const field of ['range', 'limit', 'style'] as const) {
     if (!widgetHasField(previous, field)) {
       Object.assign(state.value.config, { [field]: defaults[field] })
     }
@@ -166,9 +166,9 @@ const targetItems = computed(() => WIDGET_SLA_TARGETS.map(target => ({
  * `inherit` first and by default: a dashboard is read by people who have their
  * own setting, and a widget only overrides it where its author meant to.
  */
-const spreadItems = computed(() => [
-  { label: t('widget.spread.inherit'), value: 'inherit' as const },
-  ...LATENCY_SPREADS.map(spread => ({ label: t(`monitor.latencySpread.${spread}`), value: spread }))
+const styleItems = computed(() => [
+  { label: t('widget.style.inherit'), value: 'inherit' as const },
+  ...LATENCY_CHART_STYLES.map(style => ({ label: t(`monitor.latencyStyle.${style}`), value: style }))
 ])
 
 const groupItems = computed(() => [
@@ -395,13 +395,13 @@ async function onSubmit(event: FormSubmitEvent<WidgetInput>) {
             </UFormField>
 
             <UFormField
-              v-if="hasField('spread')"
-              :label="$t('widget.fields.spread')"
-              name="config.spread"
+              v-if="hasField('style')"
+              :label="$t('widget.fields.style')"
+              name="config.style"
             >
               <USelectMenu
-                v-model="state.config.spread"
-                :items="spreadItems"
+                v-model="state.config.style"
+                :items="styleItems"
                 value-key="value"
                 :search-input="false"
                 class="w-full"
