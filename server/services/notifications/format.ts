@@ -1,5 +1,5 @@
-import type { NotificationEvent, NotificationLocale } from '../../../shared/types/notification'
-import { NOTIFICATION_EVENT_KEYS } from '../../../shared/utils/notification'
+import type { MonitorNotificationEvent, NotificationEvent, NotificationLocale } from '../../../shared/types/notification'
+import { NOTIFICATION_EVENT_KEYS, isMonitorNotificationEvent } from '../../../shared/utils/notification'
 
 /** Locale identifiers for `Intl`, which does not know the short codes. */
 const INTL_LOCALES: Record<NotificationLocale, string> = { en: 'en-GB', de: 'de-DE' }
@@ -12,6 +12,13 @@ export type NotificationTone = 'down' | 'up' | 'warning'
 export function toneFor(event: NotificationEvent): NotificationTone {
   if (event.type === 'monitor.up') {
     return 'up'
+  }
+
+  // A restored uplink is not good news on its own: the instance watched nothing
+  // for a while and left a hole in its own record, which is the part the reader
+  // has to see. A green tick would say there is nothing here to look at.
+  if (event.type === 'instance.uplink-restored') {
+    return 'warning'
   }
 
   return event.type === 'monitor.certificate-expiring' ? 'warning' : 'down'
@@ -43,16 +50,41 @@ export function eventKey(event: NotificationEvent): string {
 }
 
 /** Group breadcrumb followed by the monitor, ready to embed in a headline. */
-export function eventMonitorLabel(event: NotificationEvent): string {
+export function eventMonitorLabel(event: MonitorNotificationEvent): string {
   return [...(event.monitor.groupPath ?? []), event.monitor.name].join(' › ')
 }
 
+/**
+ * Placeholders the headline, the subject and the summary are rendered with.
+ *
+ * A monitor event is named after its monitor; an instance event has none to
+ * name, so it is described by what happened instead — how long it lasted and
+ * how much of the record it cost.
+ */
+function eventParams(event: NotificationEvent, t: Translate): Record<string, string | number> {
+  if (isMonitorNotificationEvent(event)) {
+    return { monitor: eventMonitorLabel(event) }
+  }
+
+  return {
+    duration: event.durationSeconds === null ? '' : formatDuration(event.durationSeconds, t),
+    monitors: event.affectedMonitors
+  }
+}
+
 export function eventTitle(event: NotificationEvent, t: Translate): string {
-  return t(`notification.event.${eventKey(event)}.title`, { monitor: eventMonitorLabel(event) })
+  return t(`notification.event.${eventKey(event)}.title`, eventParams(event, t))
 }
 
 export function eventSubject(event: NotificationEvent, t: Translate): string {
-  return t(`notification.event.${eventKey(event)}.subject`, { monitor: eventMonitorLabel(event) })
+  return t(`notification.event.${eventKey(event)}.subject`, eventParams(event, t))
+}
+
+/** Word on the badge above the headline: the monitor's status, or the kind of event. */
+export function eventBadge(event: NotificationEvent, t: Translate): string {
+  return isMonitorNotificationEvent(event)
+    ? t(`status.${event.status}`)
+    : t(`notification.event.${eventKey(event)}.badge`)
 }
 
 /**
@@ -60,7 +92,7 @@ export function eventSubject(event: NotificationEvent, t: Translate): string {
  * the generic wording whenever there is one, so it wins.
  */
 export function eventSummary(event: NotificationEvent, t: Translate): string {
-  return event.message?.trim() || t(`notification.event.${eventKey(event)}.summary`)
+  return event.message?.trim() || t(`notification.event.${eventKey(event)}.summary`, eventParams(event, t))
 }
 
 /**
@@ -103,15 +135,28 @@ export function formatDuration(seconds: number, t: Translate): string {
 }
 
 /**
- * Link back to the monitor, or null when the instance does not know its own
- * public address. A message without a button beats one pointing at localhost.
+ * The instance's own public address, or null when it does not know one. A
+ * message without a button beats one pointing at localhost.
  */
+function appBaseUrl(): string | null {
+  return useRuntimeConfig().public.appUrl.trim().replace(/\/+$/, '') || null
+}
+
 export function monitorUrl(monitorId: number): string | null {
-  const base = useRuntimeConfig().public.appUrl.trim().replace(/\/+$/, '')
+  const base = appBaseUrl()
 
   // Id zero is the placeholder monitor a test message falls back to when the
   // instance has none of its own; there is no page to send anybody to.
   return base && monitorId > 0 ? `${base}/monitors/${monitorId}` : null
+}
+
+/** Where the message's button goes: the monitor, or the instance itself. */
+export function eventLink(event: NotificationEvent): string | null {
+  return isMonitorNotificationEvent(event) ? monitorUrl(event.monitor.id) : appBaseUrl()
+}
+
+export function eventLinkLabel(event: NotificationEvent, t: Translate): string {
+  return t(isMonitorNotificationEvent(event) ? 'notification.action.openMonitor' : 'notification.action.openApp')
 }
 
 export interface FactOptions {
@@ -135,24 +180,38 @@ export function eventFacts(
   const renderTimestamp = options.renderTimestamp ?? (seconds => formatTimestamp(seconds, locale, timeZone))
   const renderDate = options.renderDate ?? (seconds => formatDate(seconds, locale, timeZone))
 
-  const facts = [
-    { label: t('notification.field.target'), value: event.monitor.target },
-    { label: t('notification.field.status'), value: t(`status.${event.status}`) }
-  ]
+  const facts = isMonitorNotificationEvent(event)
+    ? [
+        { label: t('notification.field.target'), value: event.monitor.target },
+        { label: t('notification.field.status'), value: t(`status.${event.status}`) }
+      ]
+    : [
+        { label: t('notification.field.fault'), value: t(`notification.fault.${event.fault ?? 'network'}`) },
+        { label: t('notification.field.affectedMonitors'), value: String(event.affectedMonitors) }
+      ]
 
-  if (event.latencyMs !== null) {
-    facts.push({ label: t('notification.field.latency'), value: `${event.latencyMs} ms` })
-  }
+  if (isMonitorNotificationEvent(event)) {
+    if (event.latencyMs !== null) {
+      facts.push({ label: t('notification.field.latency'), value: `${event.latencyMs} ms` })
+    }
 
-  if (event.certificateExpiresAt !== null && event.type === 'monitor.certificate-expiring') {
-    facts.push({
-      label: t('notification.field.certificateExpiresAt'),
-      value: renderDate(event.certificateExpiresAt)
-    })
+    if (event.certificateExpiresAt !== null && event.type === 'monitor.certificate-expiring') {
+      facts.push({
+        label: t('notification.field.certificateExpiresAt'),
+        value: renderDate(event.certificateExpiresAt)
+      })
+    }
   }
 
   if (event.durationSeconds !== null) {
-    facts.push({ label: t('notification.field.duration'), value: formatDuration(event.durationSeconds, t) })
+    facts.push({
+      // The same number means two different things: how long the monitor held
+      // the status it just left, and how long the instance was unable to look.
+      label: t(isMonitorNotificationEvent(event)
+        ? 'notification.field.duration'
+        : 'notification.field.offlineDuration'),
+      value: formatDuration(event.durationSeconds, t)
+    })
   }
 
   facts.push({ label: t('notification.field.occurredAt'), value: renderTimestamp(event.occurredAt) })

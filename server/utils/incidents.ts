@@ -56,12 +56,13 @@ function listIncidentsFromHeartbeats(monitorIds: number[], since: number): Incid
       from heartbeats
       where monitor_id in ${monitorIds}
         and checked_at >= ${since}
-        -- Checks that ran under maintenance are taken out before the islands are
-        -- formed, not filtered out afterwards. The consequence is deliberate: an
-        -- outage running into a window and one running out of it become a single
-        -- incident, because the monitor never came back up in between and the
-        -- window is not what ended the outage.
-        and reported_status <> 'maintenance'
+        -- Checks that were recorded but not judged are taken out before the
+        -- islands are formed, not filtered out afterwards. The consequence is
+        -- deliberate: an outage running into a maintenance window, or across a
+        -- moment the instance had no uplink, and one running out of it become a
+        -- single incident, because the monitor never came back up in between and
+        -- neither the window nor our own network is what ended the outage.
+        and reported_status not in ${unjudgedStatuses}
     ),
     islands as (
       select
@@ -83,7 +84,7 @@ function listIncidentsFromHeartbeats(monitorIds: number[], since: number): Incid
         select min(h.checked_at) from heartbeats h
         where h.monitor_id = islands.monitor_id
           and h.status = 'up'
-          and h.reported_status <> 'maintenance'
+          and h.reported_status not in ${unjudgedStatuses}
           and h.checked_at > islands.last_down_at
       ) as ended_at
     from islands
@@ -121,6 +122,7 @@ function listIncidentsFromRollups(monitorIds: number[], since: number): Incident
         up_count,
         down_count,
         maintenance_count,
+        unknown_count,
         row_number() over (partition by monitor_id order by bucket_start)
           - row_number() over (
               partition by monitor_id, case when down_count > 0 then 1 else 0 end
@@ -138,14 +140,14 @@ function listIncidentsFromRollups(monitorIds: number[], since: number): Incident
         -- A bucket is not an hour of downtime, it is an hour in which some of
         -- the checks failed. Rounding every blip up to the full hour would put
         -- the mean time to recovery of a three minute outage at one hour.
-        -- The maintenance checks are in the denominator although they are in
+        -- The unjudged checks are in the denominator although they are in
         -- neither count: they are minutes of the hour that were not an outage,
         -- and leaving them out would report an hour half spent rebooting as a
         -- full hour of downtime.
         sum(
-          case when (up_count + down_count + maintenance_count) > 0
+          case when (up_count + down_count + maintenance_count + unknown_count) > 0
             then (${integerLiteral(HOUR_SECONDS)} * 1.0 * down_count)
-              / (up_count + down_count + maintenance_count)
+              / (up_count + down_count + maintenance_count + unknown_count)
             else 0 end
         ) as down_seconds
       from marked

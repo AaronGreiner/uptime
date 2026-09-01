@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import type { MaintenanceStatus } from '#shared/types/maintenance'
-import type { MonitorStatus } from '#shared/types/monitor'
+import type { MonitorDisplayStatus } from '#shared/types/monitor'
 
 const props = withDefaults(defineProps<{
-  status: MonitorStatus
+  status: MonitorDisplayStatus
   /**
    * Turns the badge into its own tooltip while a window is open. `Maintenance`
    * on its own does not say when it ends, and the badge is the one thing about

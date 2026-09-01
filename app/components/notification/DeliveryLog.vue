@@ -39,9 +39,11 @@ const STATUS_COLORS: Record<NotificationDeliveryStatus, 'neutral' | 'success' | 
       <div class="min-w-0 flex-1">
         <p class="flex items-baseline gap-1 text-sm text-highlighted min-w-0">
           <MonitorPathLabel
+            v-if="delivery.monitorName"
             :name="delivery.monitorName"
             :path="delivery.monitorGroupPath"
           />
+          <span v-else>{{ $t('notification.instance') }}</span>
           <span class="shrink-0">·</span>
           <span class="min-w-0 truncate-target">{{ $t(`notification.event.${NOTIFICATION_EVENT_KEYS[delivery.eventType]}.label`) }}</span>
         </p>

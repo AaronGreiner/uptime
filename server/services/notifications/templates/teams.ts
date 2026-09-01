@@ -2,9 +2,10 @@ import type { NotificationEvent, NotificationLocale } from '../../../../shared/t
 import {
   escapeHtml,
   eventFacts,
+  eventLink,
+  eventLinkLabel,
   eventSummary,
   eventTitle,
-  monitorUrl,
   toIsoSeconds,
   toneFor,
   toneMarker
@@ -58,7 +59,7 @@ export function buildTeamsMessage(event: NotificationEvent, options: TeamsRender
   const marker = toneMarker(toneFor(event))
   const title = eventTitle(event, t)
   const summary = eventSummary(event, t)
-  const link = monitorUrl(event.monitor.id)
+  const link = eventLink(event)
 
   // No adaptive card date placeholders here: the message is plain text to
   // Teams, so the time is rendered once, in the channel's configured zone.
@@ -72,7 +73,7 @@ export function buildTeamsMessage(event: NotificationEvent, options: TeamsRender
   ]
 
   if (link) {
-    lines.push('', `<a href="${escapeHtml(link)}">${escapeHtml(t('notification.action.openMonitor'))}</a>`)
+    lines.push('', `<a href="${escapeHtml(link)}">${escapeHtml(eventLinkLabel(event, t))}</a>`)
   }
 
   return { type: 'message', text: lines.join('<br>') }
@@ -95,7 +96,7 @@ export function buildTeamsPayload(event: NotificationEvent, options: TeamsRender
   const tone = TONE_STYLES[toneFor(event)]
   const title = eventTitle(event, t)
   const summary = eventSummary(event, t)
-  const link = monitorUrl(event.monitor.id)
+  const link = eventLink(event)
 
   // Teams renders these for whoever opens the card, in their own time zone.
   const facts = eventFacts(event, t, {
@@ -142,7 +143,7 @@ export function buildTeamsPayload(event: NotificationEvent, options: TeamsRender
   ]
 
   const actions = link
-    ? [{ type: 'Action.OpenUrl', title: t('notification.action.openMonitor'), url: link }]
+    ? [{ type: 'Action.OpenUrl', title: eventLinkLabel(event, t), url: link }]
     : []
 
   return {

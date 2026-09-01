@@ -22,7 +22,8 @@ function activeEvents(group: NotificationGroup): string[] {
   const flags = [
     ['monitor.down', group.notifyDown],
     ['monitor.up', group.notifyUp],
-    ['monitor.certificate-expiring', group.notifyCertificateExpiring]
+    ['monitor.certificate-expiring', group.notifyCertificateExpiring],
+    ['instance.uplink-restored', group.notifyInstanceOffline]
   ] as const
 
   return flags

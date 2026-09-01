@@ -1,5 +1,21 @@
-import type { Heartbeat, LatencyChartStyle, Monitor, MonitorStatus, MonitorType } from '../types/monitor'
+import type {
+  Heartbeat,
+  HeartbeatReportedStatus,
+  LatencyChartStyle,
+  Monitor,
+  MonitorDisplayStatus,
+  MonitorType
+} from '../types/monitor'
 import { isCustomIcon } from './icon'
+
+/**
+ * The reported statuses that mean a reading was recorded but not judged.
+ *
+ * Every figure filters on this one list rather than naming the reasons one at a
+ * time, so a further reason to withhold judgement reaches the uptime, the
+ * latency chart, the calendar and the incident reconstruction at once.
+ */
+export const UNJUDGED_REPORTED_STATUSES = ['maintenance', 'unknown'] as const satisfies HeartbeatReportedStatus[]
 
 export const MONITOR_TYPES: MonitorType[] = ['http', 'ping']
 
@@ -13,12 +29,13 @@ export const MONITOR_TYPE_ICONS: Record<MonitorType, string> = {
   ping: 'i-lucide-radio-tower'
 }
 
-export const MONITOR_STATUS_ICONS: Record<MonitorStatus, string> = {
+export const MONITOR_STATUS_ICONS: Record<MonitorDisplayStatus, string> = {
   up: 'i-lucide-circle-check',
   down: 'i-lucide-circle-x',
   pending: 'i-lucide-loader-circle',
   paused: 'i-lucide-circle-pause',
-  maintenance: 'i-lucide-wrench'
+  maintenance: 'i-lucide-wrench',
+  unknown: 'i-lucide-circle-dashed'
 }
 
 /**
@@ -80,7 +97,7 @@ export function monitorTarget(monitor: Pick<Monitor, 'type' | 'url' | 'hostname'
 }
 
 /** Maps a status onto a Nuxt UI colour token. */
-export function monitorStatusColor(status: MonitorStatus): 'success' | 'error' | 'warning' | 'neutral' | 'info' {
+export function monitorStatusColor(status: MonitorDisplayStatus): 'success' | 'error' | 'warning' | 'neutral' | 'info' {
   switch (status) {
     case 'up': return 'success'
     case 'down': return 'error'
@@ -90,28 +107,33 @@ export function monitorStatusColor(status: MonitorStatus): 'success' | 'error' |
     // deliberately not being judged, which is a different thing from one nobody
     // switched back on.
     case 'maintenance': return 'info'
+    // The instance was blind, which says nothing about the target. Neutral is
+    // the only honest colour for a reading nobody took.
+    case 'unknown': return 'neutral'
   }
 }
 
 /** Semantic background class for status dots and bars. */
-export function monitorStatusBackgroundClass(status: MonitorStatus): string {
+export function monitorStatusBackgroundClass(status: MonitorDisplayStatus): string {
   switch (status) {
     case 'up': return 'bg-success'
     case 'down': return 'bg-error'
     case 'pending': return 'bg-warning'
     case 'paused': return 'bg-muted'
     case 'maintenance': return 'bg-info'
+    case 'unknown': return 'bg-muted'
   }
 }
 
 /** Semantic text class for status figures and icons. */
-export function monitorStatusTextClass(status: MonitorStatus): string {
+export function monitorStatusTextClass(status: MonitorDisplayStatus): string {
   switch (status) {
     case 'up': return 'text-success'
     case 'down': return 'text-error'
     case 'pending': return 'text-warning'
     case 'paused': return 'text-dimmed'
     case 'maintenance': return 'text-info'
+    case 'unknown': return 'text-dimmed'
   }
 }
 
@@ -125,7 +147,7 @@ export function monitorIcon(monitor: Pick<Monitor, 'icon' | 'type'>): string {
   return isCustomIcon(monitor.icon) ? monitor.icon : monitorTypeIcon(monitor.type)
 }
 
-export function monitorStatusIcon(status: MonitorStatus): string {
+export function monitorStatusIcon(status: MonitorDisplayStatus): string {
   return MONITOR_STATUS_ICONS[status]
 }
 

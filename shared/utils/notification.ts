@@ -1,5 +1,11 @@
 import type { NotificationAssignment } from '../types/monitor'
-import type { NotificationEventType, NotificationGroup } from '../types/notification'
+import type {
+  MonitorNotificationEvent,
+  MonitorNotificationEventType,
+  NotificationEvent,
+  NotificationEventType,
+  NotificationGroup
+} from '../types/notification'
 
 export const NOTIFICATION_MODES = ['inherit', 'custom', 'muted'] as const
 
@@ -10,11 +16,26 @@ export const NOTIFICATION_MODES = ['inherit', 'custom', 'muted'] as const
  */
 export const NOTIFICATION_PROVIDERS = ['email', 'teams'] as const
 
-export const NOTIFICATION_EVENT_TYPES = [
+export const MONITOR_NOTIFICATION_EVENT_TYPES = [
   'monitor.down',
   'monitor.up',
   'monitor.certificate-expiring'
-] as const
+] as const satisfies MonitorNotificationEventType[]
+
+export const NOTIFICATION_EVENT_TYPES = [
+  ...MONITOR_NOTIFICATION_EVENT_TYPES,
+  'instance.uplink-restored'
+] as const satisfies NotificationEventType[]
+
+/**
+ * Whether the event is about a monitor rather than about the instance.
+ *
+ * Everything that renders one has to ask: an instance event names no monitor,
+ * so there is no target to state, no status to colour and no page to link to.
+ */
+export function isMonitorNotificationEvent(event: NotificationEvent): event is MonitorNotificationEvent {
+  return (MONITOR_NOTIFICATION_EVENT_TYPES as readonly NotificationEventType[]).includes(event.type)
+}
 
 export const NOTIFICATION_LOCALES = ['en', 'de'] as const
 
@@ -38,7 +59,8 @@ export const NOTIFICATION_DELIVERY_STATUSES = ['pending', 'sent', 'failed'] as c
 export const NOTIFICATION_EVENT_FLAGS = {
   'monitor.down': 'notifyDown',
   'monitor.up': 'notifyUp',
-  'monitor.certificate-expiring': 'notifyCertificateExpiring'
+  'monitor.certificate-expiring': 'notifyCertificateExpiring',
+  'instance.uplink-restored': 'notifyInstanceOffline'
 } as const satisfies Record<NotificationEventType, keyof NotificationGroup>
 
 /**
@@ -48,7 +70,8 @@ export const NOTIFICATION_EVENT_FLAGS = {
 export const NOTIFICATION_EVENT_KEYS = {
   'monitor.down': 'down',
   'monitor.up': 'up',
-  'monitor.certificate-expiring': 'certificate'
+  'monitor.certificate-expiring': 'certificate',
+  'instance.uplink-restored': 'uplinkRestored'
 } as const satisfies Record<NotificationEventType, string>
 
 /** True when the group is enabled and reacts to this kind of event. */

@@ -44,6 +44,9 @@ by Uptime Kuma, built with Nuxt 4, Nuxt UI 4, Bun and SQLite.
   outage: no alert, no incident, and the uptime figure is left alone.
 - **Incident and reliability history** — reconstruct outages, uptime, mean time
   to recovery and other reliability figures from recorded checks.
+- **Instance connectivity awareness** — distinguish a broken monitored target
+  from the monitoring host losing its own route or DNS, without counting the
+  resulting blind period against every monitor.
 - **SMTP and Microsoft Teams notifications** — route events through reusable
   groups with retries and persistent delivery history.
 - **Live everywhere** — server-sent events update cards, widgets, navigation and
@@ -123,6 +126,12 @@ Everything is configured through environment variables. See
 | `NUXT_SCHEDULER_ENABLED` | `true` | Set to `false` to run the UI without executing checks. |
 | `NUXT_SCHEDULER_CONCURRENCY` | `10` | Checks running in parallel. |
 | `NUXT_SCHEDULER_TICK_INTERVAL_MS` | `1000` | How often due monitors are picked up. |
+| `NUXT_UPLINK_ENABLED` | `true` | Distinguish monitor failures from this instance losing its own internet connection. |
+| `NUXT_UPLINK_TARGETS` | `1.1.1.1:443,9.9.9.9:443` | Independent comma-separated TCP endpoints used to verify the route out. |
+| `NUXT_UPLINK_DNS_HOST` | `cloudflare.com` | Hostname resolved to verify the system DNS resolver. |
+| `NUXT_UPLINK_TIMEOUT_MS` | `2000` | Deadline for one connectivity probe. |
+| `NUXT_UPLINK_FAILURE_THRESHOLD` | `2` | Consecutive failed probes before the instance is announced as offline. |
+| `NUXT_UPLINK_CACHE_MS` | `5000` | Milliseconds for which a probe verdict is reused. |
 | `NUXT_RETENTION_HEARTBEAT_DAYS` | `7` | Days of raw per-check results to keep. |
 | `NUXT_RETENTION_HOURLY_STATS_DAYS` | `365` | Days of hourly aggregates to keep. |
 | `NUXT_RETENTION_NOTIFICATION_DAYS` | `30` | Days of notification delivery history to keep. |
@@ -186,6 +195,20 @@ Both types share the check interval, timeout and retry settings. While retries
 remain, a failed monitor is *pending* rather than *down*, keeping single blips
 out of the incident history.
 
+### Instance connectivity
+
+After a monitor check fails, Uptime probes independent TCP endpoints and the
+system DNS resolver. If the instance itself has lost connectivity, checks keep
+being recorded but are not judged: monitor states and retry counters stay
+frozen, uptime and incidents exclude the readings, and the interface shows the
+blind period separately. Notification delivery waits for connectivity to
+return; an optional recovery event then reports the completed monitoring gap.
+
+The probes run only in response to a failed check, share a short cache and can
+be changed or disabled with the `NUXT_UPLINK_*` variables. Choose endpoints that
+do not depend on the services being monitored, otherwise one provider outage
+could be mistaken for an outage of the monitoring instance.
+
 ### Maintenance
 
 Servers that get restarted on a schedule are not having an outage. A maintenance
@@ -222,6 +245,12 @@ The choice is stored in your browser and applies to monitor details and dashboar
 charts. A latency widget can override it through **Chart style** in its settings;
 **From settings** follows the browser preference. Chart headers have no style
 selector.
+
+Charts retain the full selected time range. Time before a monitor was created
+stays empty; periods with unjudged checks or missing expected checks are
+hatched. Bucket widths follow both the selected range and the monitor interval,
+so a five-minute schedule is not rendered as a series of artificial 30-second
+gaps.
 
 ### History and storage
 

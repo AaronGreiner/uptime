@@ -76,17 +76,18 @@ export function aggregateHourlyStats(): void {
    */
   database.run(sql`
     insert into monitor_stats_hourly
-      (monitor_id, bucket_start, up_count, down_count, maintenance_count,
+      (monitor_id, bucket_start, up_count, down_count, maintenance_count, unknown_count,
        avg_latency_ms, min_latency_ms, max_latency_ms)
     select
       monitor_id,
       (checked_at / ${integerLiteral(HOUR_SECONDS)}) * ${integerLiteral(HOUR_SECONDS)} as bucket_start,
-      sum(case when reported_status <> 'maintenance' and status = 'up' then 1 else 0 end),
-      sum(case when reported_status <> 'maintenance' and status = 'down' then 1 else 0 end),
+      sum(case when reported_status not in ${unjudgedStatuses} and status = 'up' then 1 else 0 end),
+      sum(case when reported_status not in ${unjudgedStatuses} and status = 'down' then 1 else 0 end),
       sum(case when reported_status = 'maintenance' then 1 else 0 end),
-      cast(avg(case when reported_status <> 'maintenance' and status = 'up' then latency_ms end) as integer),
-      min(case when reported_status <> 'maintenance' and status = 'up' then latency_ms end),
-      max(case when reported_status <> 'maintenance' and status = 'up' then latency_ms end)
+      sum(case when reported_status = 'unknown' then 1 else 0 end),
+      cast(avg(case when reported_status not in ${unjudgedStatuses} and status = 'up' then latency_ms end) as integer),
+      min(case when reported_status not in ${unjudgedStatuses} and status = 'up' then latency_ms end),
+      max(case when reported_status not in ${unjudgedStatuses} and status = 'up' then latency_ms end)
     from heartbeats
     where checked_at >= ${from}
       and exists (select 1 from monitors where monitors.id = heartbeats.monitor_id)
@@ -95,6 +96,7 @@ export function aggregateHourlyStats(): void {
       up_count = excluded.up_count,
       down_count = excluded.down_count,
       maintenance_count = excluded.maintenance_count,
+      unknown_count = excluded.unknown_count,
       avg_latency_ms = excluded.avg_latency_ms,
       min_latency_ms = excluded.min_latency_ms,
       max_latency_ms = excluded.max_latency_ms

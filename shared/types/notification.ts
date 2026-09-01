@@ -1,4 +1,5 @@
 import type { MonitorStatus } from './monitor'
+import type { UplinkFault } from './uplink'
 
 /**
  * Notification layer contracts.
@@ -11,7 +12,20 @@ import type { MonitorStatus } from './monitor'
 /** Identifier of a provider implementation, e.g. `email` or `teams`. */
 export type NotificationProviderId = string
 
-export type NotificationEventType = 'monitor.down' | 'monitor.up' | 'monitor.certificate-expiring'
+/** Events about one monitor, which is what almost everything here is about. */
+export type MonitorNotificationEventType = 'monitor.down' | 'monitor.up' | 'monitor.certificate-expiring'
+
+/**
+ * Events about the instance itself.
+ *
+ * There is deliberately no counterpart announcing the *start* of an uplink
+ * outage: a host with no network cannot deliver the message saying it has no
+ * network. The restoration reports the outage after the fact, which is the only
+ * moment such a message can be sent at all.
+ */
+export type InstanceNotificationEventType = 'instance.uplink-restored'
+
+export type NotificationEventType = MonitorNotificationEventType | InstanceNotificationEventType
 
 /** Language a channel renders its messages in. Mirrors the available locales. */
 export type NotificationLocale = 'en' | 'de'
@@ -59,6 +73,8 @@ export interface NotificationGroup {
   notifyDown: boolean
   notifyUp: boolean
   notifyCertificateExpiring: boolean
+  /** Whether the group hears about the instance losing its own network. */
+  notifyInstanceOffline: boolean
   /** Used by monitors whose inheritance walk reaches the root undecided. */
   isDefault: boolean
   position: number
@@ -67,8 +83,15 @@ export interface NotificationGroup {
   updatedAt: number
 }
 
-export interface NotificationEvent {
-  type: NotificationEventType
+interface NotificationEventBase {
+  occurredAt: number
+  message: string | null
+  /** How long the state that just ended had held, in seconds. */
+  durationSeconds: number | null
+}
+
+export interface MonitorNotificationEvent extends NotificationEventBase {
+  type: MonitorNotificationEventType
   monitor: {
     id: number
     name: string
@@ -78,14 +101,26 @@ export interface NotificationEvent {
     groupPath: string[]
   }
   status: MonitorStatus
-  message: string | null
   latencyMs: number | null
-  occurredAt: number
-  /** How long the monitor held the status it just left, in seconds. */
-  durationSeconds: number | null
   /** Expiry of the monitor's certificate in Unix seconds, when one is known. */
   certificateExpiresAt: number | null
 }
+
+/**
+ * An event about the instance rather than about anything it watches, which is
+ * why it carries no monitor at all instead of a placeholder one: everything
+ * downstream — the delivery row, the subject line, the link back — has to face
+ * that there is nothing to name, and a stand-in monitor would only hide it.
+ */
+export interface InstanceNotificationEvent extends NotificationEventBase {
+  type: InstanceNotificationEventType
+  /** Monitors whose checks went unjudged while the instance was blind. */
+  affectedMonitors: number
+  /** What the probe could not do, so the message can say where to look. */
+  fault: UplinkFault | null
+}
+
+export type NotificationEvent = MonitorNotificationEvent | InstanceNotificationEvent
 
 /**
  * One attempt to hand an event to one channel. Doubles as the queue: a row is
@@ -98,8 +133,9 @@ export interface NotificationDelivery {
   channelName: string
   /** Null once the group that caused the delivery has been deleted. */
   groupId: number | null
-  monitorId: number
-  monitorName: string
+  /** Null for an event about the instance, which names no monitor. */
+  monitorId: number | null
+  monitorName: string | null
   /** Group names from the root down to the monitor's direct group. */
   monitorGroupPath: string[]
   eventType: NotificationEventType

@@ -46,6 +46,7 @@ interface CalendarDay {
   upCount: number
   downCount: number
   maintenanceCount: number
+  unknownCount: number
   avgLatencyMs: number | null
 }
 
@@ -99,6 +100,7 @@ function toDay(dayStart: number, point: MonitorDailyPoint | undefined): Calendar
     upCount: point?.upCount ?? 0,
     downCount: point?.downCount ?? 0,
     maintenanceCount: point?.maintenanceCount ?? 0,
+    unknownCount: point?.unknownCount ?? 0,
     avgLatencyMs: point?.avgLatencyMs ?? null
   }
 }
@@ -131,7 +133,11 @@ function dayClass(day: CalendarDay): string {
   if (day.ratio === null) {
     // A day nothing was judged on is not the same as a day nothing ran on: one
     // was in maintenance, the other has no history at all.
-    return day.maintenanceCount > 0 ? 'bg-info/40' : 'bg-elevated'
+    if (day.maintenanceCount > 0) {
+      return 'bg-info/40'
+    }
+
+    return day.unknownCount > 0 ? 'bg-muted/60' : 'bg-elevated'
   }
 
   if (day.ratio >= 0.9999) {
@@ -257,6 +263,10 @@ const caption = computed(() => {
                 class="text-info"
               >{{ $t('status.maintenance') }}</span>
               <span
+                v-else-if="hovered.day.unknownCount"
+                class="text-dimmed"
+              >{{ $t('status.unknown') }}</span>
+              <span
                 v-else
                 class="text-dimmed"
               >{{ $t('monitor.detail.noData') }}</span>
@@ -280,6 +290,12 @@ const caption = computed(() => {
                 class="text-info tabular-nums"
               >
                 {{ $t('maintenance.checksInWindow', { count: formatNumber(hovered.day.maintenanceCount) }) }}
+              </span>
+              <span
+                v-if="hovered.day.unknownCount"
+                class="text-dimmed tabular-nums"
+              >
+                {{ $t('uplink.unjudgedChecks', { count: formatNumber(hovered.day.unknownCount) }) }}
               </span>
             </template>
           </div>

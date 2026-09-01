@@ -1,8 +1,10 @@
 import { startMaintenance, stopMaintenance } from '../services/maintenance'
 import { registerBuiltinNotificationProviders } from '../services/notifications/providers'
+import { enqueueUplinkRestored } from '../services/notifications'
 import { startNotificationQueue, stopNotificationQueue } from '../services/notifications/queue'
 import { rescheduleAllMonitors, startScheduler, stopScheduler } from '../services/scheduler'
 import { seedAdminUser, seedDefaultDashboard, seedDemoData } from '../services/seed'
+import { onUplinkChange } from '../services/uplink'
 
 /**
  * Single boot sequence. Migrations, seeding and the background workers live in
@@ -26,11 +28,19 @@ export default defineNitroPlugin(async (nitro) => {
   }
 
   registerBuiltinNotificationProviders()
+  const stopUplinkListener = onUplinkChange((current, previous) => {
+    publishLiveEvent({ type: 'uplink.changed', uplink: current })
+
+    if (current.online && !previous.online) {
+      enqueueUplinkRestored(previous)
+    }
+  })
   startNotificationQueue()
   startMaintenance()
 
   nitro.hooks.hook('close', () => {
     stopScheduler()
+    stopUplinkListener()
     stopNotificationQueue()
     stopMaintenance()
   })

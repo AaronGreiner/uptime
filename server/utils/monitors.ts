@@ -236,7 +236,7 @@ export function calculateUptimeBulk(monitorIds: number[], rangeSeconds: number):
         from heartbeats
         where monitor_id in ${monitorIds}
           and checked_at >= ${since}
-          and reported_status <> 'maintenance'
+          and reported_status not in ${unjudgedStatuses}
         group by monitor_id
       `)
     : useDatabase().all<UptimeAggregateRow>(sql`
@@ -268,9 +268,22 @@ export function calculateUptimeBulk(monitorIds: number[], rangeSeconds: number):
 
 /** Time series powering the latency chart of a monitor. */
 export function getMonitorStatsSeries(monitorId: number, range: StatsRange): MonitorStatsPoint[] {
+  const monitor = getMonitorRow(monitorId)
+
+  if (!monitor) {
+    return []
+  }
+
   const rangeSeconds = STATS_RANGE_SECONDS[range]
-  const bucketSeconds = statsBucketSeconds(range)
-  const since = nowInSeconds() - rangeSeconds
+  const baseBucketSeconds = statsBucketSeconds(range)
+  // A chart bucket shorter than the monitor interval manufactures empty space:
+  // a five minute monitor in thirty second buckets would appear absent nine
+  // times out of ten while behaving exactly as configured. Keep bucket edges on
+  // multiples of the range's base width, but make each wide enough to expect a
+  // reading from this monitor.
+  const bucketSeconds = Math.ceil(monitor.intervalSeconds / baseBucketSeconds) * baseBucketSeconds
+  const now = nowInSeconds()
+  const since = now - rangeSeconds
   const useRaw = rangeSeconds <= RAW_HEARTBEAT_RANGE_LIMIT_SECONDS
 
   /*
@@ -289,12 +302,13 @@ export function getMonitorStatsSeries(monitorId: number, range: StatsRange): Mon
     ? useDatabase().all<StatsAggregateRow>(sql`
         select
           ${bucket} as bucket_start,
-          sum(case when reported_status <> 'maintenance' and status = 'up' then 1 else 0 end) as up_count,
-          sum(case when reported_status <> 'maintenance' and status = 'down' then 1 else 0 end) as down_count,
+          sum(case when reported_status not in ${unjudgedStatuses} and status = 'up' then 1 else 0 end) as up_count,
+          sum(case when reported_status not in ${unjudgedStatuses} and status = 'down' then 1 else 0 end) as down_count,
           sum(case when reported_status = 'maintenance' then 1 else 0 end) as maintenance_count,
-          avg(case when reported_status <> 'maintenance' and status = 'up' then latency_ms end) as avg_latency_ms,
-          min(case when reported_status <> 'maintenance' and status = 'up' then latency_ms end) as min_latency_ms,
-          max(case when reported_status <> 'maintenance' and status = 'up' then latency_ms end) as max_latency_ms
+          sum(case when reported_status = 'unknown' then 1 else 0 end) as unknown_count,
+          avg(case when reported_status not in ${unjudgedStatuses} and status = 'up' then latency_ms end) as avg_latency_ms,
+          min(case when reported_status not in ${unjudgedStatuses} and status = 'up' then latency_ms end) as min_latency_ms,
+          max(case when reported_status not in ${unjudgedStatuses} and status = 'up' then latency_ms end) as max_latency_ms
         from heartbeats
         where monitor_id = ${monitorId} and checked_at >= ${since}
         group by ${bucket}
@@ -306,6 +320,7 @@ export function getMonitorStatsSeries(monitorId: number, range: StatsRange): Mon
           sum(up_count) as up_count,
           sum(down_count) as down_count,
           sum(maintenance_count) as maintenance_count,
+          sum(unknown_count) as unknown_count,
           case when sum(up_count) > 0
             then sum(coalesce(avg_latency_ms, 0) * up_count) / sum(up_count)
             else null end as avg_latency_ms,
@@ -317,15 +332,130 @@ export function getMonitorStatsSeries(monitorId: number, range: StatsRange): Mon
         order by ${bucket} asc
       `)
 
-  return rows.map(row => ({
-    bucketStart: row.bucket_start,
-    upCount: row.up_count,
-    downCount: row.down_count,
-    maintenanceCount: row.maintenance_count,
-    avgLatencyMs: row.avg_latency_ms === null ? null : Math.round(row.avg_latency_ms),
-    minLatencyMs: row.min_latency_ms,
-    maxLatencyMs: row.max_latency_ms
-  }))
+  // A missing target row does not prove the service was down: the check may
+  // have landed just across a bucket boundary while another monitor proves the
+  // scheduler was alive. Only a bucket with no reading from any monitor is an
+  // instance-wide monitoring gap.
+  const serviceRows = useRaw
+    ? useDatabase().all<{ bucket_start: number }>(sql`
+        select ${bucket} as bucket_start
+        from heartbeats
+        where checked_at >= ${since}
+        group by ${bucket}
+      `)
+    : useDatabase().all<{ bucket_start: number }>(sql`
+        select ${bucket} as bucket_start
+        from monitor_stats_hourly
+        where bucket_start >= ${since}
+          and (up_count + down_count + maintenance_count + unknown_count) > 0
+        group by ${bucket}
+      `)
+
+  const byBucket = new Map(rows.map(row => [row.bucket_start, row]))
+  const serviceBuckets = new Set(serviceRows.map(row => row.bucket_start))
+  const firstBucket = Math.floor(since / bucketSeconds) * bucketSeconds
+  const currentBucket = Math.floor(now / bucketSeconds) * bucketSeconds
+  const creationBucket = Math.floor(monitor.createdAt / bucketSeconds) * bucketSeconds
+  const points: MonitorStatsPoint[] = []
+
+  /*
+   * Return the whole selected time axis, not only the buckets that happened to
+   * contain a heartbeat. This is what keeps three visually similar but
+   * semantically different spaces apart:
+   *
+   * - before `creationBucket`: the monitor did not exist, so the chart stays
+   *   deliberately blank;
+   * - an empty, completed bucket afterwards in which no monitor recorded
+   *   anything: the monitoring service left an unexplained gap;
+   * - a bucket without this monitor but with other readings: the instance was
+   *   alive, but this monitor may still have missed an expected check;
+   * - the current bucket: still open, and therefore not missing merely because
+   *   its next scheduled check has not landed yet.
+   *
+   * At most 120 points are emitted for an hour and 365 for a year. Filling the
+   * axis here therefore costs less than making every chart infer it differently
+   * in the browser, and every consumer receives the same account of history.
+   */
+  for (let bucketStart = firstBucket; bucketStart <= currentBucket; bucketStart += bucketSeconds) {
+    const row = byBucket.get(bucketStart)
+
+    if (row) {
+      points.push({
+        bucketStart,
+        upCount: row.up_count,
+        downCount: row.down_count,
+        maintenanceCount: row.maintenance_count,
+        unknownCount: row.unknown_count,
+        missingCount: 0,
+        serviceMissing: false,
+        beforeCreation: false,
+        avgLatencyMs: row.avg_latency_ms === null ? null : Math.round(row.avg_latency_ms),
+        minLatencyMs: row.min_latency_ms,
+        maxLatencyMs: row.max_latency_ms
+      })
+      continue
+    }
+
+    const beforeCreation = bucketStart < creationBucket
+    const completed = bucketStart < currentBucket
+
+    points.push({
+      bucketStart,
+      upCount: 0,
+      downCount: 0,
+      maintenanceCount: 0,
+      unknownCount: 0,
+      missingCount: !beforeCreation && completed ? 1 : 0,
+      serviceMissing: !beforeCreation && completed && !serviceBuckets.has(bucketStart),
+      beforeCreation,
+      avgLatencyMs: null,
+      minLatencyMs: null,
+      maxLatencyMs: null
+    })
+  }
+
+  /*
+   * A single empty raw bucket is not evidence that a check was missed. Checks
+   * sit on their own cadence rather than on chart boundaries, so one can land
+   * just before an edge and the next just after the following edge. Requiring
+   * two consecutive empty buckets removes those boundary artefacts while still
+   * revealing a real interruption after at most one chart bucket. Apply the
+   * same rule to instance-wide evidence independently, so a chart can explain
+   * whether only this monitor or the whole scheduler stopped reporting.
+   * Hourly rollups need no such grace: an entirely empty hour is already strong
+   * evidence, and hiding a second hour would make long-range charts inaccurate.
+   */
+  if (useRaw || bucketSeconds < monitor.intervalSeconds * 2) {
+    function clearSingleBucketRuns(
+      matches: (point: MonitorStatsPoint) => boolean,
+      clear: (point: MonitorStatsPoint) => void
+    ) {
+      let runStart = -1
+
+      for (let index = 0; index <= points.length; index++) {
+        const point = points[index]
+
+        if (point && matches(point)) {
+          runStart = runStart === -1 ? index : runStart
+          continue
+        }
+
+        if (runStart !== -1 && index - runStart < 2) {
+          clear(points[runStart]!)
+        }
+
+        runStart = -1
+      }
+    }
+
+    clearSingleBucketRuns(point => point.missingCount > 0, (point) => {
+      point.missingCount = 0
+      point.serviceMissing = false
+    })
+    clearSingleBucketRuns(point => point.serviceMissing, point => point.serviceMissing = false)
+  }
+
+  return points
 }
 
 export function getHeartbeats(monitorId: number, limit: number): Heartbeat[] {
@@ -355,6 +485,7 @@ interface StatsAggregateRow {
   up_count: number
   down_count: number
   maintenance_count: number
+  unknown_count: number
   avg_latency_ms: number | null
   min_latency_ms: number | null
   max_latency_ms: number | null

@@ -23,6 +23,7 @@ export function serializeNotificationGroup(row: NotificationGroupRow, channelIds
     notifyDown: row.notifyDown,
     notifyUp: row.notifyUp,
     notifyCertificateExpiring: row.notifyCertificateExpiring,
+    notifyInstanceOffline: row.notifyInstanceOffline,
     isDefault: row.isDefault,
     position: row.position,
     channelIds,
@@ -413,7 +414,7 @@ export function listNotificationDeliveries(limit: number): NotificationDelivery[
     })
     .from(notificationDeliveries)
     .innerJoin(notificationChannels, eq(notificationChannels.id, notificationDeliveries.channelId))
-    .innerJoin(monitors, eq(monitors.id, notificationDeliveries.monitorId))
+    .leftJoin(monitors, eq(monitors.id, notificationDeliveries.monitorId))
     .orderBy(desc(notificationDeliveries.createdAt), desc(notificationDeliveries.id))
     .limit(limit)
     .all()
@@ -424,7 +425,7 @@ export function listNotificationDeliveries(limit: number): NotificationDelivery[
       groupId: row.delivery.groupId,
       monitorId: row.delivery.monitorId,
       monitorName: row.monitorName,
-      monitorGroupPath: groupPath(row.monitorGroupId),
+      monitorGroupPath: row.monitorGroupId === null ? [] : groupPath(row.monitorGroupId),
       eventType: row.delivery.eventType,
       status: row.delivery.status,
       attempts: row.delivery.attempts,

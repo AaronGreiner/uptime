@@ -232,6 +232,17 @@ only reported as `down` once `consecutive_failures > monitor.retries`. Until the
 its state is `pending`. Uptime percentages are computed from raw heartbeats, so
 they are not affected by that debouncing.
 
+**Instance connectivity.** A failed check asks `server/services/uplink.ts` to
+probe independent TCP targets and DNS. Concurrent checks share the probe and a
+short cache. While the instance has no uplink, checks still write their raw
+result but use `reported_status = 'unknown'`; monitor state and retry counters
+stay frozen, just as they do in maintenance. Uptime, charts, calendars and
+incidents exclude both values through `UNJUDGED_REPORTED_STATUSES`. The fixed
+banner follows `/api/uplink` plus the `uplink.changed` live event. Notification
+delivery pauses while offline, and recovery queues the instance-level event
+after the connection returns. Runtime settings use the `NUXT_UPLINK_*`
+variables documented in `.env.example`.
+
 **Maintenance.** A monitor can be taken out of the judging without being turned
 off. Two things put it there, and they are edited in two different places
 because they are two different kinds of thing.
@@ -305,12 +316,13 @@ special case. The zone is one instance-wide setting
 what lets the maintenance widget say when the next window opens using the very
 rule the scheduler will apply.
 
-The figures exclude it. `reported_status <> 'maintenance'` is the filter in the
-raw branches of `calculateUptimeBulk`, `getMonitorStatsSeries` and
-`listIncidentsFromHeartbeats`; for every longer range the exclusion is already
-baked into `monitor_stats_hourly`, whose `maintenance_count` the aggregation job
-fills instead of `up_count`/`down_count`. That one `case` carries it into the
-uptime, the latency chart, the calendar and the incident reconstruction at once.
+The figures exclude it. `UNJUDGED_REPORTED_STATUSES` supplies maintenance and
+unknown readings to the raw branches of `calculateUptimeBulk`,
+`getMonitorStatsSeries` and `listIncidentsFromHeartbeats`; for every longer range
+the exclusion is already baked into `monitor_stats_hourly`, whose
+`maintenance_count` and `unknown_count` the aggregation job fills instead of
+`up_count`/`down_count`. That shared list carries both reasons into uptime, the
+latency chart, the calendar and incident reconstruction at once.
 
 **Data retention.** `server/services/maintenance.ts` runs every five minutes. It
 rolls heartbeats into `monitor_stats_hourly` (recomputing the current, still open
@@ -440,6 +452,13 @@ the baseline, which is the one thing the bounds were turned on to avoid. Those
 few readings run off the top instead — `yOf` clamps to the edge — and the
 tooltip still reports every one of them. With the average alone nothing is cut,
 because a bucket average is already a reading over many checks.
+
+The stats endpoint returns the complete selected axis. Buckets before monitor
+creation are blank; unjudged readings, missing expected checks and periods in
+which the whole instance recorded nothing remain distinct in the payload and
+are hatched in the chart. The bucket width is raised to a multiple suitable for
+the monitor interval. A single empty bucket at that boundary is ignored because
+checks can straddle it; consecutive empty buckets are a real missing interval.
 
 **Controls inside a widget.** No widget header offers the reader a setting: the
 chart style is a look rather than a reading, so it is chosen in the settings and
@@ -781,8 +800,9 @@ files.
 - `UDashboardToolbar` scrolls horizontally by default. Long text in it needs
   `:ui="{ left: 'min-w-0 flex-1' }"` plus truncation, otherwise it scrolls on
   phones instead of shortening.
-- `nowInSeconds()` lives in `server/services/scheduler.ts` and is the one clock
-  the server uses. Reuse it instead of inlining `Date.now()`.
+- `nowInSeconds()` is implemented in `server/utils/time.ts` and re-exported by
+  `server/services/scheduler.ts` for existing callers. It is the one clock the
+  server uses; reuse it instead of inlining `Date.now()`.
 - Bun emits `close` on a `node:http` `ClientRequest` as soon as the response
   headers arrive, not when the response body ends, and destroying an
   `IncomingMessage` makes it emit `end` rather than an error. Anything that

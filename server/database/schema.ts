@@ -149,6 +149,12 @@ export const monitorStatsHourly = sqliteTable('monitor_stats_hourly', {
    * distinguishable from an hour in which nothing was checked at all.
    */
   maintenanceCount: integer('maintenance_count').notNull().default(0),
+  /**
+   * Checks that ran while the instance itself had no uplink. Counted apart for
+   * the same reason as the maintenance readings, and separately from them: an
+   * hour nobody could see is a different thing from an hour somebody planned.
+   */
+  unknownCount: integer('unknown_count').notNull().default(0),
   avgLatencyMs: integer('avg_latency_ms'),
   minLatencyMs: integer('min_latency_ms'),
   maxLatencyMs: integer('max_latency_ms')
@@ -255,6 +261,12 @@ export const notificationGroups = sqliteTable('notification_groups', {
   notifyDown: integer('notify_down', { mode: 'boolean' }).notNull().default(true),
   notifyUp: integer('notify_up', { mode: 'boolean' }).notNull().default(true),
   notifyCertificateExpiring: integer('notify_certificate_expiring', { mode: 'boolean' }).notNull().default(true),
+  /**
+   * Whether the group is told that the instance itself lost its network. On by
+   * default: an instance that cannot see anything is exactly what nobody finds
+   * out about on their own.
+   */
+  notifyInstanceOffline: integer('notify_instance_offline', { mode: 'boolean' }).notNull().default(true),
   /** Catches monitors whose inheritance walk reaches the root undecided. */
   isDefault: integer('is_default', { mode: 'boolean' }).notNull().default(false),
   position: integer('position').notNull().default(0),
@@ -300,7 +312,8 @@ export const notificationDeliveries = sqliteTable('notification_deliveries', {
   channelId: integer('channel_id').notNull().references(() => notificationChannels.id, { onDelete: 'cascade' }),
   /** Cleared rather than cascaded: the history outlives the group that caused it. */
   groupId: integer('group_id').references(() => notificationGroups.id, { onDelete: 'set null' }),
-  monitorId: integer('monitor_id').notNull().references(() => monitors.id, { onDelete: 'cascade' }),
+  /** Null for an event about the instance itself, which names no monitor. */
+  monitorId: integer('monitor_id').references(() => monitors.id, { onDelete: 'cascade' }),
   eventType: text('event_type').$type<NotificationEventType>().notNull(),
   /** The event as it was at enqueue time, so a retry reports the original facts. */
   payload: text('payload', { mode: 'json' }).$type<NotificationEvent>().notNull(),

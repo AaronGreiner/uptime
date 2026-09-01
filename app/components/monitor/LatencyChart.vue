@@ -203,9 +203,36 @@ function runs(valueOf: (point: MonitorStatsPoint) => number | null): MonitorStat
   let current: MonitorStatsPoint[] = []
   let previous: number | null = null
 
-  for (const point of props.points) {
-    const isGap = previous !== null && gapLimit > 0 && point.bucketStart - previous > gapLimit
+  for (const [index, point] of props.points.entries()) {
     const missing = valueOf(point) === null
+    const previousPoint = props.points[index - 1]
+    const nextPoint = props.points[index + 1]
+    const emptySample = missing
+      && !point.beforeCreation
+      && point.missingCount === 0
+      && point.upCount === 0
+      && point.downCount === 0
+      && point.maintenanceCount === 0
+      && point.unknownCount === 0
+    const isolatedUnknown = missing
+      && point.unknownCount > 0
+      && previousPoint !== undefined
+      && nextPoint !== undefined
+      && valueOf(previousPoint) !== null
+      && valueOf(nextPoint) !== null
+
+    // The service was alive, but this monitor happened not to put a sample in
+    // this bucket. Leave it out of the curve rather than cutting the line at a
+    // scheduling boundary. `previous` deliberately stays on the last measured
+    // point: GAP_FACTOR still refuses to bridge a longer monitor-specific gap.
+    // An isolated unjudged check is treated the same way: its hatch still says
+    // that no latency was established, but one transient observation no longer
+    // chops an otherwise continuous curve into tiny visual fragments.
+    if (emptySample || isolatedUnknown) {
+      continue
+    }
+
+    const isGap = previous !== null && gapLimit > 0 && point.bucketStart - previous > gapLimit
 
     previous = point.bucketStart
 
@@ -233,10 +260,12 @@ function runs(valueOf: (point: MonitorStatsPoint) => number | null): MonitorStat
 
 /** The runs of one series, projected into the plot. */
 function segmentsOf(valueOf: (point: MonitorStatsPoint) => number | null): PlotPoint[][] {
-  return runs(valueOf).map(run => run.map(point => ({
-    x: xOf(point.bucketStart),
-    y: yOf(valueOf(point)!)
-  })))
+  return runs(valueOf)
+    .filter(run => run.length >= 2)
+    .map(run => run.map(point => ({
+      x: xOf(point.bucketStart),
+      y: yOf(valueOf(point)!)
+    })))
 }
 
 const segments = computed(() => segmentsOf(point => point.avgLatencyMs))
@@ -435,6 +464,7 @@ const outages = computed(() => bandsWhere(point => point.downCount > 0))
  * covered part of the hour leaves real failures on either side of it.
  */
 const maintenanceBands = computed(() => bandsWhere(point => point.maintenanceCount > 0))
+const unknownBands = computed(() => bandsWhere(point => point.unknownCount > 0 || point.missingCount > 0))
 
 const hoverIndex = ref<number | null>(null)
 const isHovering = ref(false)
@@ -565,6 +595,28 @@ function onPointerMove(event: PointerEvent) {
                 stop-opacity="0"
               />
             </linearGradient>
+            <!-- A missing observation is neither an outage nor maintenance.
+                 Sparse diagonal strokes make that distinction without laying a
+                 solid block over the chart or introducing another status colour. -->
+            <pattern
+              :id="`unknown-${chartId}`"
+              width="8"
+              height="8"
+              patternUnits="userSpaceOnUse"
+              patternTransform="rotate(45)"
+            >
+              <line
+                x1="0"
+                y1="0"
+                x2="0"
+                y2="8"
+                class="text-dimmed"
+                stroke="currentColor"
+                stroke-width="1"
+                stroke-opacity="0.28"
+                vector-effect="non-scaling-stroke"
+              />
+            </pattern>
           </defs>
 
           <line
@@ -588,6 +640,16 @@ function onPointerMove(event: PointerEvent) {
             :width="band.width"
             :height="VIEW_HEIGHT"
             class="fill-info/15"
+          />
+
+          <rect
+            v-for="band in unknownBands"
+            :key="`unknown-${band.key}`"
+            :x="band.x"
+            y="0"
+            :width="band.width"
+            :height="VIEW_HEIGHT"
+            :fill="`url(#unknown-${chartId})`"
           />
 
           <rect
@@ -706,6 +768,30 @@ function onPointerMove(event: PointerEvent) {
             class="text-info tabular-nums"
           >
             {{ $t('maintenance.checksInWindow', { count: hoveredPoint.maintenanceCount }) }}
+          </div>
+          <div
+            v-if="hoveredPoint.unknownCount > 0"
+            class="text-dimmed tabular-nums"
+          >
+            {{ $t('uplink.unjudgedChecks', { count: hoveredPoint.unknownCount }) }}
+          </div>
+          <div
+            v-if="hoveredPoint.missingCount > 0 && hoveredPoint.serviceMissing"
+            class="text-dimmed"
+          >
+            {{ $t('monitoringGap.noChecks') }}
+          </div>
+          <div
+            v-else-if="hoveredPoint.missingCount > 0"
+            class="text-dimmed"
+          >
+            {{ $t('monitoringGap.monitorNotChecked') }}
+          </div>
+          <div
+            v-else-if="hoveredPoint.beforeCreation"
+            class="text-dimmed"
+          >
+            {{ $t('monitoringGap.beforeCreation') }}
           </div>
         </template>
       </template>

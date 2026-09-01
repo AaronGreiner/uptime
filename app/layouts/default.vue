@@ -60,6 +60,8 @@ async function onDashboardCreated(slug: string) {
     storage-key="uptime-sidebar"
     :storage-options="{ maxAge: UI_PREFERENCE_MAX_AGE_SECONDS, sameSite: 'lax', path: '/' }"
   >
+    <AppUplinkBanner />
+
     <UDashboardSidebar
       v-if="!isFullscreen"
       id="uptime"

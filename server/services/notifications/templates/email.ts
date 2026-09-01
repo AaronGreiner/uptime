@@ -1,5 +1,15 @@
 import type { NotificationEvent, NotificationLocale } from '../../../../shared/types/notification'
-import { escapeHtml, eventFacts, eventSubject, eventSummary, eventTitle, monitorUrl, toneFor } from '../format'
+import {
+  escapeHtml,
+  eventBadge,
+  eventFacts,
+  eventLink,
+  eventLinkLabel,
+  eventSubject,
+  eventSummary,
+  eventTitle,
+  toneFor
+} from '../format'
 import type { NotificationTone, Translate } from '../format'
 
 /**
@@ -66,12 +76,12 @@ export function renderEmail(event: NotificationEvent, options: EmailRenderOption
   const parts: EmailParts = {
     language,
     tone: TONES[toneFor(event)],
-    status: t(`status.${event.status}`),
+    status: eventBadge(event, t),
     title: eventTitle(event, t),
     summary: eventSummary(event, t),
     facts: eventFacts(event, t, { locale: language, timeZone }),
-    link: monitorUrl(event.monitor.id),
-    linkLabel: t('notification.action.openMonitor'),
+    link: eventLink(event),
+    linkLabel: eventLinkLabel(event, t),
     footer: t('notification.footer', { app: options.appName, channel: options.channelName })
   }
 

@@ -1,14 +1,16 @@
 import { and, eq, isNull, lte, or } from 'drizzle-orm'
 import type { MaintenanceStatus } from '../../shared/types/maintenance'
-import type { EvaluatedMonitorStatus } from '../../shared/types/monitor'
+import type { EvaluatedMonitorStatus, HeartbeatReportedStatus } from '../../shared/types/monitor'
 import type { NotificationEvent } from '../../shared/types/notification'
 import { monitorTarget } from '../../shared/utils/monitor'
 import { STATS_RANGE_SECONDS } from '../../shared/utils/stats'
 import { heartbeats, monitorState, monitors } from '../database/schema'
 import type { HeartbeatRow, MonitorRow, MonitorStateRow } from '../database/schema'
+import { nowInSeconds } from '../utils/time'
 import { executeCheck } from './checks'
 import type { CheckResult } from './checks'
 import { enqueueNotificationEvent } from './notifications'
+import { ensureUplinkVerdict, isUplinkDown, shouldWithholdCheckResult } from './uplink'
 
 /** Monitor ids currently being checked, so a slow check is never queued twice. */
 const inFlight = new Set<number>()
@@ -102,6 +104,16 @@ async function runCheck(monitor: MonitorRow): Promise<void> {
 
   try {
     const result = await executeCheck(monitor)
+
+    // Asked only once the check has already failed, which is the single moment
+    // the answer changes anything: a host that lost its uplink fails every check
+    // at once, and the result alone cannot tell that from the target being down.
+    // Callers share one probe, so a total outage costs one of them, not one per
+    // monitor.
+    if (result.status === 'down' || isUplinkDown()) {
+      await ensureUplinkVerdict()
+    }
+
     const event = recordCheckResult(monitor, result)
 
     // Queued rather than delivered: the monitor stays in the in-flight set until
@@ -137,33 +149,44 @@ export function recordCheckResult(monitor: MonitorRow, result: CheckResult): Not
   const previousStatus = previous?.status ?? 'pending'
 
   /*
-   * Maintenance freezes the state machine rather than feeding it a different
-   * answer. The counters, the status and `statusChangedAt` all keep what they
-   * held when the window opened, and three things follow from that alone:
+   * Two things withhold judgement, and both freeze the state machine rather than
+   * feeding it a different answer: a maintenance window, and the instance having
+   * lost its own uplink. The counters, the status and `statusChangedAt` all keep
+   * what they held when it started, and three things follow from that alone:
    *
    * - no transition happens, so `buildNotificationEvent` below finds nothing to
-   *   report without needing to know about maintenance at all;
-   * - a monitor that was up enters the window with a failure count of zero, so
-   *   once the window closes the retries are counted from the start — a server
-   *   that is still booting gets its full tolerance;
+   *   report without needing to know about either of them;
+   * - a monitor that was up comes out of it with a failure count of zero, so the
+   *   retries are counted from the start again — a server that is still booting,
+   *   or a router that just came back, gets its full tolerance;
    * - a monitor that was already down and reported stays down underneath, so
    *   the recovery is still delivered when it finally answers again.
    *
    * The heartbeat is written either way and keeps the raw outcome; only its
    * `reportedStatus` says the reading was not judged.
+   *
+   * A successful check is frozen along with a failed one. It could be judged —
+   * a target that answered answered, whatever our own network was doing — but
+   * one rule that covers both is worth more than the interval of delay it costs
+   * a monitor recovering during the outage.
    */
   const maintenance = resolveMonitorMaintenance(monitor, now)
+  // A window wins the label where both apply: it is the one somebody planned,
+  // and it is the answer the reader is looking for.
+  const withheld: HeartbeatReportedStatus | null = maintenance.active
+    ? 'maintenance'
+    : shouldWithholdCheckResult() ? 'unknown' : null
 
-  const consecutiveFailures = maintenance.active
+  const consecutiveFailures = withheld
     ? previous?.consecutiveFailures ?? 0
     : result.status === 'down' ? (previous?.consecutiveFailures ?? 0) + 1 : 0
-  const consecutiveSuccesses = maintenance.active
+  const consecutiveSuccesses = withheld
     ? previous?.consecutiveSuccesses ?? 0
     : result.status === 'up' ? (previous?.consecutiveSuccesses ?? 0) + 1 : 0
 
   // While retries are left the monitor is "pending" rather than down, which keeps
   // a single blip out of the incident history.
-  const status: EvaluatedMonitorStatus = maintenance.active
+  const status: EvaluatedMonitorStatus = withheld
     ? previousStatus
     : result.status === 'up'
       ? 'up'
@@ -175,7 +198,7 @@ export function recordCheckResult(monitor: MonitorRow, result: CheckResult): Not
     monitorId: monitor.id,
     checkedAt: now,
     status: result.status,
-    reportedStatus: maintenance.active ? 'maintenance' : status,
+    reportedStatus: withheld ?? status,
     latencyMs: result.latencyMs,
     statusCode: result.statusCode,
     message: result.message
@@ -315,6 +338,7 @@ function enteredCertificateWarningWindow(
   return previousExpiry > previousCheckedAt + window
 }
 
-export function nowInSeconds(): number {
-  return Math.floor(Date.now() / 1000)
-}
+// Kept as a public export for existing callers; the implementation lives in a
+// dependency-free utility so services used by the scheduler do not import the
+// scheduler back and form a cycle.
+export { nowInSeconds }

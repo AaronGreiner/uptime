@@ -26,12 +26,11 @@ export function isStatsRange(value: unknown): value is StatsRange {
  *
  * Every range aims for a few hundred buckets, which is finer than the pixels of
  * any cell the chart is drawn in and therefore as much shape as the data can
- * carry. Two ceilings cut that aim short, and both are the source rather than a
- * choice: below 24 h the buckets are grouped from raw heartbeats, so a bucket
- * shorter than the check interval is empty rather than finer — 30 s is half the
- * default interval and covers the fastest monitors the bounds allow. Above 24 h
- * the source is the hourly rollup, which no bucket can undercut, and a year is
- * already past the aim at one bucket a day.
+ * carry. This is the base width: `getMonitorStatsSeries` raises it to a multiple
+ * wide enough for the monitor's own interval, because a bucket in which no
+ * check was scheduled is not finer data. Above 24 h the source is the hourly
+ * rollup, which no bucket can undercut, and a year is already past the aim at
+ * one bucket a day.
  */
 export function statsBucketSeconds(range: StatsRange): number {
   switch (range) {

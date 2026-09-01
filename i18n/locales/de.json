@@ -73,6 +73,21 @@
     "maintenance": "Wartung",
     "unknown": "Keine Daten"
   },
+  "uplink": {
+    "unjudgedChecks": "1 Prüfung nicht bewertet | {count} Prüfungen nicht bewertet",
+    "banner": {
+      "title": "Diese Instanz hat keine Netzwerkverbindung",
+      "network": "Prüfungen werden seit {duration} nicht bewertet. Kein Prüfziel ist erreichbar.",
+      "dns": "Prüfungen werden seit {duration} nicht bewertet. DNS antwortet nicht.",
+      "minimize": "Netzwerkhinweis minimieren",
+      "expand": "Netzwerkhinweis ausklappen"
+    }
+  },
+  "monitoringGap": {
+    "noChecks": "Der Monitoring-Service hat keine Prüfungen aufgezeichnet.",
+    "monitorNotChecked": "Dieser Monitor wurde nicht geprüft.",
+    "beforeCreation": "Der Monitor existierte noch nicht."
+  },
   "auth": {
     "signIn": "Anmelden",
     "signOut": "Abmelden",
@@ -498,6 +513,13 @@
         "title": "Das Zertifikat von {monitor} läuft bald ab",
         "summary": "Das TLS-Zertifikat ist in seinem Warnfenster und muss erneuert werden.",
         "label": "Zertifikat läuft ab"
+      },
+      "uplinkRestored": {
+        "subject": "[Monitoring-Lücke] Netzwerk wiederhergestellt",
+        "title": "Die Monitoring-Instanz ist wieder online",
+        "summary": "Die Instanz konnte {monitors} Monitore für {duration} nicht bewerten.",
+        "label": "Netzwerkausfall der Instanz",
+        "badge": "Monitoring-Lücke"
       }
     },
     "field": {
@@ -508,11 +530,20 @@
       "latency": "Antwortzeit",
       "occurredAt": "Zeitpunkt",
       "duration": "Vorheriger Status hielt",
-      "certificateExpiresAt": "Zertifikat läuft ab"
+      "certificateExpiresAt": "Zertifikat läuft ab",
+      "fault": "Ursache",
+      "affectedMonitors": "Betroffene Monitore",
+      "offlineDuration": "Monitoring-Lücke"
     },
     "action": {
-      "openMonitor": "Monitor öffnen"
+      "openMonitor": "Monitor öffnen",
+      "openApp": "Monitoring öffnen"
     },
+    "fault": {
+      "network": "Keine Verbindung zum Internet",
+      "dns": "DNS nicht verfügbar"
+    },
+    "instance": "Monitoring-Instanz",
     "test": {
       "monitorName": "Beispielmonitor",
       "message": "Das ist eine Testnachricht von {app}. Es ist kein Monitor betroffen.",

@@ -26,6 +26,7 @@ function createState(): NotificationGroupInput {
     notifyDown: props.group?.notifyDown ?? true,
     notifyUp: props.group?.notifyUp ?? true,
     notifyCertificateExpiring: props.group?.notifyCertificateExpiring ?? true,
+    notifyInstanceOffline: props.group?.notifyInstanceOffline ?? true,
     isDefault: props.group?.isDefault ?? false,
     channelIds: props.group ? [...props.group.channelIds] : []
   }
@@ -149,6 +150,10 @@ async function onSubmit(event: FormSubmitEvent<NotificationGroupInput>) {
             <USwitch
               v-model="state.notifyCertificateExpiring"
               :label="$t('notification.event.certificate.label')"
+            />
+            <USwitch
+              v-model="state.notifyInstanceOffline"
+              :label="$t('notification.event.uplinkRestored.label')"
             />
           </div>
         </UFormField>

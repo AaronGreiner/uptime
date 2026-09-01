@@ -1,0 +1,1 @@
+ALTER TABLE `monitor_stats_hourly` ADD `unknown_count` integer DEFAULT 0 NOT NULL;

@@ -26,12 +26,24 @@ export type MonitorStatus = EvaluatedMonitorStatus | 'paused' | 'maintenance'
 export type HeartbeatStatus = 'up' | 'down'
 
 /**
- * Monitor status reported after a check. A tolerated failure is `pending`, and
- * a check that ran inside a maintenance window is `maintenance` — which is what
- * the uptime and incident queries filter on, while `status` next to it keeps the
- * raw truth about whether the target answered.
+ * Monitor status reported after a check. A tolerated failure is `pending`, a
+ * check that ran inside a maintenance window is `maintenance` and one that ran
+ * while the instance had no uplink is `unknown` — the last two are what the
+ * uptime and incident queries filter on, while `status` next to it keeps the raw
+ * truth about whether the target answered.
  */
-export type HeartbeatReportedStatus = EvaluatedMonitorStatus | 'maintenance'
+export type HeartbeatReportedStatus = EvaluatedMonitorStatus | 'maintenance' | 'unknown'
+
+/**
+ * Everything the interface may have to colour, label or give an icon: a
+ * monitor's own status and a single reading's.
+ *
+ * The two overlap without being the same thing, which is why they are not one
+ * union. A monitor is never `unknown` — nothing was established while the
+ * instance was blind, so it keeps the status it already had — and a single
+ * reading is never `paused`, because a paused monitor is not checked.
+ */
+export type MonitorDisplayStatus = MonitorStatus | HeartbeatReportedStatus
 
 export interface MonitorHttpOptions {
   url: string
@@ -134,6 +146,8 @@ export interface MonitorDailyPoint {
   downCount: number
   /** Checks that ran under maintenance, counted out of the two above. */
   maintenanceCount: number
+  /** Checks that ran while the instance had no uplink, likewise counted apart. */
+  unknownCount: number
   avgLatencyMs: number | null
 }
 
@@ -144,6 +158,14 @@ export interface MonitorStatsPoint {
   downCount: number
   /** Checks that ran under maintenance, counted out of the two above. */
   maintenanceCount: number
+  /** Checks that ran while the instance had no uplink, likewise counted apart. */
+  unknownCount: number
+  /** Expected bucket in which the monitoring service recorded no check at all. */
+  missingCount: number
+  /** True when no monitor was checked, rather than only this monitor being missed. */
+  serviceMissing: boolean
+  /** True when this bucket predates the monitor and therefore expected nothing. */
+  beforeCreation: boolean
   avgLatencyMs: number | null
   minLatencyMs: number | null
   maxLatencyMs: number | null

@@ -73,6 +73,21 @@
     "maintenance": "Maintenance",
     "unknown": "No data"
   },
+  "uplink": {
+    "unjudgedChecks": "1 check not judged | {count} checks not judged",
+    "banner": {
+      "title": "This instance has no network connection",
+      "network": "Checks have not been judged for {duration}. No probe target is reachable.",
+      "dns": "Checks have not been judged for {duration}. DNS is not responding.",
+      "minimize": "Minimize network notice",
+      "expand": "Expand network notice"
+    }
+  },
+  "monitoringGap": {
+    "noChecks": "The monitoring service recorded no checks.",
+    "monitorNotChecked": "This monitor was not checked.",
+    "beforeCreation": "The monitor did not exist yet."
+  },
   "auth": {
     "signIn": "Sign in",
     "signOut": "Sign out",
@@ -498,6 +513,13 @@
         "title": "The certificate for {monitor} expires soon",
         "summary": "The TLS certificate is inside its warning window and needs renewing.",
         "label": "Certificate expiring"
+      },
+      "uplinkRestored": {
+        "subject": "[Monitoring gap] Network restored",
+        "title": "The monitoring instance is online again",
+        "summary": "The instance could not judge {monitors} monitors for {duration}.",
+        "label": "Instance network outage",
+        "badge": "Monitoring gap"
       }
     },
     "field": {
@@ -508,11 +530,20 @@
       "latency": "Response time",
       "occurredAt": "Time",
       "duration": "Previous status held for",
-      "certificateExpiresAt": "Certificate expires"
+      "certificateExpiresAt": "Certificate expires",
+      "fault": "Cause",
+      "affectedMonitors": "Affected monitors",
+      "offlineDuration": "Monitoring gap"
     },
     "action": {
-      "openMonitor": "Open monitor"
+      "openMonitor": "Open monitor",
+      "openApp": "Open monitoring"
     },
+    "fault": {
+      "network": "No route to the internet",
+      "dns": "DNS unavailable"
+    },
+    "instance": "Monitoring instance",
     "test": {
       "monitorName": "Example monitor",
       "message": "This is a test message from {app}. No monitor is affected.",

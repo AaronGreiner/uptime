@@ -434,6 +434,7 @@ export const notificationGroupInputSchema = z.object({
   notifyDown: z.boolean().default(true),
   notifyUp: z.boolean().default(true),
   notifyCertificateExpiring: z.boolean().default(true),
+  notifyInstanceOffline: z.boolean().default(true),
   /** Applies to monitors whose inheritance walk ends without a decision. */
   isDefault: z.boolean().default(false),
   channelIds: idList(50)

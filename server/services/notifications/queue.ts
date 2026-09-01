@@ -3,6 +3,7 @@ import type { NotificationEvent } from '../../../shared/types/notification'
 import { notificationChannels, notificationDeliveries } from '../../database/schema'
 import type { NotificationChannelRow, NotificationDeliveryRow } from '../../database/schema'
 import { nowInSeconds } from '../scheduler'
+import { isUplinkDown } from '../uplink'
 import { getNotificationProvider } from './registry'
 
 /**
@@ -67,6 +68,15 @@ export async function runNotificationQueue(): Promise<void> {
   running = true
 
   try {
+    // Nothing leaves a host with no uplink, and every attempt made while it is
+    // gone would spend one of the four a delivery gets. The alarm that reported
+    // the outage would then be the one thing the outage destroyed, so the queue
+    // waits instead: the rows keep, and the backlog goes out when the instance
+    // can talk again.
+    if (isUplinkDown()) {
+      return
+    }
+
     const { notifications } = useRuntimeConfig()
     const due = useDatabase()
       .select()

@@ -90,6 +90,31 @@ export default defineNuxtConfig({
       /** How often the scheduler looks for due monitors. */
       tickIntervalMs: 1000
     },
+    uplink: {
+      /**
+       * Set to false to judge every failed check as the target's fault, however
+       * the instance's own network is doing.
+       */
+      enabled: true,
+      /**
+       * `host:port` pairs probed over TCP, comma separated. One of them
+       * answering means the route out is intact, so they have to be addresses
+       * no monitored target depends on.
+       */
+      targets: '1.1.1.1:443,9.9.9.9:443',
+      /**
+       * Hostname resolved alongside the targets. A resolver that stopped
+       * answering fails every check by name while the route is perfectly fine,
+       * which is the same kind of fault and just as much ours.
+       */
+      dnsHost: 'cloudflare.com',
+      /** Deadline for one probe, both halves included. */
+      timeoutMs: 2000,
+      /** Consecutive failed probes before the uplink counts as gone. */
+      failureThreshold: 2,
+      /** How long a verdict is reused before the next failed check reprobes. */
+      cacheMs: 5000
+    },
     notifications: {
       /** Set to false to queue notifications without ever delivering them. */
       enabled: true,

@@ -5,6 +5,7 @@ import {
   ChevronsDownUp,
   ChevronsUpDown,
   CircleCheck,
+  CircleDashed,
   CirclePause,
   CircleX,
   Copy,
@@ -23,7 +24,7 @@ import {
   Wrench
 } from 'lucide'
 import type { IconNode } from 'morphicons/vue'
-import type { MonitorStatus } from '#shared/types/monitor'
+import type { MonitorDisplayStatus } from '#shared/types/monitor'
 
 /**
  * The icons that take part in a morph. Module scope is intentional: morphicons
@@ -36,6 +37,7 @@ export const MORPH_ICONS = {
   chevronsDownUp: ChevronsDownUp,
   chevronsUpDown: ChevronsUpDown,
   circleCheck: CircleCheck,
+  circleDashed: CircleDashed,
   circlePause: CirclePause,
   circleX: CircleX,
   copy: Copy,
@@ -61,12 +63,13 @@ export type MorphIconName = keyof typeof MORPH_ICONS
  * Kept here rather than there because `shared/` is imported by the server, and
  * the icon geometry has no business in the Nitro bundle.
  */
-export function monitorStatusMorphIcon(status: MonitorStatus): MorphIconName {
+export function monitorStatusMorphIcon(status: MonitorDisplayStatus): MorphIconName {
   switch (status) {
     case 'up': return 'circleCheck'
     case 'down': return 'circleX'
     case 'pending': return 'loaderCircle'
     case 'paused': return 'circlePause'
     case 'maintenance': return 'wrench'
+    case 'unknown': return 'circleDashed'
   }
 }
