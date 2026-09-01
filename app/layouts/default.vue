@@ -118,18 +118,27 @@ async function onDashboardCreated(slug: string) {
       </template>
 
       <!--
-        Two controls rather than four: the settings page and the language moved
-        into the account menu, which is the only place the narrowest sidebar has
-        room for them. The colour mode keeps its button because it is a toggle,
-        and burying a one click switch behind a menu is what a menu is worst at.
+        Authentication stays at the leading edge, while settings and colour
+        mode form the preference pair at the trailing edge. All three controls
+        are square and stack vertically when the sidebar becomes an icon rail.
       -->
       <template #footer="{ collapsed }">
         <div
           class="flex items-center gap-1"
-          :class="collapsed ? 'flex-col' : ''"
+          :class="collapsed ? 'flex-col' : 'w-full'"
         >
           <AppUserMenu :collapsed="collapsed" />
-          <AppColorModeButton :class="collapsed ? '' : 'ms-auto shrink-0'" />
+          <UButton
+            to="/settings"
+            color="neutral"
+            variant="ghost"
+            icon="i-lucide-settings"
+            square
+            :aria-label="$t('nav.settings')"
+            :title="$t('nav.settings')"
+            :class="collapsed ? '' : 'ms-auto'"
+          />
+          <AppColorModeButton />
         </div>
       </template>
     </UDashboardSidebar>
