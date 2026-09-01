@@ -373,7 +373,8 @@
       "incident-history": "Störungschronik",
       "reliability-kpis": "Zuverlässigkeit",
       "maintenance-schedule": "Wartung",
-      "heading": "Überschrift"
+      "heading": "Überschrift",
+      "monitor-repeat": "Pro Monitor wiederholen"
     },
     "typeDescription": {
       "monitor": "Status, Antwortzeit und der jüngste Verlauf eines Monitors.",
@@ -388,7 +389,8 @@
       "incident-history": "Aus der Prüfhistorie rekonstruierte Ausfälle.",
       "reliability-kpis": "Ausfälle, Ausfallzeit, MTTR und MTBF über einen Zeitraum.",
       "maintenance-schedule": "Was gerade in Wartung ist und welches Fenster als Nächstes öffnet.",
-      "heading": "Ein Textelement, um Widgets zu gruppieren."
+      "heading": "Ein Textelement, um Widgets zu gruppieren.",
+      "monitor-repeat": "Eine Reihe Widgets, gezeichnet für jeden Monitor einer Gruppe."
     },
     "fields": {
       "type": "Widget-Typ",
@@ -402,7 +404,8 @@
       "target": "Verfügbarkeitsziel",
       "sort": "Sortierung",
       "width": "Breite",
-      "height": "Höhe"
+      "height": "Höhe",
+      "children": "Widgets pro Monitor"
     },
     "level": {
       "1": "Groß",
@@ -414,6 +417,7 @@
       "uptime": "Verfügbarkeit, 24 h"
     },
     "sort": {
+      "tree": "Gruppenreihenfolge",
       "status": "Schlechteste zuerst",
       "name": "Name",
       "uptime": "Geringste Verfügbarkeit",
@@ -426,6 +430,19 @@
       "noGroup": "Keine Gruppe",
       "groupHint": "Eine Gruppe umfasst alles darunter und folgt dem Baum.",
       "monitorsHint": "Leer lassen für alle Monitore."
+    },
+    "repeat": {
+      "summary": "{monitors} × {widgets}",
+      "widgetCount": "keine Widgets | 1 Widget | {count} Widgets",
+      "sample": "Gezeigt mit {name}",
+      "noChildren": "Noch keine Widgets in diesem Block.",
+      "addChild": "Widget hinzufügen",
+      "removeChild": "Widget entfernen",
+      "moveChildUp": "Widget nach oben",
+      "moveChildDown": "Widget nach unten",
+      "childrenHint": "Jeder Monitor im Bereich bekommt diese Reihe Widgets, in dieser Reihenfolge.",
+      "groupHint": "Eine Gruppe umfasst alles darunter, ein neuer Monitor kommt von selbst dazu.",
+      "previewHint": "Ein Band mit echten Daten. Das Dashboard zeichnet es einmal pro Monitor."
     },
     "preview": {
       "title": "Vorschau",
@@ -730,6 +747,7 @@
     "timeoutTooLong": "Das Zeitlimit darf das Prüfintervall nicht überschreiten",
     "monitorRequired": "Monitor für dieses Widget auswählen",
     "weekdayRequired": "Wähle mindestens einen Wochentag",
-    "maintenanceTarget": "Wähle einen Monitor oder eine Gruppe für dieses Fenster"
+    "maintenanceTarget": "Wähle einen Monitor oder eine Gruppe für dieses Fenster",
+    "repeatChildrenRequired": "Füge mindestens ein Widget zum Wiederholen hinzu"
   }
 }

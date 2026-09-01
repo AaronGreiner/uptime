@@ -2,6 +2,8 @@
 import { useSortable } from '@vueuse/integrations/useSortable'
 import type { DashboardWidget, DashboardWithWidgets, WidgetHeight, WidgetWidth } from '#shared/types/dashboard'
 import type { MonitorWithState } from '#shared/types/monitor'
+import { WIDGET_GRID_CLASS } from '#shared/utils/grid'
+import { REPEAT_WIDGET_TYPE } from '#shared/utils/widget'
 
 const props = defineProps<{
   dashboard: DashboardWithWidgets
@@ -158,6 +160,17 @@ async function saveLayout() {
   }
 }
 
+/**
+ * Whether a widget is drawn as itself or as the cells it stands for.
+ *
+ * A block collapses to one element while the layout is arranged, because
+ * Sortable reads the order back off the DOM: as many elements as widgets, in
+ * the same order, is the whole contract between the two.
+ */
+function expands(widget: DashboardWidget): boolean {
+  return widget.type === REPEAT_WIDGET_TYPE && !props.editing
+}
+
 onBeforeUnmount(() => {
   if (saveTimer) {
     clearTimeout(saveTimer)
@@ -168,19 +181,28 @@ onBeforeUnmount(() => {
 <template>
   <div
     ref="grid"
-    class="grid grid-cols-2 sm:grid-cols-6 lg:grid-cols-12 gap-x-3 gap-y-4 sm:gap-4 auto-rows-[68px] lg:auto-rows-[60px]"
+    :class="WIDGET_GRID_CLASS"
   >
-    <DashboardWidgetView
+    <template
       v-for="(widget, index) in widgets"
       :key="widget.id"
-      :widget="widget"
-      :monitors="monitors"
-      :editing="editing"
-      @edit="emit('editWidget', widget)"
-      @duplicate="duplicateWidget(widget)"
-      @remove="emit('removeWidget', widget)"
-      @resize="resizeWidget(widget, $event)"
-      @move="moveWidget(index, $event)"
-    />
+    >
+      <DashboardRepeatCells
+        v-if="expands(widget)"
+        :widget="widget"
+        :monitors="monitors"
+      />
+      <DashboardWidgetView
+        v-else
+        :widget="widget"
+        :monitors="monitors"
+        :editing="editing"
+        @edit="emit('editWidget', widget)"
+        @duplicate="duplicateWidget(widget)"
+        @remove="emit('removeWidget', widget)"
+        @resize="resizeWidget(widget, $event)"
+        @move="moveWidget(index, $event)"
+      />
+    </template>
   </div>
 </template>

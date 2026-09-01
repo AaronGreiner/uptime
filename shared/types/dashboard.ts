@@ -16,13 +16,29 @@ export type WidgetType
     | 'reliability-kpis'
     | 'maintenance-schedule'
     | 'heading'
+    | 'monitor-repeat'
 
 export type WidgetWidth = 'quarter' | 'third' | 'half' | 'twoThirds' | 'full'
 
 export type WidgetHeight = 'slim' | 'compact' | 'standard' | 'tall'
 
 /** Order a monitor list arranges its rows in. */
-export type WidgetSort = 'name' | 'status' | 'uptime' | 'latency'
+export type WidgetSort = 'tree' | 'name' | 'status' | 'uptime' | 'latency'
+
+/**
+ * A widget drawn inside a repeat block, once per monitor in the block's scope.
+ *
+ * It is not a row of its own: a child is never dragged, resized or deleted
+ * individually, it is only ever saved as part of the block that holds it. So it
+ * lives in that block's config, where `widgetConfigForType` reduces it to the
+ * settings its own type reads — the same rule one level down.
+ */
+export interface WidgetChild {
+  type: Exclude<WidgetType, 'monitor-repeat'>
+  config: WidgetConfig
+  width: WidgetWidth
+  height: WidgetHeight
+}
 
 export interface WidgetConfig {
   /** Overrides the auto-generated widget title. */
@@ -48,6 +64,11 @@ export interface WidgetConfig {
    * everybody, so a widget may insist on a look — but does not have to.
    */
   style?: LatencyChartStyle | 'inherit'
+  /**
+   * Widgets a repeat block draws for every monitor it covers. Nesting stops
+   * here: a child is never itself a block.
+   */
+  children?: WidgetChild[]
 }
 
 export interface DashboardWidget {

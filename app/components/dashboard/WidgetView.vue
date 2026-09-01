@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { DashboardWidget, WidgetHeight, WidgetWidth } from '#shared/types/dashboard'
 import type { MonitorWithState } from '#shared/types/monitor'
-import { WIDGET_HEIGHT_CLASS, WIDGET_WIDTH_CLASS } from '#shared/utils/grid'
-import { stepWidgetHeight, stepWidgetWidth } from '#shared/utils/widget'
+import { WIDGET_GAP_PX, WIDGET_HEIGHT_CLASS, WIDGET_HEIGHT_ROWS, WIDGET_ROW_HEIGHT_PX, WIDGET_WIDTH_CLASS } from '#shared/utils/grid'
+import { REPEAT_WIDGET_TYPE, stepWidgetHeight, stepWidgetWidth, widgetChildren } from '#shared/utils/widget'
 
 const props = defineProps<{
   widget: DashboardWidget
@@ -19,6 +19,58 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+
+/**
+ * A repeat block has no cell of its own: it is drawn as a band of whole grid
+ * rows, and how many of them it needs follows from its children rather than
+ * from a size token. So the band is measured and the row span written out.
+ *
+ * Only the layout being arranged ever gets here — a dashboard being read
+ * expands the block into ordinary cells, where none of this is needed.
+ */
+const isBand = computed(() => props.widget.type === REPEAT_WIDGET_TYPE)
+
+/**
+ * Enough rows for the tallest child plus the band's own frame, which is right
+ * often enough that the first paint does not jump. The observer below corrects
+ * it against the real height a frame later.
+ */
+const bandRows = ref(Math.max(
+  ...widgetChildren(props.widget.config).map(child => WIDGET_HEIGHT_ROWS[child.height]),
+  1
+) + 1)
+
+const root = useTemplateRef<HTMLElement>('root')
+const bandContent = useTemplateRef<HTMLElement>('bandContent')
+
+onMounted(() => {
+  const observer = new ResizeObserver(() => {
+    const content = bandContent.value
+
+    if (!content) {
+      return
+    }
+
+    // Read off the grid rather than off the constants: the row height and the
+    // gaps change with the breakpoint, and the grid is the one that knows.
+    const grid = root.value?.parentElement
+    const style = grid ? getComputedStyle(grid) : null
+    const gap = Number.parseFloat(style?.rowGap ?? '') || WIDGET_GAP_PX
+    const row = Number.parseFloat(style?.gridAutoRows ?? '') || WIDGET_ROW_HEIGHT_PX
+
+    bandRows.value = Math.max(1, Math.ceil((content.offsetHeight + gap) / (row + gap)))
+  })
+
+  watch(bandContent, (content) => {
+    observer.disconnect()
+
+    if (content) {
+      observer.observe(content)
+    }
+  }, { immediate: true })
+
+  onScopeDispose(() => observer.disconnect())
+})
 
 const narrowerWidth = computed(() => stepWidgetWidth(props.widget.type, props.widget.width, -1))
 const widerWidth = computed(() => stepWidgetWidth(props.widget.type, props.widget.width, 1))
@@ -72,8 +124,12 @@ function onKeydown(event: KeyboardEvent) {
 
 <template>
   <div
+    ref="root"
     class="relative h-full min-w-0 group/widget @container rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-primary"
-    :class="[WIDGET_WIDTH_CLASS[widget.width], WIDGET_HEIGHT_CLASS[widget.height]]"
+    :class="isBand
+      ? WIDGET_WIDTH_CLASS.full
+      : [WIDGET_WIDTH_CLASS[widget.width], WIDGET_HEIGHT_CLASS[widget.height]]"
+    :style="isBand ? { gridRow: `span ${bandRows}` } : undefined"
     :tabindex="editing ? 0 : undefined"
     :aria-label="editing ? (widget.config.title || $t(`widget.type.${widget.type}`)) : undefined"
     @keydown="onKeydown"
@@ -92,6 +148,7 @@ function onKeydown(event: KeyboardEvent) {
         :aria-label="$t('widget.reorder')"
       />
       <UButton
+        v-if="!isBand"
         icon="i-lucide-chevron-left"
         size="xs"
         color="neutral"
@@ -101,6 +158,7 @@ function onKeydown(event: KeyboardEvent) {
         @click="resizeWidth(narrowerWidth)"
       />
       <UButton
+        v-if="!isBand"
         icon="i-lucide-chevron-right"
         size="xs"
         color="neutral"
@@ -110,6 +168,7 @@ function onKeydown(event: KeyboardEvent) {
         @click="resizeWidth(widerWidth)"
       />
       <UButton
+        v-if="!isBand"
         icon="i-lucide-chevron-up"
         size="xs"
         color="neutral"
@@ -119,6 +178,7 @@ function onKeydown(event: KeyboardEvent) {
         @click="resizeHeight(shorterHeight)"
       />
       <UButton
+        v-if="!isBand"
         icon="i-lucide-chevron-down"
         size="xs"
         color="neutral"
@@ -153,7 +213,22 @@ function onKeydown(event: KeyboardEvent) {
       />
     </div>
 
+    <!--
+      The band is measured, so it has to keep its natural height while the cell
+      around it is being told how tall to be.
+    -->
+    <div
+      v-if="isBand"
+      ref="bandContent"
+      class="min-w-0"
+    >
+      <DashboardWidgetBody
+        :widget="widget"
+        :monitors="monitors"
+      />
+    </div>
     <DashboardWidgetBody
+      v-else
       :widget="widget"
       :monitors="monitors"
     />

@@ -11,6 +11,7 @@ import MaintenanceSchedule from './widget/MaintenanceSchedule.vue'
 import Monitor from './widget/Monitor.vue'
 import MonitorList from './widget/MonitorList.vue'
 import ReliabilityKpis from './widget/ReliabilityKpis.vue'
+import Repeat from './widget/Repeat.vue'
 import SlaTable from './widget/SlaTable.vue'
 import StatusOverview from './widget/StatusOverview.vue'
 import UptimeCalendar from './widget/UptimeCalendar.vue'
@@ -37,7 +38,10 @@ const WIDGET_COMPONENTS: Record<WidgetType, Component> = {
   'incident-history': IncidentHistory,
   'reliability-kpis': ReliabilityKpis,
   'maintenance-schedule': MaintenanceSchedule,
-  'heading': Heading
+  'heading': Heading,
+  // Only ever reached where the block itself is the subject: the layout being
+  // arranged, or the settings preview. A dashboard expands it into cells.
+  'monitor-repeat': Repeat
 }
 
 const props = defineProps<{

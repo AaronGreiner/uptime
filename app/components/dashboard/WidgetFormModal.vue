@@ -1,22 +1,17 @@
 <script setup lang="ts">
 import type { FormSubmitEvent } from '@nuxt/ui'
-import type { DashboardWidget, WidgetHeight, WidgetWidth } from '#shared/types/dashboard'
+import type { DashboardWidget, WidgetChild } from '#shared/types/dashboard'
 import type { MonitorWithState } from '#shared/types/monitor'
-import type { StatsRange } from '#shared/types/stats'
 import { joinMonitorPath, monitorGroupIcon } from '#shared/utils/group'
-import { LATENCY_CHART_STYLES } from '#shared/utils/monitor'
-import { STATS_RANGES } from '#shared/utils/stats'
 import {
+  REPEAT_MAX_CHILDREN,
+  WIDGET_CHILD_TYPES,
   WIDGET_DEFINITIONS,
-  WIDGET_SLA_TARGETS,
-  WIDGET_SORTS,
   WIDGET_TYPES,
   clampWidgetSize,
   widgetConfigDefaults,
   widgetConfigForType,
-  widgetHasField,
-  widgetHeightOptions,
-  widgetWidthOptions
+  widgetHasField
 } from '#shared/utils/widget'
 import { widgetInputSchema } from '#shared/utils/validation'
 import type { WidgetInput } from '#shared/utils/validation'
@@ -34,7 +29,6 @@ const open = defineModel<boolean>('open', { required: true })
 
 const { t } = useI18n()
 const toast = useToast()
-const { formatUptime } = useFormatters()
 const { flatTree } = useMonitorTree()
 
 /**
@@ -58,18 +52,45 @@ function createState(widget?: DashboardWidget | null): WidgetInput {
       monitorIds: widget?.config.monitorIds ?? defaults.monitorIds,
       groupId: widget?.config.groupId ?? defaults.groupId,
       target: widget?.config.target ?? defaults.target,
-      sort: widget?.config.sort ?? defaults.sort
+      sort: widget?.config.sort ?? defaults.sort,
+      children: (widget?.config.children ?? defaults.children).map(child => createChild(child.type, child))
     },
     ...size
+  }
+}
+
+/**
+ * A child carries every setting too, for the same reason the widget above it
+ * does: its type can be changed while the dialog is open. What it never carries
+ * is a monitor or a scope — the block hands it one per band.
+ */
+function createChild(type: WidgetChild['type'], child?: WidgetChild): WidgetChild {
+  const defaults = widgetConfigDefaults(type)
+
+  return {
+    type,
+    config: {
+      title: child?.config.title ?? '',
+      range: child?.config.range ?? defaults.range,
+      style: child?.config.style ?? defaults.style,
+      level: child?.config.level ?? defaults.level,
+      target: child?.config.target ?? defaults.target,
+      sort: child?.config.sort ?? defaults.sort
+    },
+    ...clampWidgetSize(type, child?.width, child?.height)
   }
 }
 
 const state = ref<WidgetInput>(createState(props.widget))
 const submitting = ref(false)
 
+/** Which child has its settings open. Only ever one, the form is long enough. */
+const openChild = ref(-1)
+
 watch(open, (isOpen) => {
   if (isOpen) {
     state.value = createState(props.widget)
+    openChild.value = state.value.config.children?.length === 1 ? 0 : -1
   }
 })
 
@@ -91,16 +112,29 @@ watch([() => state.value.type, state], ([type, current], [previous, old]) => {
   state.value.width = size.width
   state.value.height = size.height
 
-  for (const field of ['range', 'style'] as const) {
+  for (const field of ['range', 'style', 'sort'] as const) {
     if (!widgetHasField(previous, field)) {
       Object.assign(state.value.config, { [field]: defaults[field] })
     }
+  }
+
+  // A block with nothing in it is not a widget yet, so it opens with one.
+  if (widgetHasField(type, 'children') && !state.value.config.children?.length) {
+    state.value.config.children = [createChild('monitor')]
+    openChild.value = 0
   }
 })
 
 const isEdit = computed(() => Boolean(props.widget))
 
 const typeItems = computed(() => WIDGET_TYPES.map(type => ({
+  label: t(`widget.type.${type}`),
+  value: type,
+  icon: WIDGET_DEFINITIONS[type].icon,
+  description: t(`widget.typeDescription.${type}`)
+})))
+
+const childTypeItems = computed(() => WIDGET_CHILD_TYPES.map(type => ({
   label: t(`widget.type.${type}`),
   value: type,
   icon: WIDGET_DEFINITIONS[type].icon,
@@ -117,35 +151,6 @@ const monitorListSearch = ref('')
 const monitorResults = computed(() => filterMonitorItems(monitorSearch.value))
 const monitorListResults = computed(() => filterMonitorItems(monitorListSearch.value))
 
-const rangeItems = computed(() => STATS_RANGES.map(range => ({
-  label: t(`range.${range}`),
-  value: range as StatsRange
-})))
-
-const levelItems = computed(() => ([1, 2, 3] as const).map(level => ({
-  label: t(`widget.level.${level}`),
-  value: level
-})))
-
-const sortItems = computed(() => WIDGET_SORTS.map(sort => ({
-  label: t(`widget.sort.${sort}`),
-  value: sort
-})))
-
-const targetItems = computed(() => WIDGET_SLA_TARGETS.map(target => ({
-  label: formatUptime(target),
-  value: target as number
-})))
-
-/**
- * `inherit` first and by default: a dashboard is read by people who have their
- * own setting, and a widget only overrides it where its author meant to.
- */
-const styleItems = computed(() => [
-  { label: t('widget.style.inherit'), value: 'inherit' as const },
-  ...LATENCY_CHART_STYLES.map(style => ({ label: t(`monitor.latencyStyle.${style}`), value: style }))
-])
-
 const groupItems = computed(() => [
   { label: t('widget.scope.noGroup'), value: null as number | null, icon: 'i-lucide-globe' },
   ...flatTree.value.map(node => ({
@@ -154,16 +159,6 @@ const groupItems = computed(() => [
     icon: monitorGroupIcon(node)
   }))
 ])
-
-const widthItems = computed(() => widgetWidthOptions(state.value.type).map(width => ({
-  label: t(`widget.width.${width}`),
-  value: width as WidgetWidth
-})))
-
-const heightItems = computed(() => widgetHeightOptions(state.value.type).map(height => ({
-  label: t(`widget.height.${height}`),
-  value: height as WidgetHeight
-})))
 
 /** USelectMenu works with `undefined` for "nothing selected", the API with `null`. */
 const selectedMonitorId = computed({
@@ -179,6 +174,62 @@ function hasField(field: Parameters<typeof widgetHasField>[1]): boolean {
 
 /** A group scope follows the tree, so the hand-picked list is hidden while one is set. */
 const usesMonitorList = computed(() => hasField('scope') && !state.value.config.groupId)
+
+const children = computed(() => state.value.config.children ?? [])
+
+function addChild() {
+  const list = [...children.value, createChild('monitor')]
+
+  state.value.config.children = list
+  openChild.value = list.length - 1
+}
+
+function removeChild(index: number) {
+  state.value.config.children = children.value.filter((_, position) => position !== index)
+  openChild.value = -1
+}
+
+function moveChild(index: number, direction: -1 | 1) {
+  const target = index + direction
+  const list = [...children.value]
+
+  if (target < 0 || target >= list.length) {
+    return
+  }
+
+  const [child] = list.splice(index, 1)
+
+  list.splice(target, 0, child!)
+  state.value.config.children = list
+  openChild.value = target
+}
+
+/** The same carry-over the widget above gets, one level down. */
+function setChildType(index: number, type: WidgetChild['type']) {
+  const current = children.value[index]
+
+  if (!current || current.type === type) {
+    return
+  }
+
+  const defaults = widgetConfigDefaults(type)
+  const config = { ...current.config }
+
+  for (const field of ['range', 'style', 'sort'] as const) {
+    if (!widgetHasField(current.type, field)) {
+      Object.assign(config, { [field]: defaults[field] })
+    }
+  }
+
+  const list = [...children.value]
+
+  list[index] = { type, config, ...clampWidgetSize(type, current.width, current.height) }
+  state.value.config.children = list
+}
+
+function childSummary(child: WidgetChild): string {
+  return `${t(`widget.width.${child.width}`)} · ${t(`widget.height.${child.height}`)}`
+}
 
 /**
  * The preview is the real widget with the real data, assembled from the form as
@@ -286,7 +337,7 @@ async function onSubmit(event: FormSubmitEvent<WidgetInput>) {
               :label="$t('widget.fields.group')"
               name="config.groupId"
               :hint="$t('common.optional')"
-              :description="$t('widget.scope.groupHint')"
+              :description="$t(hasField('children') ? 'widget.repeat.groupHint' : 'widget.scope.groupHint')"
             >
               <USelectMenu
                 v-model="state.config.groupId"
@@ -329,114 +380,112 @@ async function onSubmit(event: FormSubmitEvent<WidgetInput>) {
             </UFormField>
           </template>
 
+          <DashboardWidgetFields
+            v-model:config="state.config"
+            v-model:width="state.width"
+            v-model:height="state.height"
+            :type="state.type"
+          />
+
+          <!--
+            The band is composed here rather than on the grid: its children are
+            never dragged, resized or deleted on their own, they are only ever
+            saved as part of the block that holds them.
+          -->
           <UFormField
-            :label="$t('widget.fields.title')"
-            name="config.title"
-            :hint="$t('common.optional')"
+            v-if="hasField('children')"
+            :label="$t('widget.fields.children')"
+            name="config.children"
+            :description="$t('widget.repeat.childrenHint')"
           >
-            <UInput
-              v-model="state.config.title"
-              class="w-full"
-            />
+            <div class="space-y-2">
+              <div
+                v-for="(child, index) in children"
+                :key="index"
+                class="rounded-md border border-default bg-elevated/30"
+              >
+                <div class="flex items-center gap-1 p-1.5">
+                  <UButton
+                    color="neutral"
+                    variant="ghost"
+                    size="xs"
+                    class="min-w-0 flex-1 justify-start"
+                    :icon="WIDGET_DEFINITIONS[child.type].icon"
+                    :aria-expanded="openChild === index"
+                    @click="openChild = openChild === index ? -1 : index"
+                  >
+                    <span class="min-w-0 truncate">
+                      {{ $t(`widget.type.${child.type}`) }}
+                      <span class="text-dimmed">{{ childSummary(child) }}</span>
+                    </span>
+                  </UButton>
+                  <UButton
+                    icon="i-lucide-chevron-up"
+                    size="xs"
+                    color="neutral"
+                    variant="ghost"
+                    :disabled="index === 0"
+                    :aria-label="$t('widget.repeat.moveChildUp')"
+                    @click="moveChild(index, -1)"
+                  />
+                  <UButton
+                    icon="i-lucide-chevron-down"
+                    size="xs"
+                    color="neutral"
+                    variant="ghost"
+                    :disabled="index === children.length - 1"
+                    :aria-label="$t('widget.repeat.moveChildDown')"
+                    @click="moveChild(index, 1)"
+                  />
+                  <UButton
+                    icon="i-lucide-trash-2"
+                    size="xs"
+                    color="error"
+                    variant="ghost"
+                    :aria-label="$t('widget.repeat.removeChild')"
+                    @click="removeChild(index)"
+                  />
+                </div>
+
+                <div
+                  v-if="openChild === index"
+                  class="space-y-4 border-t border-default p-3"
+                >
+                  <UFormField
+                    :label="$t('widget.fields.type')"
+                    :name="`config.children.${index}.type`"
+                  >
+                    <USelectMenu
+                      :model-value="child.type"
+                      :items="childTypeItems"
+                      value-key="value"
+                      :search-input="{ placeholder: $t('common.search') }"
+                      class="w-full"
+                      @update:model-value="setChildType(index, $event)"
+                    />
+                  </UFormField>
+
+                  <DashboardWidgetFields
+                    v-model:config="child.config"
+                    v-model:width="child.width"
+                    v-model:height="child.height"
+                    :type="child.type"
+                    :path="`config.children.${index}`"
+                  />
+                </div>
+              </div>
+
+              <UButton
+                icon="i-lucide-plus"
+                size="xs"
+                color="neutral"
+                variant="subtle"
+                :label="$t('widget.repeat.addChild')"
+                :disabled="children.length >= REPEAT_MAX_CHILDREN"
+                @click="addChild"
+              />
+            </div>
           </UFormField>
-
-          <div class="grid gap-4 sm:grid-cols-2">
-            <UFormField
-              v-if="hasField('range')"
-              :label="$t('widget.fields.range')"
-              name="config.range"
-            >
-              <USelectMenu
-                v-model="state.config.range"
-                :items="rangeItems"
-                value-key="value"
-                :search-input="false"
-                class="w-full"
-              />
-            </UFormField>
-
-            <UFormField
-              v-if="hasField('target')"
-              :label="$t('widget.fields.target')"
-              name="config.target"
-            >
-              <USelectMenu
-                v-model="state.config.target"
-                :items="targetItems"
-                value-key="value"
-                :search-input="false"
-                class="w-full"
-              />
-            </UFormField>
-
-            <UFormField
-              v-if="hasField('style')"
-              :label="$t('widget.fields.style')"
-              name="config.style"
-            >
-              <USelectMenu
-                v-model="state.config.style"
-                :items="styleItems"
-                value-key="value"
-                :search-input="false"
-                class="w-full"
-              />
-            </UFormField>
-
-            <UFormField
-              v-if="hasField('sort')"
-              :label="$t('widget.fields.sort')"
-              name="config.sort"
-            >
-              <USelectMenu
-                v-model="state.config.sort"
-                :items="sortItems"
-                value-key="value"
-                :search-input="false"
-                class="w-full"
-              />
-            </UFormField>
-
-            <UFormField
-              v-if="hasField('level')"
-              :label="$t('widget.fields.level')"
-              name="config.level"
-            >
-              <USelectMenu
-                v-model="state.config.level"
-                :items="levelItems"
-                value-key="value"
-                :search-input="false"
-                class="w-full"
-              />
-            </UFormField>
-
-            <UFormField
-              :label="$t('widget.fields.width')"
-              name="width"
-            >
-              <USelectMenu
-                v-model="state.width"
-                :items="widthItems"
-                value-key="value"
-                :search-input="false"
-                class="w-full"
-              />
-            </UFormField>
-
-            <UFormField
-              :label="$t('widget.fields.height')"
-              name="height"
-            >
-              <USelectMenu
-                v-model="state.height"
-                :items="heightItems"
-                value-key="value"
-                :search-input="false"
-                class="w-full"
-              />
-            </UFormField>
-          </div>
         </UForm>
 
         <div class="min-w-0 space-y-2 lg:sticky lg:top-0 lg:self-start">
@@ -450,7 +499,7 @@ async function onSubmit(event: FormSubmitEvent<WidgetInput>) {
             />
           </div>
           <p class="text-xs text-dimmed">
-            {{ $t('widget.preview.hint') }}
+            {{ $t(hasField('children') ? 'widget.repeat.previewHint' : 'widget.preview.hint') }}
           </p>
         </div>
       </div>

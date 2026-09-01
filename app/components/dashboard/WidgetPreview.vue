@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { DashboardWidget } from '#shared/types/dashboard'
 import type { MonitorWithState } from '#shared/types/monitor'
-import { widgetPixelHeight, widgetPixelWidth } from '#shared/utils/grid'
-import { widgetNeedsMonitor } from '#shared/utils/widget'
+import { WIDGET_ROW_HEIGHT_PX, widgetPixelHeight, widgetPixelWidth } from '#shared/utils/grid'
+import { REPEAT_WIDGET_TYPE, widgetNeedsMonitor } from '#shared/utils/widget'
 
 const props = defineProps<{
   widget: DashboardWidget
@@ -22,7 +22,16 @@ const GRID_WIDTH = 1180
 provideWidgetEditing(() => true)
 
 const frame = useTemplateRef<HTMLElement>('frame')
+const content = useTemplateRef<HTMLElement>('content')
 const available = ref(GRID_WIDTH)
+
+/**
+ * A repeat block has no height token: it is as tall as its band turns out to
+ * be. So the band is drawn at its natural height and measured, where every
+ * other widget is drawn at the height its token buys.
+ */
+const isBand = computed(() => props.widget.type === REPEAT_WIDGET_TYPE)
+const bandHeight = ref(WIDGET_ROW_HEIGHT_PX)
 
 /**
  * Rendering the widget without its monitor would show the "no longer exists"
@@ -31,7 +40,7 @@ const available = ref(GRID_WIDTH)
 const awaitingMonitor = computed(() => widgetNeedsMonitor(props.widget.type) && !props.widget.monitorId)
 
 const width = computed(() => widgetPixelWidth(props.widget.width, GRID_WIDTH))
-const height = computed(() => widgetPixelHeight(props.widget.height))
+const height = computed(() => isBand.value ? bandHeight.value : widgetPixelHeight(props.widget.height))
 const scale = computed(() => Math.min(1, available.value / width.value))
 
 onMounted(() => {
@@ -46,7 +55,25 @@ onMounted(() => {
   })
 
   observer.observe(element)
-  onScopeDispose(() => observer.disconnect())
+
+  // Measured off the untransformed box, which is what a ResizeObserver reports
+  // whatever the scale around it is.
+  const band = new ResizeObserver(([entry]) => {
+    bandHeight.value = Math.max(WIDGET_ROW_HEIGHT_PX, entry?.contentRect.height ?? 0)
+  })
+
+  watch(content, (node) => {
+    band.disconnect()
+
+    if (node) {
+      band.observe(node)
+    }
+  }, { immediate: true })
+
+  onScopeDispose(() => {
+    observer.disconnect()
+    band.disconnect()
+  })
 })
 </script>
 
@@ -57,8 +84,13 @@ onMounted(() => {
     :style="{ height: `${height * scale}px` }"
   >
     <div
+      ref="content"
       class="origin-top-left"
-      :style="{ width: `${width}px`, height: `${height}px`, transform: `scale(${scale})` }"
+      :style="{
+        width: `${width}px`,
+        height: isBand ? undefined : `${height}px`,
+        transform: `scale(${scale})`
+      }"
     >
       <div
         v-if="awaitingMonitor"

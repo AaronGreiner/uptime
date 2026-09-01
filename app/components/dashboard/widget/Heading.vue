@@ -10,6 +10,15 @@ const props = defineProps<{
 
 const level = computed(() => props.widget.config.level ?? 2)
 
+/**
+ * A heading placed inside a repeat block is handed the monitor of its band, and
+ * an untitled one then names it — which is what turns a band into a section.
+ * A heading of its own never carries a monitor, so nothing else changes.
+ */
+const monitor = computed(() => props.widget.monitorId
+  ? props.monitors.find(entry => entry.id === props.widget.monitorId) ?? null
+  : null)
+
 const classes = computed(() => ({
   1: 'text-2xl font-semibold',
   2: 'text-lg font-semibold',
@@ -19,7 +28,14 @@ const classes = computed(() => ({
 
 <template>
   <div class="h-full min-w-0 flex items-end pb-2">
+    <MonitorPathLabel
+      v-if="monitor && !widget.config.title"
+      :monitor="monitor"
+      class="text-highlighted"
+      :class="classes"
+    />
     <p
+      v-else
       class="text-highlighted truncate-target"
       :class="classes"
     >

@@ -1,7 +1,15 @@
 import z from 'zod'
 import { WIDGET_HEIGHTS, WIDGET_WIDTHS } from './grid'
 import { isCustomIcon } from './icon'
-import { WIDGET_SORTS, WIDGET_TYPES, widgetConfigForType, widgetNeedsMonitor } from './widget'
+import {
+  REPEAT_MAX_CHILDREN,
+  REPEAT_WIDGET_TYPE,
+  WIDGET_CHILD_TYPES,
+  WIDGET_SORTS,
+  WIDGET_TYPES,
+  widgetConfigForType,
+  widgetNeedsMonitor
+} from './widget'
 import { MAINTENANCE_WINDOW_BOUNDS, WEEKDAY_MASK_ALL, isTimeZoneName } from './maintenance'
 import { LATENCY_CHART_STYLES, MONITOR_INTERVAL_BOUNDS, MONITOR_PACKET_BOUNDS, MONITOR_RETRY_BOUNDS, MONITOR_TIMEOUT_BOUNDS } from './monitor'
 import {
@@ -37,6 +45,7 @@ const FALLBACK_MESSAGES: Record<string, string> = {
   'validation.statusCodes': 'Use single codes or ranges, for example 200-299,301',
   'validation.timeoutTooLong': 'The timeout must not exceed the check interval',
   'validation.monitorRequired': 'Select a monitor for this widget',
+  'validation.repeatChildrenRequired': 'Add at least one widget to repeat',
   'validation.outOfRange': 'Enter a value between {min} and {max}',
   'validation.tooShort': 'Use at least {min} characters',
   'validation.email': 'Enter a valid email address',
@@ -254,7 +263,12 @@ export const dashboardInputSchema = z.object({
 
 export type DashboardInput = z.output<typeof dashboardInputSchema>
 
-export const widgetConfigSchema = z.object({
+/**
+ * Split out from the config below so a child can be validated with everything
+ * but `children`. That is the depth cap, written where it cannot be forgotten:
+ * a block nested into a block has no schema to be parsed by.
+ */
+const widgetSettingFields = {
   title: z.string().trim().max(120, { error: message('validation.tooLong', { max: 120 }) }).optional(),
   range: z.enum(['1h', '24h', '7d', '30d', '1y']).optional(),
   level: z.union([z.literal(1), z.literal(2), z.literal(3)]).optional(),
@@ -263,6 +277,19 @@ export const widgetConfigSchema = z.object({
   target: z.number().min(0.5).max(1).optional(),
   sort: z.enum(WIDGET_SORTS).optional(),
   style: z.enum([...LATENCY_CHART_STYLES, 'inherit']).optional()
+}
+
+/** A widget inside a repeat block: no monitor of its own, the block supplies it. */
+export const widgetChildSchema = z.object({
+  type: z.enum(WIDGET_CHILD_TYPES),
+  config: z.object(widgetSettingFields).default({}),
+  width: z.enum(WIDGET_WIDTHS),
+  height: z.enum(WIDGET_HEIGHTS)
+})
+
+export const widgetConfigSchema = z.object({
+  ...widgetSettingFields,
+  children: z.array(widgetChildSchema).max(REPEAT_MAX_CHILDREN).optional()
 })
 
 export const widgetInputSchema = z.object({
@@ -274,6 +301,12 @@ export const widgetInputSchema = z.object({
 }).superRefine((value, context) => {
   if (widgetNeedsMonitor(value.type) && !value.monitorId) {
     context.addIssue({ code: 'custom', path: ['monitorId'], message: translate('validation.monitorRequired') })
+  }
+
+  // A block with nothing in it draws nothing, which on a dashboard is
+  // indistinguishable from a widget that is broken.
+  if (value.type === REPEAT_WIDGET_TYPE && !value.config.children?.length) {
+    context.addIssue({ code: 'custom', path: ['config', 'children'], message: translate('validation.repeatChildrenRequired') })
   }
 })
   // The registry decides which settings a type keeps, so neither the form nor an

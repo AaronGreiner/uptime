@@ -1,4 +1,6 @@
 import type {
+  DashboardWidget,
+  WidgetChild,
   WidgetConfig,
   WidgetHeight,
   WidgetSort,
@@ -20,6 +22,7 @@ export type WidgetField
     | 'target'
     | 'sort'
     | 'style'
+    | 'children'
 
 export interface WidgetDefinition {
   /** Shown next to the type in the picker. Also listed in `nuxt.config`. */
@@ -36,7 +39,16 @@ export interface WidgetDefinition {
 /** Selectable SLA targets, as ratios. */
 export const WIDGET_SLA_TARGETS = [0.99, 0.995, 0.999, 0.9995, 0.9999] as const
 
-export const WIDGET_SORTS = ['status', 'name', 'uptime', 'latency'] as const satisfies readonly WidgetSort[]
+export const WIDGET_SORTS = ['tree', 'status', 'name', 'uptime', 'latency'] as const satisfies readonly WidgetSort[]
+
+/**
+ * The one widget that holds others. Its own width and height are never drawn:
+ * the block is not a cell, it expands into the cells of its children.
+ */
+export const REPEAT_WIDGET_TYPE = 'monitor-repeat' as const
+
+/** How many widgets one band may hold. A band is a row, not a dashboard. */
+export const REPEAT_MAX_CHILDREN = 12
 
 /**
  * Everything the application knows about a widget type, in one place. Adding a
@@ -154,6 +166,19 @@ export const WIDGET_DEFINITIONS = {
     heights: ['slim'],
     defaultWidth: 'full',
     defaultHeight: 'slim'
+  },
+  'monitor-repeat': {
+    icon: 'i-lucide-repeat',
+    fields: ['scope', 'sort', 'children'],
+    // A block occupies whatever its children need. The single option exists
+    // because every widget carries a size; nothing reads these two.
+    widths: ['full'],
+    heights: ['slim'],
+    defaultWidth: 'full',
+    defaultHeight: 'slim',
+    // A band per monitor is read top to bottom, so the tree order the rest of
+    // the application shows is the one that needs no explaining.
+    defaults: { sort: 'tree' }
   }
 } as const satisfies Record<WidgetType, WidgetDefinition>
 
@@ -162,6 +187,10 @@ export const WIDGET_DEFINITIONS = {
  * is always offered and always accepted. Object key order is insertion order.
  */
 export const WIDGET_TYPES = Object.keys(WIDGET_DEFINITIONS) as [WidgetType, ...WidgetType[]]
+
+/** Everything a repeat block may hold, which is everything but another block. */
+export const WIDGET_CHILD_TYPES = WIDGET_TYPES
+  .filter(type => type !== REPEAT_WIDGET_TYPE) as [WidgetChild['type'], ...WidgetChild['type'][]]
 
 export function widgetDefinition(type: WidgetType): WidgetDefinition {
   return WIDGET_DEFINITIONS[type]
@@ -179,7 +208,8 @@ export const WIDGET_CONFIG_DEFAULTS: Omit<Required<WidgetConfig>, 'title'> = {
   sort: 'status',
   style: 'inherit',
   monitorIds: [],
-  groupId: null
+  groupId: null,
+  children: []
 }
 
 /** The defaults in force for a type: the global ones with its own on top. */
@@ -227,10 +257,81 @@ export function widgetConfigForType(type: WidgetType, config: WidgetConfig = {})
       case 'style':
         result.style = config.style ?? fallback.style
         break
+      case 'children':
+        result.children = (config.children ?? fallback.children).flatMap(child => normalizeWidgetChild(child) ?? [])
+        break
     }
   }
 
   return result
+}
+
+/**
+ * A child as it comes out of the database, where nothing guarantees that it is
+ * one: the config column is JSON, and an older row or a hand-written API call
+ * may hold anything the registry has since stopped knowing.
+ */
+type StoredWidgetChild = {
+  type: WidgetType
+  config?: WidgetConfig
+  width?: WidgetWidth
+  height?: WidgetHeight
+} | null | undefined
+
+/**
+ * A child reduced the same way the block holding it is: to the settings its own
+ * type reads, at a size that type allows. Anything that is not a widget the
+ * registry knows — a block nested into a block above all — is dropped rather
+ * than stored, so the depth stays one without a check anywhere else.
+ */
+export function normalizeWidgetChild(child: StoredWidgetChild): WidgetChild | null {
+  const type = child?.type
+
+  if (!type || type === REPEAT_WIDGET_TYPE || !(type in WIDGET_DEFINITIONS)) {
+    return null
+  }
+
+  const config = widgetConfigForType(type, child.config)
+
+  // A child never reads a scope of its own: the block hands it one monitor per
+  // band, overwriting both keys. Storing them would be a setting nothing reads.
+  delete config.monitorIds
+  delete config.groupId
+
+  return {
+    type,
+    config,
+    ...clampWidgetSize(type, child.width, child.height)
+  }
+}
+
+/** The widgets a block draws per monitor, empty for every other type. */
+export function widgetChildren(config: WidgetConfig): WidgetChild[] {
+  return config.children ?? []
+}
+
+/**
+ * One child of a block as the widget it is drawn as, for a single monitor.
+ *
+ * The monitor is pushed into both places a widget can carry one: `monitorId`
+ * for the types bound to exactly one, and a scope of one for the aggregate
+ * types. That is why no existing widget had to learn anything about blocks —
+ * inside a band they simply find a scope with a single monitor in it.
+ *
+ * The block's own id is carried along because a child is not a row of its own.
+ * Nothing reads it; the grid keys its cells by block, child and monitor.
+ */
+export function repeatChildWidget(block: DashboardWidget, child: WidgetChild, monitorId: number): DashboardWidget {
+  return {
+    ...block,
+    type: child.type,
+    monitorId,
+    config: widgetHasField(child.type, 'scope')
+      ? { ...child.config, monitorIds: [monitorId], groupId: null }
+      : child.config,
+    width: child.width,
+    height: child.height
+  }
 }
 
 export function widgetNeedsMonitor(type: WidgetType): boolean {

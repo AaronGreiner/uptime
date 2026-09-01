@@ -4,7 +4,7 @@ import type { WidgetConfig, WidgetHeight, WidgetType, WidgetWidth } from '../../
 import type { HeartbeatReportedStatus } from '../../shared/types/monitor'
 import { dashboards, dashboardWidgets, heartbeats, maintenanceWindows, monitorGroups, monitors, monitorState, monitorStatsHourly, notificationChannels, notificationGroups, settings, users } from '../database/schema'
 import { WEEKDAY_MASK_ALL, windowRemainingMinutes, zonedClock } from '../../shared/utils/maintenance'
-import { widgetConfigForType } from '../../shared/utils/widget'
+import { REPEAT_WIDGET_TYPE, widgetConfigForType } from '../../shared/utils/widget'
 import { aggregateHourlyStats } from './maintenance'
 import { nowInSeconds } from './scheduler'
 
@@ -141,8 +141,12 @@ const DEMO_MONITORS: DemoMonitor[] = [
   { name: 'Vue', group: 'production/web', type: 'http', url: 'https://vuejs.org', description: 'Framework site', intervalSeconds: 300, failureRate: 0.004, baseLatency: 145, certificateDays: 41 },
   { name: 'Vite', group: 'production/web', type: 'http', url: 'https://vite.dev', description: 'Build tool site', intervalSeconds: 300, failureRate: 0.004, baseLatency: 160, certificateDays: 9 },
 
+  // Four of them, because the API group is what the repeat block on the
+  // production dashboard is pointed at: one monitor would show nothing about it.
   { name: 'GitHub API', group: 'production/api', type: 'http', url: 'https://api.github.com', description: 'REST API endpoint', intervalSeconds: 120, failureRate: 0.006, baseLatency: 210, certificateDays: 78 },
   { name: 'npm Registry', group: 'production/api', type: 'http', url: 'https://registry.npmjs.org', description: 'Package metadata', intervalSeconds: 300, failureRate: 0.008, baseLatency: 260, certificateDays: 52 },
+  { name: 'Nuxt Modules API', group: 'production/api', type: 'http', url: 'https://api.nuxt.com/modules', description: 'Module registry', intervalSeconds: 300, failureRate: 0.005, baseLatency: 230, certificateDays: 47 },
+  { name: 'jsDelivr API', group: 'production/api', type: 'http', url: 'https://data.jsdelivr.com/v1/package/npm/nuxt', description: 'CDN package metadata', intervalSeconds: 300, failureRate: 0.007, baseLatency: 185, certificateDays: 71 },
 
   { name: 'Nuxt UI', group: 'production/docs', type: 'http', url: 'https://ui.nuxt.com', description: 'Component documentation', intervalSeconds: 300, failureRate: 0.003, baseLatency: 135, certificateDays: 63 },
   { name: 'MDN Web Docs', group: 'production/docs', type: 'http', url: 'https://developer.mozilla.org', description: 'Reference documentation', intervalSeconds: 300, failureRate: 0.005, baseLatency: 190, certificateDays: 88 },
@@ -586,8 +590,9 @@ function buildDemoDashboards(created: CreatedMonitor[], groupIds: Map<string, nu
 
   const mainSite = monitorId('Nuxt')
   const productionGroup = groupIds.get('production') ?? null
+  const apiGroup = groupIds.get('production/api') ?? null
   const infrastructureGroup = groupIds.get('infrastructure') ?? null
-  const infrastructureMonitorNames = ['Cloudflare DNS', 'Google DNS', 'Quad9 DNS', 'Cloudflare Edge']
+  const dnsGroup = groupIds.get('infrastructure/dns') ?? null
 
   place(overview.id, 'status-overview', 'full', 'compact', null, {})
   place(overview.id, 'incident-feed', 'half', 'standard', null, {})
@@ -621,11 +626,28 @@ function buildDemoDashboards(created: CreatedMonitor[], groupIds: Map<string, nu
     groupId: productionGroup,
     sort: 'latency'
   })
-  place(production.id, 'heading', 'full', 'slim', null, { title: 'APIs & Documentation', level: 2 })
+  place(production.id, 'heading', 'full', 'slim', null, { title: 'Documentation', level: 2 })
 
-  for (const name of ['GitHub API', 'npm Registry', 'Nuxt UI', 'MDN Web Docs']) {
-    place(production.id, 'monitor', 'quarter', 'compact', monitorId(name), {})
+  for (const name of ['Nuxt UI', 'MDN Web Docs']) {
+    place(production.id, 'monitor', 'half', 'compact', monitorId(name), {})
   }
+
+  /*
+   * The showcase for the repeat block: one band per API, and nothing on this
+   * dashboard has to be touched when a fifth API is added to the group. The
+   * children add up to twelve columns, so every monitor gets a row of its own,
+   * and the untitled heading names the monitor the band was drawn for.
+   */
+  place(production.id, 'heading', 'full', 'slim', null, { title: 'Every API, one band each', level: 2 })
+  place(production.id, REPEAT_WIDGET_TYPE, 'full', 'slim', null, {
+    groupId: apiGroup,
+    sort: 'tree',
+    children: [
+      { type: 'heading', config: { level: 3 }, width: 'full', height: 'slim' },
+      { type: 'monitor', config: {}, width: 'third', height: 'standard' },
+      { type: 'latency-chart', config: { range: '24h' }, width: 'twoThirds', height: 'standard' }
+    ]
+  })
 
   place(infrastructure.id, 'status-overview', 'full', 'compact', null, { groupId: infrastructureGroup })
   place(infrastructure.id, 'heading', 'full', 'slim', null, { title: 'Network', level: 2 })
@@ -642,9 +664,19 @@ function buildDemoDashboards(created: CreatedMonitor[], groupIds: Map<string, nu
     groupId: infrastructureGroup
   })
 
-  for (const name of infrastructureMonitorNames) {
-    place(infrastructure.id, 'monitor', 'quarter', 'compact', monitorId(name), {})
-  }
+  // The same block with three children and no heading: the cards name their own
+  // monitor, so a band reads as one resolver from left to right.
+  place(infrastructure.id, 'heading', 'full', 'slim', null, { title: 'Every resolver, side by side', level: 2 })
+  place(infrastructure.id, REPEAT_WIDGET_TYPE, 'full', 'slim', null, {
+    groupId: dnsGroup,
+    sort: 'tree',
+    children: [
+      { type: 'monitor', config: {}, width: 'third', height: 'standard' },
+      { type: 'latency-chart', config: { range: '24h' }, width: 'third', height: 'standard' },
+      { type: 'uptime-calendar', config: {}, width: 'third', height: 'standard' }
+    ]
+  })
+  place(infrastructure.id, 'monitor', 'third', 'standard', monitorId('Cloudflare Edge'), {})
 
   place(reliability.id, 'reliability-kpis', 'full', 'compact', null, { range: '30d' })
   place(reliability.id, 'heading', 'full', 'slim', null, { title: 'Incidents', level: 2 })

@@ -373,7 +373,8 @@
       "incident-history": "Incident history",
       "reliability-kpis": "Reliability",
       "maintenance-schedule": "Maintenance",
-      "heading": "Heading"
+      "heading": "Heading",
+      "monitor-repeat": "Repeat per monitor"
     },
     "typeDescription": {
       "monitor": "Status, response time and the recent pulse of one monitor.",
@@ -388,7 +389,8 @@
       "incident-history": "Outages reconstructed from the check history.",
       "reliability-kpis": "Outage count, downtime, MTTR and MTBF over a range.",
       "maintenance-schedule": "What is in maintenance now, and which window opens next.",
-      "heading": "A text label to group widgets."
+      "heading": "A text label to group widgets.",
+      "monitor-repeat": "A row of widgets, drawn once for every monitor in a group."
     },
     "fields": {
       "type": "Widget type",
@@ -402,7 +404,8 @@
       "target": "Uptime target",
       "sort": "Order",
       "width": "Width",
-      "height": "Height"
+      "height": "Height",
+      "children": "Widgets per monitor"
     },
     "level": {
       "1": "Large",
@@ -414,6 +417,7 @@
       "uptime": "Uptime, 24 h"
     },
     "sort": {
+      "tree": "Group order",
       "status": "Worst first",
       "name": "Name",
       "uptime": "Lowest uptime",
@@ -426,6 +430,19 @@
       "noGroup": "No group",
       "groupHint": "A group covers everything below it and follows the tree.",
       "monitorsHint": "Leave empty for every monitor."
+    },
+    "repeat": {
+      "summary": "{monitors} × {widgets}",
+      "widgetCount": "no widgets | 1 widget | {count} widgets",
+      "sample": "Shown with {name}",
+      "noChildren": "No widgets in this block yet.",
+      "addChild": "Add widget",
+      "removeChild": "Remove widget",
+      "moveChildUp": "Move widget up",
+      "moveChildDown": "Move widget down",
+      "childrenHint": "Every monitor in the scope gets this row of widgets, in this order.",
+      "groupHint": "A group covers everything below it, and a new monitor joins on its own.",
+      "previewHint": "One band with its real data. The dashboard draws it once per monitor."
     },
     "preview": {
       "title": "Preview",
@@ -730,6 +747,7 @@
     "timeoutTooLong": "The timeout must not exceed the check interval",
     "monitorRequired": "Select a monitor for this widget",
     "weekdayRequired": "Select at least one weekday",
-    "maintenanceTarget": "Choose a monitor or a group for this window"
+    "maintenanceTarget": "Choose a monitor or a group for this window",
+    "repeatChildrenRequired": "Add at least one widget to repeat"
   }
 }

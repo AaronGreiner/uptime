@@ -476,6 +476,48 @@ Adding a widget type means: extend the `WidgetType` union in
 files. Every widget takes the same two props (`widget`, `monitors`), which is
 what lets the grid and the preview render any of them without a branch.
 
+**Repeat blocks.** `monitor-repeat` is the one widget that holds others. It
+carries a scope like every aggregate widget and, in `config.children`, a row of
+widgets it draws once for every monitor that scope covers — so a dashboard grows
+a band on its own when a monitor joins the group, without anybody editing it.
+
+The children live in the block's config rather than in rows of their own,
+because they are never addressed on their own: they are not dragged, resized or
+deleted individually, they are only ever saved as part of the block. That is
+also why the depth is one — `widgetChildSchema` is the config schema *without*
+`children`, so a block nested into a block has nothing to be parsed by, and
+`normalizeWidgetChild` drops one that arrives anyway.
+
+`repeatChildWidget` is what makes every existing widget repeatable without
+knowing it: the monitor is pushed into both places a widget can carry one —
+`monitorId` for the types bound to a single monitor, a scope of one for the
+aggregate types — so `reliability-kpis` inside a band simply finds a scope with
+one monitor in it. A child therefore stores no scope of its own; the two keys
+are stripped on the way in. An untitled `heading` child names the monitor of its
+band, which is what turns a band into a section.
+
+The reader never sees the block itself. `DashboardRepeatCells` emits the
+children as *siblings* in the dashboard grid — a component with a `v-for` at its
+root renders as a fragment — so every cell is an ordinary grid item and the
+block needs no geometry: no nested grid, no row span, nothing that would have to
+know the breakpoint. Its cells are keyed by block, child and monitor, and the
+covered ids are joined into a string first, so the shared monitor list being
+patched by a check result does not rebuild them.
+
+Only the layout being arranged shows the block as itself: `WidgetView` then
+draws one band with the first monitor of the scope, a counter, and a row span
+measured off its content. One element per widget is what Sortable requires —
+it reads the new order back off the DOM — and it is the reason edit mode
+collapses the block instead of expanding it. The band is measured rather than
+derived because the columns it wraps into depend on the breakpoint; that costs
+nothing, since edit mode is never rendered on the server.
+
+The children are composed in the block's settings dialog.
+`DashboardWidgetFields` renders the settings a widget keeps wherever it is
+drawn, from the registry, and is used for the block and for each of its children;
+the monitor and the scope fields stay in the dialog around it, since those are
+exactly what a child cannot have.
+
 **Fullscreen.** `?fullscreen=1` on a dashboard — a bare `?fullscreen` reads the
 same — drops the sidebar, the navbar and the toolbar, and takes the panel's
 margin, border and rounding with them, so nothing but the widgets is left. The

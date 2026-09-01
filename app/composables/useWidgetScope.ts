@@ -47,6 +47,12 @@ export function useWidgetScope(widget: MaybeRefOrGetter<DashboardWidget>) {
 
 /** Rows of a monitor list, in the order the widget asks for. */
 export function sortMonitors(monitors: MonitorWithState[], sort = WIDGET_CONFIG_DEFAULTS.sort): MonitorWithState[] {
+  // The scope already arrives in tree order, which is the order the sidebar,
+  // the list page and the group headings all show. Keeping it is the option.
+  if (sort === 'tree') {
+    return [...monitors]
+  }
+
   const byName = (a: MonitorWithState, b: MonitorWithState) => a.name.localeCompare(b.name)
 
   return [...monitors].sort((a, b) => {

@@ -10,6 +10,14 @@ export const WIDGET_HEIGHTS = ['slim', 'compact', 'standard', 'tall'] as const
 export const WIDGET_GRID_COLUMNS = 12
 
 /**
+ * The dashboard grid itself. A repeat block draws its band with the very same
+ * columns, gaps and row height, so a child sits where it will sit once the
+ * block is expanded.
+ */
+export const WIDGET_GRID_CLASS
+  = 'grid grid-cols-2 sm:grid-cols-6 lg:grid-cols-12 gap-x-3 gap-y-4 sm:gap-4 auto-rows-[68px] lg:auto-rows-[60px]'
+
+/**
  * Keep every responsive class in one literal string. Tailwind cannot emit class
  * names assembled from fragments at runtime.
  */
