@@ -184,6 +184,17 @@ push the deepest leaf past the depth cap. Deleting a group never deletes what it
 holds; `deleteMonitorGroup` lifts subgroups and monitors to the parent first.
 The tree is small, so these walks run in memory instead of as recursive CTEs.
 
+**Acting on a monitor.** The five admin actions — edit, check now, pause,
+maintenance, delete — are built once, by `useMonitorMenu`, and drawn as one
+dropdown wherever a monitor is on screen: on every card in the list and in the
+detail page's navbar. The same monitor therefore answers to the same actions
+under the same labels in the same order, whichever page it is looked at from.
+The detail page passes `{ checkNow: false }` and draws that one as a button
+beside the menu, because it is the action a reader repeats while watching a
+single monitor; `pendingAction` on `useMonitorActions` is what keeps the button
+and the menu from spinning at once. Nothing else in the navbar is an action, so
+nothing else competes with the monitor's name for the width of a phone.
+
 **Duplicating a monitor.** The create dialog opens with a template field which
 fills the whole form from an existing monitor and leaves the name — the one
 thing a duplicate has to differ in. It is a prefill rather than a value: it sits
@@ -328,7 +339,12 @@ still be down.
 
 **Application shell.** `app/layouts/default.vue` renders `UDashboardGroup` plus a
 collapsible, resizable `UDashboardSidebar` holding the navigation and the account
-controls. Every page then renders its own
+controls. That footer holds two controls and not one more: `AppUserMenu`, which
+names who you are and carries the settings page, the language and the sign in or
+out beneath it, and the colour mode, which keeps a button of its own because it
+is flipped rather than chosen — a menu is worst at exactly that. At the narrowest
+sidebar width, and collapsed to the rail, four controls in a row had nowhere to
+go. Every page then renders its own
 `UDashboardPanel` with a `#header` (a `UDashboardNavbar`, optionally followed by a
 `UDashboardToolbar`) and a `#body`. Put the page title and its actions in the
 navbar, filters and contextual metadata in the toolbar. Each navbar needs a
@@ -341,7 +357,7 @@ the application is: `index.vue` holds what is stored in the reader's own browser
 and is therefore open to everyone, while `admin.vue` and `notifications.vue`
 write to the server and carry the `admin` middleware.
 
-They are reached through the gear in the sidebar footer rather than through
+They are reached from the account menu in the sidebar footer rather than through
 navigation rows, and switched between with `AppSettingsNav` — a
 `UDashboardToolbar` each page renders under its own navbar, hiding the two
 administrative sections from a reader who cannot open them. Each page still owns

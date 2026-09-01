@@ -21,7 +21,8 @@ async function reload() {
 }
 
 const { monitorPath, fullMonitorPath } = useMonitorPath()
-const { pending, checkNow, toggleActive, setMaintenance, endMaintenance, remove } = useMonitorActions(reload)
+const monitorActions = useMonitorActions(reload)
+const { pending, remove } = monitorActions
 const {
   pending: groupPending,
   move: moveGroup,
@@ -201,34 +202,14 @@ function openGroupForm(group: MonitorGroup | null, parentId: number | null = nul
   groupFormOpen.value = true
 }
 
-function menuItems(monitor: MonitorWithState): DropdownMenuItem[][] {
-  return [[{
-    label: t('common.edit'),
-    icon: 'i-lucide-pencil',
-    onSelect: () => openForm(monitor)
-  }, {
-    label: t('monitor.actions.checkNow'),
-    icon: 'i-lucide-refresh-cw',
-    onSelect: () => checkNow(monitor)
-  }, {
-    label: t(monitor.active ? 'monitor.actions.pause' : 'monitor.actions.resume'),
-    icon: monitor.active ? 'i-lucide-pause' : 'i-lucide-play',
-    onSelect: () => toggleActive(monitor)
-  },
-  maintenanceMenuItem(
-    monitor,
-    duration => setMaintenance(monitor, duration),
-    () => endMaintenance(monitor)
-  )], [{
-    label: t('common.delete'),
-    icon: 'i-lucide-trash-2',
-    color: 'error' as const,
-    onSelect: () => {
-      monitorToDelete.value = monitor
-      deleteOpen.value = true
-    }
-  }]]
-}
+/** The same menu the detail page draws, minus nothing: here it is the only access. */
+const { menuItems } = useMonitorMenu(monitorActions, {
+  edit: monitor => openForm(monitor),
+  remove: (monitor) => {
+    monitorToDelete.value = monitor
+    deleteOpen.value = true
+  }
+})
 
 function groupMenuItems(node: MonitorTreeNode): DropdownMenuItem[][] {
   const siblings = flatTree.value.filter(entry => entry.parentId === node.parentId)

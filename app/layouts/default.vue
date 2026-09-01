@@ -115,31 +115,19 @@ async function onDashboardCreated(slug: string) {
         <AppMonitorNav :collapsed="collapsed" />
       </template>
 
+      <!--
+        Two controls rather than four: the settings page and the language moved
+        into the account menu, which is the only place the narrowest sidebar has
+        room for them. The colour mode keeps its button because it is a toggle,
+        and burying a one click switch behind a menu is what a menu is worst at.
+      -->
       <template #footer="{ collapsed }">
         <div
           class="flex items-center gap-1"
           :class="collapsed ? 'flex-col' : ''"
         >
           <AppUserMenu :collapsed="collapsed" />
-
-          <div
-            class="flex items-center gap-1"
-            :class="collapsed ? 'flex-col' : 'ms-auto'"
-          >
-            <UTooltip :text="$t('nav.settings')">
-              <UButton
-                to="/settings"
-                color="neutral"
-                variant="ghost"
-                active-variant="soft"
-                icon="i-lucide-settings"
-                square
-                :aria-label="$t('nav.settings')"
-              />
-            </UTooltip>
-            <AppLocaleSelect :collapsed="collapsed" />
-            <AppColorModeButton />
-          </div>
+          <AppColorModeButton :class="collapsed ? '' : 'ms-auto shrink-0'" />
         </div>
       </template>
     </UDashboardSidebar>

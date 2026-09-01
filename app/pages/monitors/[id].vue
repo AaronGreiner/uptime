@@ -75,33 +75,22 @@ onMonitorChecked((event) => {
   void refreshStats()
 }, monitorId)
 
-const {
-  pending,
-  succeededId,
-  checkNow,
-  toggleActive,
-  setMaintenance,
-  endMaintenance,
-  remove
-} = useMonitorActions(reload)
-
-const { menuItem: maintenanceMenuItem } = useMaintenanceMenu()
-
-/**
- * The manual switch, offered as a menu because it is five choices rather than a
- * toggle. It sits next to pause: both take a monitor out of the judging, one
- * for a while and one until somebody says otherwise.
- */
-const maintenanceItems = computed(() => (monitor.value
-  ? [maintenanceMenuItem(
-      monitor.value,
-      duration => setMaintenance(monitor.value!, duration),
-      () => endMaintenance(monitor.value!)
-    )]
-  : []))
+const monitorActions = useMonitorActions(reload)
+const { pending, pendingAction, succeededId, checkNow, remove } = monitorActions
 
 const formOpen = ref(false)
 const deleteOpen = ref(false)
+
+/**
+ * Everything but the check, which stays a button of its own beside it: the same
+ * menu the list draws on every card, so the actions on a monitor do not depend
+ * on which page it is looked at from.
+ */
+const { menuItems } = useMonitorMenu(monitorActions, {
+  edit: () => { formOpen.value = true },
+  remove: () => { deleteOpen.value = true }
+})
+
 const copied = ref(false)
 let copiedTimer: ReturnType<typeof setTimeout> | undefined
 
@@ -197,10 +186,12 @@ const recentChecks = computed(() => [...(heartbeats.value ?? [])].reverse().slic
 
         <template #right>
           <template v-if="isAdmin">
+            <!-- The one action a reader repeats while watching a monitor keeps
+                 its own button; everything else lives in the menu beside it. -->
             <UButton
               color="neutral"
               variant="subtle"
-              :loading="pending === monitor.id"
+              :loading="pending === monitor.id && pendingAction === 'check'"
               :label="$t('monitor.actions.checkNow')"
               :aria-label="$t('monitor.actions.checkNow')"
               :ui="{ base: 'px-2 sm:px-2.5', label: 'hidden sm:inline' }"
@@ -209,45 +200,22 @@ const recentChecks = computed(() => [...(heartbeats.value ?? [])].reverse().slic
               <template #leading="{ ui }">
                 <AppMorphIcon
                   :name="succeededId === monitor.id ? 'check' : 'refreshCw'"
-                  :class="ui.leadingIcon({ class: pending === monitor.id ? 'animate-spin' : '' })"
+                  :class="ui.leadingIcon({ class: pending === monitor.id && pendingAction === 'check' ? 'animate-spin' : '' })"
                 />
               </template>
             </UButton>
-            <UButton
-              color="neutral"
-              variant="ghost"
-              :aria-label="$t(monitor.active ? 'monitor.actions.pause' : 'monitor.actions.resume')"
-              @click="toggleActive(monitor)"
+            <UDropdownMenu
+              :items="menuItems(monitor, { checkNow: false })"
+              :content="{ align: 'end' }"
             >
-              <template #leading="{ ui }">
-                <AppMorphIcon
-                  :name="monitor.active ? 'pause' : 'play'"
-                  :class="ui.leadingIcon()"
-                />
-              </template>
-            </UButton>
-            <UDropdownMenu :items="maintenanceItems">
               <UButton
-                icon="i-lucide-wrench"
+                icon="i-lucide-ellipsis-vertical"
                 color="neutral"
                 variant="ghost"
-                :aria-label="$t('maintenance.manual.label')"
+                :loading="pending === monitor.id && pendingAction !== 'check'"
+                :aria-label="$t('common.actions')"
               />
             </UDropdownMenu>
-            <UButton
-              icon="i-lucide-pencil"
-              color="neutral"
-              variant="ghost"
-              :aria-label="$t('common.edit')"
-              @click="formOpen = true"
-            />
-            <UButton
-              icon="i-lucide-trash-2"
-              color="error"
-              variant="ghost"
-              :aria-label="$t('common.delete')"
-              @click="deleteOpen = true"
-            />
           </template>
         </template>
       </UDashboardNavbar>

@@ -1,11 +1,21 @@
 import type { Monitor, MonitorWithState } from '#shared/types/monitor'
 
+/**
+ * Which of the actions is running, next to the monitor it runs on.
+ *
+ * The list needs no more than the id, since one menu button stands for all of
+ * them. The detail page draws `checkNow` as a button beside that menu, so it
+ * has to tell the two apart — otherwise a check spins both at once.
+ */
+export type MonitorActionName = 'check' | 'toggle' | 'maintenance' | 'delete'
+
 /** Shared admin actions used by the monitor list and the detail page. */
 export function useMonitorActions(onChanged: () => unknown) {
   const { t } = useI18n()
   const toast = useToast()
   const { monitorPath } = useMonitorPath()
   const pending = ref<number | null>(null)
+  const pendingAction = ref<MonitorActionName | null>(null)
   const succeededId = ref<number | null>(null)
   let succeededTimer: ReturnType<typeof setTimeout> | undefined
 
@@ -15,6 +25,7 @@ export function useMonitorActions(onChanged: () => unknown) {
     clearTimeout(succeededTimer)
     succeededId.value = null
     pending.value = monitor.id
+    pendingAction.value = 'check'
 
     try {
       await $fetch<MonitorWithState>(`/api/monitors/${monitor.id}/check`, { method: 'POST' })
@@ -32,11 +43,13 @@ export function useMonitorActions(onChanged: () => unknown) {
       toast.add({ title: t('common.error'), description: resolveErrorMessage(error), color: 'error' })
     } finally {
       pending.value = null
+      pendingAction.value = null
     }
   }
 
   async function toggleActive(monitor: Monitor) {
     pending.value = monitor.id
+    pendingAction.value = 'toggle'
 
     try {
       await $fetch(`/api/monitors/${monitor.id}`, {
@@ -49,6 +62,7 @@ export function useMonitorActions(onChanged: () => unknown) {
       toast.add({ title: t('common.error'), description: resolveErrorMessage(error), color: 'error' })
     } finally {
       pending.value = null
+      pendingAction.value = null
     }
   }
 
@@ -59,6 +73,7 @@ export function useMonitorActions(onChanged: () => unknown) {
    */
   async function setMaintenance(monitor: Monitor, durationSeconds: number | null) {
     pending.value = monitor.id
+    pendingAction.value = 'maintenance'
 
     try {
       await $fetch(`/api/monitors/${monitor.id}/maintenance`, {
@@ -77,11 +92,13 @@ export function useMonitorActions(onChanged: () => unknown) {
       toast.add({ title: t('common.error'), description: resolveErrorMessage(error), color: 'error' })
     } finally {
       pending.value = null
+      pendingAction.value = null
     }
   }
 
   async function endMaintenance(monitor: Monitor) {
     pending.value = monitor.id
+    pendingAction.value = 'maintenance'
 
     try {
       await $fetch(`/api/monitors/${monitor.id}/maintenance`, { method: 'DELETE' })
@@ -96,11 +113,13 @@ export function useMonitorActions(onChanged: () => unknown) {
       toast.add({ title: t('common.error'), description: resolveErrorMessage(error), color: 'error' })
     } finally {
       pending.value = null
+      pendingAction.value = null
     }
   }
 
   async function remove(monitor: Monitor) {
     pending.value = monitor.id
+    pendingAction.value = 'delete'
 
     try {
       await $fetch(`/api/monitors/${monitor.id}`, { method: 'DELETE' })
@@ -115,8 +134,9 @@ export function useMonitorActions(onChanged: () => unknown) {
       return false
     } finally {
       pending.value = null
+      pendingAction.value = null
     }
   }
 
-  return { pending, succeededId, checkNow, toggleActive, setMaintenance, endMaintenance, remove }
+  return { pending, pendingAction, succeededId, checkNow, toggleActive, setMaintenance, endMaintenance, remove }
 }
