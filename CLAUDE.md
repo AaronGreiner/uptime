@@ -159,7 +159,7 @@ query finds a letter in the middle of every other name. Several words all have
 to match but may land in different fields, so `prod nuxt.com` finds a monitor by
 its group and its URL at once.
 
-Scoring ranks the widget picker, where the closest match belongs at the top. The
+Scoring ranks the pickers, where the closest match belongs at the top. The
 monitor list keeps tree order instead — its sections are the group tree, and
 relevance cannot reorder that. Highlighting never vetoes: a row found through
 its URL still shows its name unmarked, and a query that only matched across
@@ -172,11 +172,28 @@ the browser has a `cookieStore`, so a breadcrumb drawn once per row would go
 stale the moment the setting changed. `useMonitorPathPreference()` binds that
 one state to its cookie and is called once, from the dashboard layout.
 
+`useMonitorPicker` is that search wrapped as a list of rows: every picker
+offering monitors — the widget's monitor fields, the template field of the
+monitor form — takes its items and its ranking from there, and hands
+`USelectMenu` an `ignore-filter`, because the component itself only ever
+compares the label it draws.
+
 `assertValidParent` in `server/utils/groups.ts` is the guard: it rejects a
 missing parent, a group nested into its own subtree, and any move that would
 push the deepest leaf past the depth cap. Deleting a group never deletes what it
 holds; `deleteMonitorGroup` lifts subgroups and monitors to the parent first.
 The tree is small, so these walks run in memory instead of as recursive CTEs.
+
+**Duplicating a monitor.** The create dialog opens with a template field which
+fills the whole form from an existing monitor and leaves the name — the one
+thing a duplicate has to differ in. It is a prefill rather than a value: it sits
+outside the schema and is never submitted, so from the moment it is applied the
+form is an ordinary create, and the edit dialog does not offer it at all.
+
+Where a new monitor belongs is the reader's position to decide rather than the
+template's. The list's group filter and the group whose menu opened the dialog
+both preselect their group, and that preselection outranks the template; only
+with no group in sight does the template's own come along.
 
 **Read endpoints.** Besides the monitor routes there is `/api/stats/uptime` for
 uptime over many monitors in one query (an SLA table would otherwise issue one

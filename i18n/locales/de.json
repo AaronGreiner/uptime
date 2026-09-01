@@ -96,6 +96,7 @@
     "created": "Monitor „{name}“ angelegt.",
     "updated": "Monitor „{name}“ gespeichert.",
     "deleted": "Monitor „{name}“ gelöscht.",
+    "templatePlaceholder": "Monitor zum Kopieren wählen",
     "empty": {
       "title": "Noch keine Monitore",
       "description": "Lege den ersten Monitor an, um Verfügbarkeitsdaten zu sammeln.",
@@ -136,7 +137,8 @@
       "timeoutSeconds": "Zeitlimit",
       "retries": "Wiederholungen vor Ausfall",
       "active": "Aktiv",
-      "group": "Gruppe"
+      "group": "Gruppe",
+      "template": "Vorlage"
     },
     "hints": {
       "expectedStatusCodes": "Einzelne Codes und Bereiche, durch Komma getrennt. Zum Beispiel 200-299,301.",
@@ -146,7 +148,8 @@
       "timeout": "Sekunden, die eine einzelne Prüfung dauern darf.",
       "ignoreTls": "Akzeptiert selbstsignierte und abgelaufene Zertifikate. Nur für interne Hosts sinnvoll.",
       "active": "Pausierte Monitore behalten ihre Historie, werden aber nicht geprüft.",
-      "group": "Gruppen strukturieren den Baum in der Navigation und die Monitorliste."
+      "group": "Gruppen strukturieren den Baum in der Navigation und die Monitorliste.",
+      "template": "Übernimmt alle Einstellungen eines vorhandenen Monitors in dieses Formular. Nur der Name bleibt unverändert."
     },
     "actions": {
       "checkNow": "Jetzt prüfen",

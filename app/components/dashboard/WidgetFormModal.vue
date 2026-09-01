@@ -5,7 +5,6 @@ import type { MonitorWithState } from '#shared/types/monitor'
 import type { StatsRange } from '#shared/types/stats'
 import { joinMonitorPath, monitorGroupIcon } from '#shared/utils/group'
 import { LATENCY_CHART_STYLES } from '#shared/utils/monitor'
-import { fuzzyScore } from '#shared/utils/search'
 import { STATS_RANGES } from '#shared/utils/stats'
 import {
   WIDGET_DEFINITIONS,
@@ -37,7 +36,6 @@ const { t } = useI18n()
 const toast = useToast()
 const { formatUptime } = useFormatters()
 const { flatTree } = useMonitorTree()
-const { monitorPath, fullMonitorPath } = useMonitorPath()
 
 /**
  * Every setting the registry knows, whichever type is selected. The submitted
@@ -109,36 +107,7 @@ const typeItems = computed(() => WIDGET_TYPES.map(type => ({
   description: t(`widget.typeDescription.${type}`)
 })))
 
-const monitorItems = computed(() => props.monitors.map(monitor => ({
-  label: monitorPath(monitor),
-  icon: monitorIcon(monitor),
-  // Searched but never drawn: the label follows the reader's breadcrumb format,
-  // and a group shortened out of it still has to find its monitors here.
-  path: fullMonitorPath(monitor),
-  value: monitor.id,
-  description: monitorTarget(monitor)
-})))
-
-/*
- * Filtered here rather than by the component, which only ever compares the
- * label it draws. The whole breadcrumb and the target are searched instead, and
- * the closest match is lifted to the top — with a hundred monitors the ranking
- * is what makes the picker usable.
- */
-function filterMonitorItems(query: string) {
-  if (!query.trim()) {
-    return monitorItems.value
-  }
-
-  return monitorItems.value
-    .flatMap((item) => {
-      const score = fuzzyScore([item.path, item.description], query)
-
-      return score === null ? [] : [{ item, score }]
-    })
-    .sort((a, b) => b.score - a.score)
-    .map(entry => entry.item)
-}
+const { filter: filterMonitorItems } = useMonitorPicker(() => props.monitors)
 
 // One term per picker: they never stand open at the same time, but a shared
 // one would still leak the last search into the other's first frame.

@@ -144,6 +144,14 @@ const visibleNodes = computed<MonitorTreeNode[]>(() => {
 
 const showUngrouped = computed(() => groupFilter.value === 'all' || groupFilter.value === 'none')
 
+/**
+ * The group the reader is standing in, which is where a new monitor belongs:
+ * having filtered the list down to one group, naming that group again in the
+ * dialog is a step nobody means to take. `none` and `all` leave it to the form,
+ * since neither says anything about where a new monitor should go.
+ */
+const currentGroupId = computed(() => typeof groupFilter.value === 'number' ? groupFilter.value : null)
+
 interface Section {
   key: string
   node: MonitorTreeNode | null
@@ -180,7 +188,8 @@ const filtered = computed(() => {
   return scoped.filter(matches)
 })
 
-function openForm(monitor: Monitor | null, groupId: number | null = null) {
+/** A group menu names its own group; everywhere else the filtered one stands in. */
+function openForm(monitor: Monitor | null, groupId: number | null = currentGroupId.value) {
   editedMonitor.value = monitor
   formGroupId.value = groupId
   formOpen.value = true

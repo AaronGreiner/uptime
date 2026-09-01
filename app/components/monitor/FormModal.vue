@@ -27,6 +27,7 @@ const { t } = useI18n()
 const toast = useToast()
 const { flatTree } = useMonitorTree()
 const { monitorPath } = useMonitorPath()
+const { data: monitors } = useMonitors()
 
 type HeaderRow = { name: string, value: string }
 
@@ -66,6 +67,14 @@ const state = ref<MonitorInput>(createState(props.monitor))
 const headerRows = ref<HeaderRow[]>([])
 const submitting = ref(false)
 
+/** The monitor the form was filled from, offered while creating one. */
+const templateId = ref<number | null>(null)
+const templateSearch = ref('')
+
+function fillHeaderRows(headers: Record<string, string>) {
+  headerRows.value = Object.entries(headers).map(([name, value]) => ({ name, value }))
+}
+
 // The modal is kept mounted, so the form is reset whenever it opens.
 watch(open, (isOpen) => {
   if (!isOpen) {
@@ -73,7 +82,9 @@ watch(open, (isOpen) => {
   }
 
   state.value = createState(props.monitor)
-  headerRows.value = Object.entries(props.monitor?.headers ?? {}).map(([name, value]) => ({ name, value }))
+  templateId.value = null
+  templateSearch.value = ''
+  fillHeaderRows(props.monitor?.headers ?? {})
 })
 
 // Header rows are edited as a list but submitted as a record.
@@ -104,6 +115,36 @@ const selectedGroup = computed({
   get: () => state.value.groupId ?? UNGROUPED_VALUE,
   set: (value: number) => {
     state.value.groupId = value === UNGROUPED_VALUE ? null : value
+  }
+})
+
+const { filter: filterTemplates } = useMonitorPicker(() => monitors.value)
+const templateResults = computed(() => filterTemplates(templateSearch.value))
+
+/**
+ * Fills the form from an existing monitor. Everything a check is made of comes
+ * along; only the name stays, because that is the one field a duplicate has to
+ * differ in.
+ *
+ * A group the dialog was opened from outranks the template's own: the reader is
+ * standing in that group, while the template only happens to sit somewhere
+ * else.
+ */
+function applyTemplate(template: Monitor) {
+  const { name } = state.value
+
+  state.value = createState(template)
+  state.value.name = name
+  state.value.groupId = props.defaultGroupId ?? template.groupId
+
+  fillHeaderRows(template.headers)
+}
+
+watch(templateId, (id) => {
+  const template = monitors.value.find(monitor => monitor.id === id)
+
+  if (template) {
+    applyTemplate(template)
   }
 })
 
@@ -159,6 +200,41 @@ async function onSubmit(event: FormSubmitEvent<MonitorInput>) {
           <h3 class="text-sm font-semibold text-highlighted">
             {{ $t('monitor.sections.general') }}
           </h3>
+
+          <!--
+            Outside the schema: the template only fills the fields below it, so
+            it is never submitted and never validated.
+          -->
+          <UFormField
+            v-if="!isEdit && monitors.length"
+            :label="$t('monitor.fields.template')"
+            :description="$t('monitor.hints.template')"
+            :hint="$t('common.optional')"
+          >
+            <USelectMenu
+              v-model="templateId"
+              v-model:search-term="templateSearch"
+              :items="templateResults"
+              value-key="value"
+              ignore-filter
+              icon="i-lucide-copy"
+              class="w-full"
+              :placeholder="$t('monitor.templatePlaceholder')"
+            >
+              <template #item-label="{ item }">
+                <AppHighlight
+                  :text="item.label"
+                  :query="templateSearch"
+                />
+              </template>
+              <template #item-description="{ item }">
+                <AppHighlight
+                  :text="item.description"
+                  :query="templateSearch"
+                />
+              </template>
+            </USelectMenu>
+          </UFormField>
 
           <div class="grid gap-4 sm:grid-cols-2">
             <UFormField

@@ -96,6 +96,7 @@
     "created": "Monitor \"{name}\" created.",
     "updated": "Monitor \"{name}\" saved.",
     "deleted": "Monitor \"{name}\" deleted.",
+    "templatePlaceholder": "Pick a monitor to copy",
     "empty": {
       "title": "No monitors yet",
       "description": "Add the first monitor to start collecting uptime data.",
@@ -136,7 +137,8 @@
       "timeoutSeconds": "Timeout",
       "retries": "Retries before down",
       "active": "Active",
-      "group": "Group"
+      "group": "Group",
+      "template": "Template"
     },
     "hints": {
       "expectedStatusCodes": "Single codes and ranges, separated by commas. For example 200-299,301.",
@@ -146,7 +148,8 @@
       "timeout": "Seconds a single check may take.",
       "ignoreTls": "Accepts self signed and expired certificates. Only use this for internal hosts.",
       "active": "Paused monitors keep their history but are not checked.",
-      "group": "Groups organise the sidebar tree and the monitor list."
+      "group": "Groups organise the sidebar tree and the monitor list.",
+      "template": "Copies every setting of an existing monitor into this form. Only the name is left untouched."
     },
     "actions": {
       "checkNow": "Check now",
