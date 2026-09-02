@@ -604,6 +604,19 @@ the same on both sides of hydration. After mount it keeps only complete week
 columns, plus the newest partial week, and extends the request if a wider screen
 can show more. Its day count and average describe the visible days.
 
+Seven rows of squares are 95 px, which is more than a compact cell has left
+under a header. The squares are the one thing that must not change, so the label
+moves instead: `DashboardWidgetShell` takes a `header` of `above`, `overlay` or
+`none`, and a compact calendar asks for `overlay` — the title and the caption
+then lie on a plate of the card's own surface in the top corner, over the oldest
+weeks that the left fade is thinning out anyway. Overlaid, the header and the
+content share one grid cell rather than being stacked, which is what keeps the
+card's padding aligning both without offsets of its own.
+
+`config.showLabel` — the `label` field in the registry — drops the header
+altogether, for a cell that is to hold nothing but the reading. It defaults to
+on and no other type offers it yet; adding one is an entry in `fields`.
+
 List widgets likewise have no row-count setting. `DashboardWidgetList` measures
 its body and reads the row height from CSS, including container-query changes,
 then renders as many complete rows as fit. Measurements use layout pixels so the
@@ -847,6 +860,13 @@ files.
 - A bound parameter has no type affinity in SQLite, so bucket maths needs
   `integerLiteral` — and `signedIntegerLiteral` for a value that may be negative,
   such as the UTC offset the uptime calendar aligns its days to.
+- The calendar's day buckets are cut against one fixed UTC offset — the viewer's
+  at the time of the request — so a bucket from the other half of the year is
+  23:00 the evening before, and `new Date(dayStart * 1000)` reports the day
+  before it: both the weekday the square is placed on and the date the tooltip
+  prints come out a day early, and the whole grid shifts a row. `localDay()` in
+  the widget reads the aligned instant in UTC instead. Nothing that draws a
+  bucket may go through the browser's zone.
 - SQLite resolves a name in `group by` against the source columns before the
   output aliases, so a bucket selected `as bucket_start` from a table that has a
   `bucket_start` column groups by the stored value rather than by the bucket, and

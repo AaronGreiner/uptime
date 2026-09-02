@@ -16,6 +16,7 @@ import { WIDGET_HEIGHTS, WIDGET_WIDTHS } from './grid'
  */
 export type WidgetField
   = | 'monitor'
+    | 'label'
     | 'scope'
     | 'range'
     | 'level'
@@ -84,10 +85,12 @@ export const WIDGET_DEFINITIONS = {
   },
   'uptime-calendar': {
     icon: 'i-lucide-calendar-days',
-    fields: ['monitor'],
+    fields: ['monitor', 'label'],
     widths: WIDGET_WIDTHS,
-    // Seven rows of fixed size squares need more than a compact cell can give.
-    heights: ['standard', 'tall'],
+    // Seven rows of fixed size squares are taller than what a compact cell
+    // leaves under a header, so there the label moves on top of the squares —
+    // and can be turned off altogether.
+    heights: ['compact', 'standard', 'tall'],
     defaultWidth: 'half',
     defaultHeight: 'standard'
   },
@@ -202,6 +205,7 @@ export function widgetHasField(type: WidgetType, field: WidgetField): boolean {
 
 /** Values a field falls back to while the widget carries none of its own. */
 export const WIDGET_CONFIG_DEFAULTS: Omit<Required<WidgetConfig>, 'title'> = {
+  showLabel: true,
   range: '24h',
   level: 2,
   target: 0.999,
@@ -237,6 +241,9 @@ export function widgetConfigForType(type: WidgetType, config: WidgetConfig = {})
     switch (field) {
       // The monitor is a column of its own, not part of the config.
       case 'monitor':
+        break
+      case 'label':
+        result.showLabel = config.showLabel ?? fallback.showLabel
         break
       case 'scope':
         result.monitorIds = config.monitorIds ?? fallback.monitorIds

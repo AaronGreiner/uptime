@@ -89,14 +89,21 @@ interface MonitorDailyResponse {
   points: MonitorDailyPoint[]
 }
 
+/**
+ * Minutes the viewer's zone is ahead of UTC. Resolved once per render rather
+ * than per caller: the value has to be the same on the server and on the
+ * client, or hydration rewrites every square — and whoever reads the buckets
+ * back has to align them with the very same offset they were cut with.
+ */
+export function useUtcOffsetMinutes(): Ref<number> {
+  return useState('utc-offset', () => -new Date().getTimezoneOffset())
+}
+
 /** Daily uptime of one monitor, aligned to the reader's own midnight. */
 export function useMonitorDaily(monitorId: MaybeRefOrGetter<number | null>, days: MaybeRefOrGetter<number>) {
   const id = computed(() => toValue(monitorId))
   const span = computed(() => toValue(days))
-
-  // Resolved once per render rather than per request: the value has to be the
-  // same on the server and on the client, or hydration rewrites every square.
-  const offsetMinutes = useState('utc-offset', () => -new Date().getTimezoneOffset())
+  const offsetMinutes = useUtcOffsetMinutes()
 
   const state = useAsyncData<MonitorDailyResponse | null>(
     () => `monitor-daily-${id.value ?? 'none'}-${span.value}`,

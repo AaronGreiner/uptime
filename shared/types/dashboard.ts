@@ -43,6 +43,11 @@ export interface WidgetChild {
 export interface WidgetConfig {
   /** Overrides the auto-generated widget title. */
   title?: string
+  /**
+   * Whether the widget draws its title and caption at all. Off leaves nothing
+   * but the reading itself, for a cell whose content already says what it is.
+   */
+  showLabel?: boolean
   /** Time range used by data driven widgets. */
   range?: StatsRange
   /** Heading widgets only. */

@@ -410,6 +410,7 @@
     "fields": {
       "type": "Widget-Typ",
       "title": "Titel",
+      "showLabel": "Beschriftung anzeigen",
       "monitor": "Monitor",
       "range": "Zeitraum",
       "style": "Darstellung",
@@ -421,6 +422,9 @@
       "width": "Breite",
       "height": "Höhe",
       "children": "Widgets pro Monitor"
+    },
+    "hints": {
+      "showLabel": "Titel und Beschriftung. In einer kompakten Zelle liegen sie über den Tagen."
     },
     "level": {
       "1": "Groß",

@@ -106,6 +106,17 @@ const showSize = computed(() => widthItems.value.length > 1 || heightItems.value
       />
     </UFormField>
 
+    <UFormField
+      v-if="hasField('label')"
+      :name="name('config.showLabel')"
+      :description="$t('widget.hints.showLabel')"
+    >
+      <USwitch
+        v-model="config.showLabel"
+        :label="$t('widget.fields.showLabel')"
+      />
+    </UFormField>
+
     <div class="grid gap-4 sm:grid-cols-2">
       <UFormField
         v-if="hasField('range')"

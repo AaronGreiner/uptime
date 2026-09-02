@@ -270,6 +270,7 @@ export type DashboardInput = z.output<typeof dashboardInputSchema>
  */
 const widgetSettingFields = {
   title: z.string().trim().max(120, { error: message('validation.tooLong', { max: 120 }) }).optional(),
+  showLabel: z.boolean().optional(),
   range: z.enum(['1h', '24h', '7d', '30d', '1y']).optional(),
   level: z.union([z.literal(1), z.literal(2), z.literal(3)]).optional(),
   monitorIds: z.array(z.number().int().positive()).max(100).optional(),

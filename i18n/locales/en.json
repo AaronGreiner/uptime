@@ -410,6 +410,7 @@
     "fields": {
       "type": "Widget type",
       "title": "Title",
+      "showLabel": "Show label",
       "monitor": "Monitor",
       "range": "Time range",
       "style": "Chart style",
@@ -421,6 +422,9 @@
       "width": "Width",
       "height": "Height",
       "children": "Widgets per monitor"
+    },
+    "hints": {
+      "showLabel": "Title and caption. A compact cell draws them over the days."
     },
     "level": {
       "1": "Large",

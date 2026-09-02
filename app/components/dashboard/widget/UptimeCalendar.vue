@@ -14,6 +14,7 @@ const MAX_DAYS = 365
 const { t } = useI18n()
 const { formatDate, formatLatency, formatNumber, formatUptime } = useFormatters()
 const { monitorPath } = useMonitorPath()
+const offsetMinutes = useUtcOffsetMinutes()
 const frame = useTemplateRef<HTMLElement>('frame')
 const columns = ref<number | null>(null)
 
@@ -32,6 +33,22 @@ watch(frame, (element, _previous, onCleanup) => {
 }, { flush: 'post' })
 
 const monitor = computed(() => props.monitors.find(entry => entry.id === props.widget.monitorId) ?? null)
+
+/**
+ * Seven rows of squares are 95 px, which is more than a two row cell has left
+ * once a header sits above them. The squares are the one thing that must not
+ * change — a week reads the same block wherever it is drawn — so in a compact
+ * cell the label lies over the days rather than above them, in the corner the
+ * oldest weeks are already fading out of.
+ */
+const header = computed(() => {
+  if (props.widget.config.showLabel === false) {
+    return 'none'
+  }
+
+  return props.widget.height === 'compact' ? 'overlay' : 'above'
+})
+
 const days = computed(() => Math.min(MAX_DAYS, Math.max(
   calendarDaysForWidth(props.widget.width, MAX_DAYS),
   // Include a partial week at each end when a wide screen needs more history.
@@ -73,6 +90,27 @@ const history = computed<CalendarDay[]>(() => {
   return result.slice(-days.value)
 })
 
+/**
+ * The day a bucket stands for, at noon in the viewer's own zone.
+ *
+ * The server cuts the buckets against one fixed offset — the viewer's at the
+ * time of the request — so a bucket from the other half of the year is 23:00
+ * the evening before once the clock has changed, and both the weekday and the
+ * date label would answer with that earlier day. Reading the aligned instant in
+ * UTC gives the day the bucket was meant to be, and noon keeps the local date
+ * out of reach of a zone whose midnight the change skips.
+ */
+function localDay(dayStart: number): Date {
+  const aligned = new Date((dayStart + offsetMinutes.value * 60) * 1000)
+
+  return new Date(aligned.getUTCFullYear(), aligned.getUTCMonth(), aligned.getUTCDate(), 12)
+}
+
+/** Weekday of a bucket, Monday first — the row its square belongs in. */
+function weekday(dayStart: number): number {
+  return (localDay(dayStart).getDay() + 6) % 7
+}
+
 /** Keep whole week columns and the newest partial week; captions follow what is visible. */
 const calendar = computed(() => {
   const first = history.value[0]
@@ -81,7 +119,7 @@ const calendar = computed(() => {
     return history.value
   }
 
-  const blanks = (new Date(first.dayStart * 1000).getDay() + 6) % 7
+  const blanks = weekday(first.dayStart)
   const totalColumns = Math.ceil((blanks + history.value.length) / 7)
   const start = Math.max(0, (totalColumns - columns.value) * 7 - blanks)
 
@@ -113,7 +151,7 @@ function toDay(dayStart: number, point: MonitorDailyPoint | undefined): Calendar
 const leadingBlanks = computed(() => {
   const first = calendar.value.at(0)
 
-  return first ? (new Date(first.dayStart * 1000).getDay() + 6) % 7 : 0
+  return first ? weekday(first.dayStart) : 0
 })
 
 const overall = computed(() => {
@@ -178,6 +216,8 @@ const caption = computed(() => {
     :title="title"
     :to="`/monitors/${monitor.id}`"
     :caption="caption"
+    :dense="widget.height === 'compact'"
+    :header="header"
   >
     <template #title>
       <template v-if="widget.config.title">
@@ -256,7 +296,7 @@ const caption = computed(() => {
             v-if="hovered"
             class="flex flex-wrap items-baseline gap-x-1.5"
           >
-            <span class="text-dimmed">{{ formatDate(hovered.day.dayStart) }}</span>
+            <span class="text-dimmed">{{ formatDate(localDay(hovered.day.dayStart).getTime() / 1000) }}</span>
             <template v-if="hovered.day.ratio === null">
               <span
                 v-if="hovered.day.maintenanceCount"

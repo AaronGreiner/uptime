@@ -46,6 +46,7 @@ function createState(widget?: DashboardWidget | null): WidgetInput {
     monitorId: widget?.monitorId ?? null,
     config: {
       title: widget?.config.title ?? '',
+      showLabel: widget?.config.showLabel ?? defaults.showLabel,
       range: widget?.config.range ?? defaults.range,
       style: widget?.config.style ?? defaults.style,
       level: widget?.config.level ?? defaults.level,
@@ -71,6 +72,7 @@ function createChild(type: WidgetChild['type'], child?: WidgetChild): WidgetChil
     type,
     config: {
       title: child?.config.title ?? '',
+      showLabel: child?.config.showLabel ?? defaults.showLabel,
       range: child?.config.range ?? defaults.range,
       style: child?.config.style ?? defaults.style,
       level: child?.config.level ?? defaults.level,
